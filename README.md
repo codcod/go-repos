@@ -26,6 +26,18 @@ go mod tidy
 go build -o repos ./cmd/repos
 ```
 
+When ready for a new release:
+
+```sh
+git tag v1.0.x
+git push origin v1.0.x
+
+# To create a release go to github.com or use gh tool:
+gh release create v1.0.x --title "Repos v1.0.x" --notes "Release notes for version 1.0.x"
+```
+
+
+
 ## Typical session
 
 Example session with this tool can look like the following
