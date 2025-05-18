@@ -66,6 +66,15 @@ See [Example commands](#example-commands) for more examples.
 ### Repository Management
 
 ```sh
+# Scan deeper directories (up to 5 levels)
+repos init --depth 5
+
+# Create a different output file
+repos init -o my-repos-config.yaml
+
+# Overwrite existing config file
+repos init --overwrite
+
 # Clone all repositories
 repos clone
 

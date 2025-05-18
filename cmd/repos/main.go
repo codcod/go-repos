@@ -11,8 +11,10 @@ import (
 	"github.com/codcod/repos/internal/git"
 	"github.com/codcod/repos/internal/github"
 	"github.com/codcod/repos/internal/runner"
+	"github.com/codcod/repos/internal/util"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -23,9 +25,9 @@ var (
 	defaultLogs = "logs"
 
 	// Version information
-	version = "dev"
+	version = "0.0.2"
 	commit  = "none"
-	date    = "unknown"
+	date    = "2025-05-18"
 
 	// PR command flags
 	prTitle    string
@@ -36,6 +38,11 @@ var (
 	prDraft    bool
 	prToken    string
 	createOnly bool
+
+	// Init command flags
+	maxDepth   int
+	outputFile string
+	overwrite  bool
 )
 
 var rootCmd = &cobra.Command{
@@ -218,6 +225,67 @@ var rmCmd = &cobra.Command{
 	},
 }
 
+var initCmd = &cobra.Command{
+	Use:   "init",
+	Short: "Create a config.yaml file from discovered Git repositories",
+	Long:  `Scan the current directory for Git repositories and generate a config.yaml file based on discovered repositories.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		// Get current directory
+		currentDir, err := os.Getwd()
+		if err != nil {
+			color.Red("Error getting current directory: %v", err)
+			os.Exit(1)
+		}
+
+		// Check if output file already exists
+		if _, err := os.Stat(outputFile); err == nil && !overwrite {
+			color.Red("File %s already exists. Use --overwrite to replace it.", outputFile)
+			os.Exit(1)
+		}
+
+		// Find Git repositories
+		color.Green("Scanning for Git repositories in %s (max depth: %d)...", currentDir, maxDepth)
+		repos, err := util.FindGitRepositories(currentDir, maxDepth)
+		if err != nil {
+			color.Red("Error scanning for repositories: %v", err)
+			os.Exit(1)
+		}
+
+		if len(repos) == 0 {
+			color.Yellow("No Git repositories found in %s", currentDir)
+			os.Exit(0)
+		}
+
+		color.Green("Found %d Git repositories", len(repos))
+
+		// Create config structure
+		cfg := config.Config{
+			Repositories: repos,
+		}
+
+		// Convert to YAML
+		yamlData, err := yaml.Marshal(cfg)
+		if err != nil {
+			color.Red("Error creating YAML: %v", err)
+			os.Exit(1)
+		}
+
+		// Write to file
+		err = os.WriteFile(outputFile, yamlData, 0644)
+		if err != nil {
+			color.Red("Error writing to file %s: %v", outputFile, err)
+			os.Exit(1)
+		}
+
+		color.Green("Successfully created %s with %d repositories", outputFile, len(repos))
+
+		// Print preview of the generated file
+		fmt.Println("\nConfig file preview:")
+		color.Cyan("---")
+		fmt.Println(string(yamlData))
+	},
+}
+
 // Process repositories with clean error handling
 func processRepos(repositories []config.Repository, parallel bool, processor func(config.Repository) error) {
 	repoColor := color.New(color.FgCyan, color.Bold).SprintFunc()
@@ -262,10 +330,16 @@ func init() {
 	prCmd.Flags().StringVar(&prToken, "token", "", "GitHub token (can also use GITHUB_TOKEN env var)")
 	prCmd.Flags().BoolVar(&createOnly, "create-only", false, "Only create PR, don't commit changes")
 
+	// Init command flags
+	initCmd.Flags().IntVar(&maxDepth, "depth", 3, "Maximum directory depth to scan for repositories")
+	initCmd.Flags().StringVarP(&outputFile, "output", "o", "config.yaml", "Output file name")
+	initCmd.Flags().BoolVar(&overwrite, "overwrite", false, "Overwrite existing file if it exists")
+
 	rootCmd.AddCommand(cloneCmd)
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(prCmd)
 	rootCmd.AddCommand(rmCmd)
+	rootCmd.AddCommand(initCmd) // Add the init command
 
 	// Add version command
 	rootCmd.AddCommand(&cobra.Command{
