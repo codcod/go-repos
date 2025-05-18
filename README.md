@@ -44,10 +44,10 @@ Example session with this tool can look like the following
 
 ```sh
 # Clone java-based repositories in parallel
-./repos clone -t java -p
+repos clone -t java -p
 
 # Update Backstage catalog-info.yamls
-./repos run "fd 'catalog-info' -x sed -i '' 's/jira\/project-key: FOO/jira\/project-key: BAR/g' {}"
+repos run "fd 'catalog-info' -x sed -i '' 's/jira\/project-key: FOO/jira\/project-key: BAR/g' {}"
 
 # Validate changes
 rg 'jira/project-key: BAR' .
@@ -67,41 +67,41 @@ See [Example commands](#example-commands) for more examples.
 
 ```sh
 # Clone all repositories
-./repos clone
+repos clone
 
 # Clone only repositories with tag "java"
-./repos clone -t java
+repos clone -t java
 
 # Clone in parallel
-./repos clone -p
+repos clone -p
 
 # Use a custom config file
-./repos clone -c custom-config.yaml
+repos clone -c custom-config.yaml
 
 # Remove cloned repositories
-./repos rm
+repos rm
 
 # Remove only repositories with tag "java"
-./repos rm -t java
+repos rm -t java
 
 # Remove in parallel
-./repos rm -p
+repos rm -p
 ```
 
 ### Running Commands
 
 ```sh
 # Run a command in all repositories
-./repos run "mvn clean compile"
+repos run "mvn clean compile"
 
 # Run a command only in repositories with tag "java"
-./repos run -t java "mvn clean compile"
+repos run -t java "mvn clean compile"
 
 # Run in parallel
-./repos run -p "npm install"
+repos run -p "npm install"
 
 # Specify a custom log directory
-./repos run -l custom/logs "make build"
+repos run -l custom/logs "make build"
 ```
 
 #### Example commands
@@ -125,16 +125,16 @@ git log --all --author='$(id -un)' --since='1 month ago' --pretty=format:'%h %an
 ```sh
 # Create PRs for repositories with changes
 export GITHUB_TOKEN=your_github_token
-./repos pr --title "My changes" --body "Description of changes"
+repos pr --title "My changes" --body "Description of changes"
 
 # Create PRs with specific branch name
-./repos pr --branch feature/my-changes --title "My changes"
+repos pr --branch feature/my-changes --title "My changes"
 
 # Create draft pull requests
-./repos pr --draft
+repos pr --draft
 
 # Create PRs for specific repositories
-./repos pr -t backend
+repos pr -t backend
 ```
 
 ## Configuration
