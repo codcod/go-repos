@@ -56,7 +56,7 @@ rg 'jira/project-key: BAR' .
 rg 'jira/project-key: FOO' .
 
 # Create pull requests for all changes
-./bin/repos pr --title "Update catalog-info.yaml" --body "Change jira/project-key to BAR"
+repos pr --title "Update catalog-info.yaml" --body "Change jira/project-key to BAR"
 ```
 
 See [Example commands](#example-commands) for more examples.
