@@ -15,6 +15,13 @@ A CLI tool to manage multiple GitHub repositories: clone them and run arbitrary 
 ## Installation
 
 ```sh
+brew tap codcod/repos
+brew install repos
+```
+
+For local development:
+
+```sh
 go mod tidy
 go build -o repos ./cmd/repos
 ```
