@@ -22,6 +22,11 @@ var (
 	logDir      string
 	defaultLogs = "logs"
 
+	// Version information
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+
 	// PR command flags
 	prTitle    string
 	prBody     string
@@ -261,6 +266,15 @@ func init() {
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(prCmd)
 	rootCmd.AddCommand(rmCmd)
+
+	// Add version command
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "version",
+		Short: "Print version information",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("repos %s (%s) built on %s\n", version, commit, date)
+		},
+	})
 }
 
 func main() {
