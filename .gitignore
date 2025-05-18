@@ -1,0 +1,29 @@
+# Binaries
+/bin/
+/bin/*
+/repos
+
+# Logs
+logs/
+*.log
+
+# Dependency directories
+vendor/
+
+# OS generated files
+.DS_Store
+
+# IDE/editor files
+.vscode/
+.idea/
+
+# Go build cache
+*.test
+*.out
+
+# Custom log directory
+custom/logs/
+
+# Other files
+cloned_repos/
+config.yaml
