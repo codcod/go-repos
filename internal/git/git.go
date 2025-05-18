@@ -8,17 +8,18 @@ import (
 
 	"github.com/codcod/repos/internal/config"
 	"github.com/codcod/repos/internal/util"
-	"github.com/fatih/color"
 )
 
 // CloneRepository clones a repository
 func CloneRepository(repo config.Repository) error {
+	logger := util.NewLogger()
+
 	// Determine target directory
 	targetDir := util.GetRepoDir(repo)
 
 	// Check if directory already exists
 	if _, err := os.Stat(targetDir); err == nil {
-		color.Yellow("%s | Repository directory already exists, skipping", repo.Name)
+		logger.Warn(repo, "Repository directory already exists, skipping")
 		return nil
 	}
 
@@ -40,11 +41,10 @@ func CloneRepository(repo config.Repository) error {
 	cmd.Stderr = &stderrBuf
 
 	// Print which branch is being cloned
-	repoColor := color.New(color.FgCyan).SprintFunc()
 	if repo.Branch != "" {
-		color.Green("%s | Cloning branch '%s' from %s to %s", repoColor(repo.Name), repo.Branch, repo.URL, targetDir)
+		logger.Info(repo, "Cloning branch '%s' from %s", repo.Branch, repo.URL)
 	} else {
-		color.Green("%s | Cloning default branch from %s to %s", repoColor(repo.Name), repo.URL, targetDir)
+		logger.Info(repo, "Cloning default branch from %s", repo.URL)
 	}
 
 	err := cmd.Run()
@@ -54,13 +54,15 @@ func CloneRepository(repo config.Repository) error {
 	}
 
 	if stderrBuf.Len() > 0 {
-		color.Red("%s | %s", repo.Name, stderrBuf.String())
+		logger.Error(repo, "%s", stderrBuf.String())
 	}
 
 	if err != nil {
 		return fmt.Errorf("failed to clone repository: %w", err)
 	}
 
+	// Only log success if we actually cloned
+	logger.Success(repo, "Successfully cloned")
 	return nil
 }
 

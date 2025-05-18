@@ -43,10 +43,8 @@ func (p *OutputProcessor) ProcessOutput(reader io.Reader, wg *sync.WaitGroup) {
 		// Print to stdout/stderr with colored repo name
 		if p.IsStderr {
 			fmt.Fprintf(os.Stderr, "%s | %s\n", repoColor(p.RepoName), line)
-			os.Stderr.Sync()
 		} else {
 			fmt.Printf("%s | %s\n", repoColor(p.RepoName), line)
-			os.Stdout.Sync()
 		}
 
 		// Save to log file if enabled
@@ -94,6 +92,8 @@ func PrepareLogFile(repo config.Repository, logDir, command, repoDir string) (*o
 
 // RunCommand runs a command in the repository directory
 func RunCommand(repo config.Repository, command string, logDir string) error {
+	logger := util.NewLogger()
+
 	// Determine repository directory
 	repoDir := util.GetRepoDir(repo)
 
@@ -126,8 +126,7 @@ func RunCommand(repo config.Repository, command string, logDir string) error {
 	}
 
 	// Run the command
-	repoColor := color.New(color.FgCyan).SprintFunc()
-	color.Green("%s | Running '%s' in %s", repoColor(repo.Name), command, repoDir)
+	logger.Info(repo, "Running '%s'", command)
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start command: %w", err)
@@ -159,8 +158,7 @@ func RunCommand(repo config.Repository, command string, logDir string) error {
 	err = cmd.Wait()
 
 	if logFile != nil && err == nil {
-		repoColor = color.New(color.FgCyan).SprintFunc()
-		color.Green("%s | Log saved to %s", repoColor(repo.Name), logFilePath)
+		logger.Info(repo, "Log saved to %s", logFilePath)
 	}
 
 	if err != nil {

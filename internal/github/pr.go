@@ -26,6 +26,8 @@ type PROptions struct {
 
 // CreatePullRequest creates a PR for changes in the repository
 func CreatePullRequest(repo config.Repository, options PROptions) error {
+	logger := util.NewLogger()
+
 	// Determine repository directory
 	repoDir := util.GetRepoDir(repo)
 
@@ -39,16 +41,21 @@ func CreatePullRequest(repo config.Repository, options PROptions) error {
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}
+	defer func() {
+		// Ensure we always change back to the original directory
+		if err := os.Chdir(originalDir); err != nil {
+			logger.Error(repo, "Failed to change back to original directory: %v", err)
+		}
+	}()
+
 	if err := os.Chdir(repoDir); err != nil {
 		return fmt.Errorf("failed to change to repository directory: %w", err)
 	}
-	// Change back to original directory when done
-	defer os.Chdir(originalDir)
 
 	// Create changes unless "create only" mode is enabled
 	if !options.CreateOnly {
 		// Check for changes
-		hasChanges, err := git.HasChanges(repoDir)
+		hasChanges, err := git.HasChanges(".") // Use "." instead of repoDir since we've already changed to that dir
 		if err != nil {
 			return fmt.Errorf("failed to check for changes: %w", err)
 		}
@@ -63,12 +70,12 @@ func CreatePullRequest(repo config.Repository, options PROptions) error {
 		}
 
 		// Create and checkout the branch
-		if err := git.CreateAndCheckoutBranch(repoDir, options.BranchName); err != nil {
+		if err := git.CreateAndCheckoutBranch(".", options.BranchName); err != nil { // Use "." instead of repoDir
 			return fmt.Errorf("failed to create branch: %w", err)
 		}
 
 		// Add all changes
-		if err := git.AddAllChanges(repoDir); err != nil {
+		if err := git.AddAllChanges("."); err != nil { // Use "." instead of repoDir
 			return fmt.Errorf("failed to add changes: %w", err)
 		}
 
@@ -81,12 +88,12 @@ func CreatePullRequest(repo config.Repository, options PROptions) error {
 			commitMsg = "Automated changes"
 		}
 
-		if err := git.CommitChanges(repoDir, commitMsg); err != nil {
+		if err := git.CommitChanges(".", commitMsg); err != nil { // Use "." instead of repoDir
 			return fmt.Errorf("failed to commit changes: %w", err)
 		}
 
 		// Push the branch
-		if err := git.PushBranch(repoDir, options.BranchName); err != nil {
+		if err := git.PushBranch(".", options.BranchName); err != nil { // Use "." instead of repoDir
 			return fmt.Errorf("failed to push branch: %w", err)
 		}
 	}
@@ -104,7 +111,7 @@ func CreatePullRequest(repo config.Repository, options PROptions) error {
 		baseBranch = "main"
 
 		// Check if 'main' exists, otherwise use 'master'
-		if !git.BranchExists(repoDir, baseBranch) && git.BranchExists(repoDir, "master") {
+		if !git.BranchExists(".", baseBranch) && git.BranchExists(".", "master") { // Use "." instead of repoDir
 			baseBranch = "master"
 		}
 	}

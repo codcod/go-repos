@@ -25,7 +25,7 @@ var (
 	defaultLogs = "logs"
 
 	// Version information
-	version = "0.0.2"
+	version = "0.0.3"
 	commit  = "none"
 	date    = "2025-05-18"
 
@@ -71,10 +71,13 @@ var cloneCmd = &cobra.Command{
 		color.Green("Cloning %d repositories...", len(repositories))
 
 		processRepos(repositories, parallel, func(r config.Repository) error {
-			if err := git.CloneRepository(r); err != nil {
+			err := git.CloneRepository(r)
+			// Only show "Successfully cloned" if no error AND repository didn't already exist
+			if err != nil {
 				return err
 			}
-			color.Green("%s | Successfully cloned", color.New(color.FgCyan, color.Bold).SprintFunc()(r.Name))
+			// git.CloneRepository returns nil when repo exists (skipping clone) without showing success message
+			// We don't need to output additional success message here
 			return nil
 		})
 
@@ -123,11 +126,7 @@ var runCmd = &cobra.Command{
 		}
 
 		processRepos(repositories, parallel, func(r config.Repository) error {
-			if err := runner.RunCommand(r, command, absLogDir); err != nil {
-				return err
-			}
-			color.Green("%s | Command completed successfully", color.New(color.FgCyan, color.Bold).SprintFunc()(r.Name))
-			return nil
+			return runner.RunCommand(r, command, absLogDir)
 		})
 
 		color.Green("Done running commands in all repositories")
@@ -288,7 +287,7 @@ var initCmd = &cobra.Command{
 
 // Process repositories with clean error handling
 func processRepos(repositories []config.Repository, parallel bool, processor func(config.Repository) error) {
-	repoColor := color.New(color.FgCyan, color.Bold).SprintFunc()
+	logger := util.NewLogger()
 
 	if parallel {
 		var wg sync.WaitGroup
@@ -298,7 +297,7 @@ func processRepos(repositories []config.Repository, parallel bool, processor fun
 			go func(r config.Repository) {
 				defer wg.Done()
 				if err := processor(r); err != nil {
-					color.Red("%s | Error: %v", repoColor(r.Name), err)
+					logger.Error(r, "%v", err)
 				}
 			}(repo)
 		}
@@ -307,7 +306,7 @@ func processRepos(repositories []config.Repository, parallel bool, processor fun
 	} else {
 		for _, repo := range repositories {
 			if err := processor(repo); err != nil {
-				color.Red("%s | Error: %v", repoColor(repo.Name), err)
+				logger.Error(repo, "%v", err)
 			}
 		}
 	}
