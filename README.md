@@ -174,7 +174,7 @@ repositories.
 * [myrepos](https://myrepos.branchable.com): A tool to manage multiple
 repositories.
 * [repo](https://android.googlesource.com/tools/repo): A repository management
-tool often used for Android source code
+tool often used for Android source code.
 
 ## License
 
