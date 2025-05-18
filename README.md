@@ -24,10 +24,16 @@ brew install repos
 Example session with this tool can look like the following
 
 ```sh
+# Clone a repo and use it as a starting point to adjust config.yaml
+mkdir cloned_repos
+cd cloned_repos
+git clone http://github.com/myself/repo.git
+repos init
+
 # Clone java-based repositories in parallel
 repos clone -t java -p
 
-# Update Backstage catalog-info.yamls
+# Update Backstage catalog-info.yamls in all repos
 repos run "fd 'catalog-info' -x sed -i '' 's/jira\/project-key: FOO/jira\/project-key: BAR/g' {}"
 
 # Validate changes
