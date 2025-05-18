@@ -156,12 +156,25 @@ repositories:
     url: git@github.com:yourorg/loan-pricing.git
     tags: [java, backend]
     branch: develop  # Optional: Branch to clone
-  
+
   - name: web-ui
     url: git@github.com:yourorg/web-ui.git
     tags: [frontend, react]
     # When branch is not specified, the default branch will be cloned
 ```
+
+## Alternatives
+
+* [gita](https://github.com/nosarthur/gita): A tool to manage multiple Git
+repositories.
+* [gr](http://mixu.net/gr): Another multi-repo management tool.
+* [meta](https://github.com/mateodelnorte/meta): Helps in managing multiple
+repositories.
+* [mu-repo](https://fabioz.github.io/mu-repo): For managing many repositories.
+* [myrepos](https://myrepos.branchable.com): A tool to manage multiple
+repositories.
+* [repo](https://android.googlesource.com/tools/repo): A repository management
+tool often used for Android source code
 
 ## License
 
