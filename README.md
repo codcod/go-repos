@@ -15,7 +15,7 @@ A CLI tool to manage multiple GitHub repositories: clone them and run arbitrary 
 ## Installation
 
 ```sh
-brew tap codcod/repos
+brew tap codcod/taps
 brew install repos
 ```
 
