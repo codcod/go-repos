@@ -1,3 +1,5 @@
+[![Release](https://img.shields.io/github/v/release/codcod/repos?style=flat-square)](https://github.com/codcod/repos/releases)
+
 # Repos
 
 A CLI tool to manage multiple GitHub repositories: clone them and run arbitrary
