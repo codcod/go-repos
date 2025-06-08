@@ -30,8 +30,8 @@ repositories:
   - name: loan-pricing
     url: git@github.com:yourorg/loan-pricing.git
     tags: [java, backend]
-    branch: develop     # Optional: Branch to clone
-    path: cloned_repos  # Optional: Directory to place cloned repo
+    branch: develop                  # Optional: Branch to clone
+    path: cloned_repos/loan-pricing  # Optional: Directory to place cloned repo
 
   - name: web-ui
     url: git@github.com:yourorg/web-ui.git
@@ -40,7 +40,7 @@ repositories:
     # When path is not specified, the current directory will be used
 ```
 **Tip:**  
-You can clone repos first and use these to generate your `config.yaml`:
+You can clone repositories first and use these to generate your `config.yaml`:
 
 ```sh
 mkdir cloned_repos && cd "$_"
@@ -51,11 +51,11 @@ repos init
 
 ## Typical session
 
-Once you have a configuration in place, an example session can look like the
-following:
+Once you have a configuration file in place, an example session can look like
+the following:
 
 ```sh
-# Remove existing repos
+# Remove existing repositories
 repos rm
 
 # Clone java-based repositories in parallel
@@ -79,6 +79,8 @@ See [Example commands](#example-commands) for more examples of commands to run.
 ## Usage
 
 ### Repository management
+
+To configure, clone and remove repositories:
 
 ```sh
 # Scan deeper directories (up to 5 levels)
@@ -114,6 +116,8 @@ repos rm -p
 
 ### Running commands
 
+To run arbitrary commands in repositories:
+
 ```sh
 # Run a command in all repositories
 repos run "mvn clean compile"
@@ -148,6 +152,8 @@ git log --all --author='$(id -un)' --since='1 month ago' --pretty=format:'%h %an
 
 ### Creating Pull Requests
 
+To submit changes made in the cloned repositories:
+
 ```sh
 export GITHUB_TOKEN=your_github_token
 
@@ -163,7 +169,6 @@ repos pr --draft
 # Create PRs for specific repositories
 repos pr -t backend
 ```
-
 
 ## Development
 
