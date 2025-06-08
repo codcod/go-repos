@@ -1,0 +1,40 @@
+{
+  "branches": [
+    "main",
+    "master"
+  ],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    "@semantic-release/changelog",
+    [
+      "@semantic-release/exec",
+      {
+        "verifyReleaseCmd": "echo 'Verifying release for version ${nextRelease.version}'",
+        "prepareCmd": "VERSION=${nextRelease.version} COMMIT=$(git rev-parse --short HEAD) BUILD_DATE=$(date -u +\"%Y-%m-%d\") make build",
+        "publishCmd": "echo 'Built binary ready for release'"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {
+            "path": "bin/repos",
+            "name": "repos-${nextRelease.version}",
+            "label": "repos CLI binary"
+          }
+        ]
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": [
+          "CHANGELOG.md"
+        ],
+        "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+      }
+    ]
+  ]
+}

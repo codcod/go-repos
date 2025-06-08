@@ -24,10 +24,10 @@ var (
 	logDir      string
 	defaultLogs = "logs"
 
-	// Version information
-	version = "0.2.1"
-	commit  = "f51155d"
-	date    = "2025-06-08"
+	// Version information - will be set via build flags or environment variables
+	version = getEnvOrDefault("VERSION", "dev")
+	commit  = getEnvOrDefault("COMMIT", "unknown")
+	date    = getEnvOrDefault("BUILD_DATE", "unknown")
 
 	// PR command flags
 	prTitle    string
@@ -44,6 +44,14 @@ var (
 	outputFile string
 	overwrite  bool
 )
+
+// getEnvOrDefault returns the value of the environment variable or a default value
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
 
 var rootCmd = &cobra.Command{
 	Use:   "repos",
