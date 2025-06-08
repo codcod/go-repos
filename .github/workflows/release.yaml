@@ -101,15 +101,15 @@ jobs:
           echo "Updated version to $new_version, date to $today, and commit to $commit_hash in cmd/repos/main.go"
 
           # Generate release notes from commit messages
-          echo "Generating release notes from commit messages"
-          release_notes="## What's Changed\n\n"
-          
-          git log --pretty=format:"* %s (%h)" "v${{ steps.bump.outputs.latest_version }}..HEAD" > release_notes.md
-          if [ ! -s release_notes.md ]; then
-            echo "* Initial release" > release_notes.md
-          fi
-          
-          echo "release_notes=$(cat release_notes.md)" >> $GITHUB_OUTPUT
+          # echo "Generating release notes from commit messages"
+          # release_notes="## What's Changed\n\n"
+          #
+          # git log --pretty=format:"* %s (%h)" "v${{ steps.bump.outputs.latest_version }}..HEAD" > release_notes.md
+          # if [ ! -s release_notes.md ]; then
+          #   echo "* Initial release" > release_notes.md
+          # fi
+          #
+          # echo "release_notes=$(cat release_notes.md)" >> $GITHUB_OUTPUT
 
       - name: Commit version changes
         run: |
