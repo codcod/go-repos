@@ -25,9 +25,9 @@ var (
 	defaultLogs = "logs"
 
 	// Version information
-	version = "0.0.3"
-	commit  = "none"
-	date    = "2025-05-18"
+	version = "0.1.0"
+	commit  = "25b60c7"
+	date    = "2025-06-08"
 
 	// PR command flags
 	prTitle    string
