@@ -1,3 +1,16 @@
+# [1.0.0](https://github.com/codcod/repos/compare/v0.2.1...v1.0.0) (2025-06-08)
+
+
+### Features
+
+* migrate to semantic-release for automated releases ([5a4877f](https://github.com/codcod/repos/commit/5a4877f8521e1ff5b4ba50a8c874bd457598dedb))
+
+
+### BREAKING CHANGES
+
+* Version management is now handled by semantic-release.
+Developers must use conventional commit messages for proper versioning.
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
