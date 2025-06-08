@@ -120,8 +120,14 @@ func CreatePullRequest(repo config.Repository, options PROptions) error {
 	return createGitHubPullRequest(owner, repoName, options, baseBranch)
 }
 
-// createGitHubPullRequest creates a pull request via the GitHub API
-func createGitHubPullRequest(owner, repo string, options PROptions, baseBranch string) error {
+// createGitHubPullRequestFunc is the function type for creating GitHub pull requests
+type createGitHubPullRequestFunc func(owner, repo string, options PROptions, baseBranch string) error
+
+// createGitHubPullRequest is a variable that can be overridden for testing
+var createGitHubPullRequest createGitHubPullRequestFunc = createGitHubPullRequestImpl
+
+// createGitHubPullRequestImpl creates a pull request via the GitHub API
+func createGitHubPullRequestImpl(owner, repo string, options PROptions, baseBranch string) error {
 	// GitHub API endpoint
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls", owner, repo)
 

@@ -78,7 +78,7 @@ var cloneCmd = &cobra.Command{
 
 		color.Green("Cloning %d repositories...", len(repositories))
 
-		processRepos(repositories, parallel, func(r config.Repository) error {
+		err = processRepos(repositories, parallel, func(r config.Repository) error {
 			err := git.CloneRepository(r)
 			// Only show "Successfully cloned" if no error AND repository didn't already exist
 			if err != nil {
@@ -88,6 +88,11 @@ var cloneCmd = &cobra.Command{
 			// We don't need to output additional success message here
 			return nil
 		})
+
+		if err != nil {
+			color.Red("Error: %v", err)
+			os.Exit(1)
+		}
 
 		color.Green("Done cloning repositories")
 	},
@@ -133,9 +138,14 @@ var runCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		processRepos(repositories, parallel, func(r config.Repository) error {
+		err = processRepos(repositories, parallel, func(r config.Repository) error {
 			return runner.RunCommand(r, command, absLogDir)
 		})
+
+		if err != nil {
+			color.Red("Error: %v", err)
+			os.Exit(1)
+		}
 
 		color.Green("Done running commands in all repositories")
 	},
@@ -183,7 +193,7 @@ var prCmd = &cobra.Command{
 
 		successCount := 0
 
-		processRepos(repositories, parallel, func(r config.Repository) error {
+		err = processRepos(repositories, parallel, func(r config.Repository) error {
 			if err := github.CreatePullRequest(r, prOptions); err != nil {
 				if strings.Contains(err.Error(), "no changes detected") {
 					color.Yellow("%s | No changes detected", color.New(color.FgCyan, color.Bold).SprintFunc()(r.Name))
@@ -196,6 +206,11 @@ var prCmd = &cobra.Command{
 			}
 			return nil
 		})
+
+		if err != nil {
+			color.Red("Error: %v", err)
+			os.Exit(1)
+		}
 
 		color.Green("Created %d pull requests", successCount)
 	},
@@ -220,13 +235,18 @@ var rmCmd = &cobra.Command{
 
 		color.Green("Removing %d repositories...", len(repositories))
 
-		processRepos(repositories, parallel, func(r config.Repository) error {
+		err = processRepos(repositories, parallel, func(r config.Repository) error {
 			if err := git.RemoveRepository(r); err != nil {
 				return err
 			}
 			color.Green("%s | Successfully removed", color.New(color.FgCyan, color.Bold).SprintFunc()(r.Name))
 			return nil
 		})
+
+		if err != nil {
+			color.Red("Error: %v", err)
+			os.Exit(1)
+		}
 
 		color.Green("Done removing repositories")
 	},
@@ -294,11 +314,13 @@ var initCmd = &cobra.Command{
 }
 
 // Process repositories with clean error handling
-func processRepos(repositories []config.Repository, parallel bool, processor func(config.Repository) error) {
+func processRepos(repositories []config.Repository, parallel bool, processor func(config.Repository) error) error {
 	logger := util.NewLogger()
+	var hasErrors bool
 
 	if parallel {
 		var wg sync.WaitGroup
+		var mu sync.Mutex
 		wg.Add(len(repositories))
 
 		for _, repo := range repositories {
@@ -306,6 +328,9 @@ func processRepos(repositories []config.Repository, parallel bool, processor fun
 				defer wg.Done()
 				if err := processor(r); err != nil {
 					logger.Error(r, "%v", err)
+					mu.Lock()
+					hasErrors = true
+					mu.Unlock()
 				}
 			}(repo)
 		}
@@ -315,9 +340,15 @@ func processRepos(repositories []config.Repository, parallel bool, processor fun
 		for _, repo := range repositories {
 			if err := processor(repo); err != nil {
 				logger.Error(repo, "%v", err)
+				hasErrors = true
 			}
 		}
 	}
+
+	if hasErrors {
+		return fmt.Errorf("one or more commands failed")
+	}
+	return nil
 }
 
 func init() {
