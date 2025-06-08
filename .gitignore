@@ -9,6 +9,7 @@ logs/
 
 # Dependency directories
 vendor/
+node_modules/
 
 # OS generated files
 .DS_Store

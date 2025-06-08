@@ -3,12 +3,17 @@ PKG=github.com/codcod/repos
 CMD_DIR=./cmd
 GOFILES=$(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
+# Version information - can be overridden by environment variables
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_DATE ?= $(shell date -u +"%Y-%m-%d")
+
 .PHONY: all build run test lint fmt clean
 
 all: build
 
 build:
-	go build -o bin/$(APP_NAME) $(CMD_DIR)/repos
+	VERSION=$(VERSION) COMMIT=$(COMMIT) BUILD_DATE=$(BUILD_DATE) go build -o bin/$(APP_NAME) $(CMD_DIR)/repos
 
 run: build
 	./bin/$(APP_NAME)

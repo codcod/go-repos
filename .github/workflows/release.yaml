@@ -4,148 +4,46 @@ on:
   push:
     branches:
       - main
+      - master
   workflow_dispatch:
 
 permissions:
-  contents: write  # Needed for creating tags and releases
+  contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
   release:
-    name: Create Release
+    name: Release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # We need full history for determining version
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: '1.24'
 
-      - name: Determine version bump
-        id: bump
-        run: |
-          # Get the latest tag
-          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          echo "Latest tag: $latest_tag"
-          latest_version="${latest_tag#v}"
-
-          # Get commit messages since the latest tag
-          commits=$(git log --pretty=format:"%s" "$latest_tag..HEAD" 2>/dev/null || git log --pretty=format:"%s")
-
-          # Determine bump type based on conventional commits
-          bump_type="patch"  # Default to patch bump
-
-          while IFS= read -r commit; do
-            if [[ "$commit" =~ ^BREAKING\ CHANGE:.*|^.*!:.*|^feat!:.*|^fix!:.* ]]; then
-              bump_type="major"
-              break
-            elif [[ "$commit" =~ ^feat(\(.+\))?:.* ]]; then
-              bump_type="minor"
-            fi
-          done <<< "$commits"
-
-          echo "Determined bump type: $bump_type"
-          echo "bump_type=$bump_type" >> $GITHUB_OUTPUT
-          echo "latest_version=$latest_version" >> $GITHUB_OUTPUT
-
-      - name: Calculate new version
-        id: version
-        run: |
-          latest_version="${{ steps.bump.outputs.latest_version }}"
-          bump_type="${{ steps.bump.outputs.bump_type }}"
-
-          # Parse version numbers
-          IFS='.' read -r major minor patch <<< "$latest_version"
-          
-          # Convert to integers (remove any non-numeric suffixes)
-          major=$(echo $major | sed 's/[^0-9]*//g')
-          minor=$(echo $minor | sed 's/[^0-9]*//g')
-          patch=$(echo $patch | sed 's/[^0-9]*//g')
-          
-          # Default to 0 if any component is empty
-          major=${major:-0}
-          minor=${minor:-0}
-          patch=${patch:-0}
-
-          # Bump version according to bump type
-          if [[ "$bump_type" == "major" ]]; then
-            major=$((major + 1))
-            minor=0
-            patch=0
-          elif [[ "$bump_type" == "minor" ]]; then
-            minor=$((minor + 1))
-            patch=0
-          else
-            patch=$((patch + 1))
-          fi
-
-          new_version="$major.$minor.$patch"
-          echo "New version: $new_version"
-          echo "new_version=$new_version" >> $GITHUB_OUTPUT
-
-      - name: Update version in source code
-        id: update_source
-        run: |
-          new_version="${{ steps.version.outputs.new_version }}"
-          today=$(date +"%Y-%m-%d")
-          commit_hash=$(git rev-parse --short HEAD)
-          
-          # Update version, date and commit in cmd/repos/main.go
-          sed -i "s/version = \".*\"/version = \"$new_version\"/" cmd/repos/main.go
-          sed -i "s/commit  = \".*\"/commit  = \"$commit_hash\"/" cmd/repos/main.go
-          sed -i "s/date    = \".*\"/date    = \"$today\"/" cmd/repos/main.go
-          
-          echo "Updated version to $new_version, date to $today, and commit to $commit_hash in cmd/repos/main.go"
-
-          # Generate release notes from commit messages
-          echo "Generating release notes from commit messages"
-          echo "## What's Changed" > release_notes.md
-          echo "" >> release_notes.md
-          
-          # Write commit messages to file
-          git log --pretty=format:"* %s (%h)" "v${{ steps.bump.outputs.latest_version }}..HEAD" >> release_notes.md
-          
-          # If file is empty (only has header), add initial release note
-          if [ $(wc -l < release_notes.md) -le 2 ]; then
-            echo "* Initial release" >> release_notes.md
-          fi
-          
-          cat release_notes.md
-
-      - name: Commit version changes
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add cmd/repos/main.go
-          git commit -m "chore: bump version to v${{ steps.version.outputs.new_version }}"
-
-      - name: Push changes
-        uses: ad-m/github-push-action@master
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref }}
+          node-version: '20'
+          cache: 'npm'
 
-      - name: Create Tag
-        run: |
-          git tag "v${{ steps.version.outputs.new_version }}"
-          git push --tags
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Build binary
-        run: |
-          make build
+      - name: Verify Go build
+        run: make build
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ steps.version.outputs.new_version }}
-          name: Release v${{ steps.version.outputs.new_version }}
-          body_path: release_notes.md
-          draft: false
-          prerelease: false
-          files: |
-            bin/repos
+      - name: Run tests
+        run: go test ./...
+
+      - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
