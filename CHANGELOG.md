@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/codcod/repos/compare/v1.0.0...v1.0.1) (2025-06-08)
+
+
+### Bug Fixes
+
+* **tests:** add tests ([c866b91](https://github.com/codcod/repos/commit/c866b91d9ee55130082da682a8b918c876f4b2f4))
+
 # [1.0.0](https://github.com/codcod/repos/compare/v0.2.1...v1.0.0) (2025-06-08)
 
 
