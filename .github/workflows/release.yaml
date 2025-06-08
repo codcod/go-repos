@@ -114,7 +114,6 @@ jobs:
           fi
           
           cat release_notes.md
-          echo "release_notes=$(cat release_notes.md)" >> $GITHUB_OUTPUT
 
       - name: Commit version changes
         run: |
