@@ -1,6 +1,7 @@
 # Repos
 
-A CLI tool to manage multiple GitHub repositories: clone them and run arbitrary commands in each, with colored output and logging.
+A CLI tool to manage multiple GitHub repositories: clone them and run arbitrary
+commands in each, with colored output and logging.
 
 ## Features
 
@@ -19,24 +20,51 @@ brew tap codcod/taps
 brew install repos
 ```
 
-## Typical session
+## Configuration
 
-Example session with this tool can look like the following
+To work properly, `repos` requires information about Git repositories. To
+provide it, create a `config.yaml` file in the root directory:
+
+```yaml
+repositories:
+  - name: loan-pricing
+    url: git@github.com:yourorg/loan-pricing.git
+    tags: [java, backend]
+    branch: develop     # Optional: Branch to clone
+    path: cloned_repos  # Optional: Directory to place cloned repo
+
+  - name: web-ui
+    url: git@github.com:yourorg/web-ui.git
+    tags: [frontend, react]
+    # When branch is not specified, the default branch will be cloned
+    # When path is not specified, the current directory will be used
+```
+**Tip:**  
+You can clone repos first and use these to generate your `config.yaml`:
 
 ```sh
-# Clone a repo and use it as a starting point to adjust config.yaml
-mkdir cloned_repos
-cd cloned_repos
-git clone http://github.com/myself/repo.git
+mkdir cloned_repos && cd "$_"
+git clone http://github.com/codcod/jira-epic-timeline.git
+git clone http://github.com/codcod/repos.git
 repos init
+```
+
+## Typical session
+
+Once you have a configuration in place, an example session can look like the
+following:
+
+```sh
+# Remove existing repos
+repos rm
 
 # Clone java-based repositories in parallel
 repos clone -t java -p
 
-# Update Backstage catalog-info.yamls in all repos
+# Run command to update Backstage's catalog-info.yamls in all repos
 repos run "fd 'catalog-info' -x sed -i '' 's/jira\/project-key: FOO/jira\/project-key: BAR/g' {}"
 
-# Validate changes
+# Validate changes to see if updates were applied properly
 rg 'jira/project-key: BAR' .
 
 # Make sure that old entries were replaced
@@ -46,11 +74,11 @@ rg 'jira/project-key: FOO' .
 repos pr --title "Update catalog-info.yaml" --body "Change jira/project-key to BAR"
 ```
 
-See [Example commands](#example-commands) for more examples.
+See [Example commands](#example-commands) for more examples of commands to run.
 
 ## Usage
 
-### Repository Management
+### Repository management
 
 ```sh
 # Scan deeper directories (up to 5 levels)
@@ -84,7 +112,7 @@ repos rm -t java
 repos rm -p
 ```
 
-### Running Commands
+### Running commands
 
 ```sh
 # Run a command in all repositories
@@ -101,6 +129,8 @@ repos run -l custom/logs "make build"
 ```
 
 #### Example commands
+
+Example commands to run with `repos run ""`:
 
 ```sh
 # Count the number of lines
@@ -119,8 +149,9 @@ git log --all --author='$(id -un)' --since='1 month ago' --pretty=format:'%h %an
 ### Creating Pull Requests
 
 ```sh
-# Create PRs for repositories with changes
 export GITHUB_TOKEN=your_github_token
+
+# Create PRs for repositories with changes
 repos pr --title "My changes" --body "Description of changes"
 
 # Create PRs with specific branch name
@@ -133,22 +164,6 @@ repos pr --draft
 repos pr -t backend
 ```
 
-## Configuration
-
-Create a `config.yaml` file in the root directory:
-
-```yaml
-repositories:
-  - name: loan-pricing
-    url: git@github.com:yourorg/loan-pricing.git
-    tags: [java, backend]
-    branch: develop  # Optional: Branch to clone
-
-  - name: web-ui
-    url: git@github.com:yourorg/web-ui.git
-    tags: [frontend, react]
-    # When branch is not specified, the default branch will be cloned
-```
 
 ## Development
 
@@ -168,6 +183,8 @@ gh release create v1.0.x --title "Repos v1.0.x" --notes "Release notes for versi
 ```
 
 ## Alternatives
+
+The following are the alternatives to `repos`:
 
 * [gita](https://github.com/nosarthur/gita): A tool to manage multiple Git
 repositories.
