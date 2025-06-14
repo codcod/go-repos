@@ -42,6 +42,11 @@ jobs:
       - name: Download Go dependencies
         run: go mod download
 
+      - name: Install development tools
+        run: |
+          make install-lint
+          make install-go-tools
+
       - name: Verify Go build
         run: make build
 
