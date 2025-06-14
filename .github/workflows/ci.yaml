@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ['1.23', '1.24']
+        go-version: ['1.24']
     
     steps:
       - name: Checkout
@@ -57,6 +57,7 @@ jobs:
         run: |
           make fmt
           make vet
+          golangci-lint cache clean
           make lint
 
       - name: Run unit tests

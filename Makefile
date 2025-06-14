@@ -147,12 +147,11 @@ install-go-tools: ## Install Go development tools
 	fi
 
 install-lint: ## Install golangci-lint
-	@if ! command -v golangci-lint >/dev/null 2>&1; then \
-		echo "Installing golangci-lint..."; \
-		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.59.1; \
-	else \
-		echo "golangci-lint already installed"; \
-	fi
+	@echo "Installing golangci-lint..."
+	@# Remove existing golangci-lint to avoid version conflicts
+	@rm -f $$(go env GOPATH)/bin/golangci-lint 2>/dev/null || true
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin latest
+	@echo "golangci-lint installed successfully"
 
 setup-commitlint: ## Setup commitlint Git hooks
 	@echo "Setting up commitlint..."
