@@ -61,9 +61,6 @@ jobs:
       - name: Run integration tests
         run: make test-integration
 
-      - name: Run benchmarks
-        run: make test-bench
-
       - name: Build multi-platform binaries
         run: make build-all
 

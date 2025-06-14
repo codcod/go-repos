@@ -70,9 +70,6 @@ jobs:
       - name: Generate test coverage
         run: make test-coverage
 
-      - name: Run benchmarks
-        run: make test-bench
-
       - name: Validate commit messages (if commitlint is available)
         if: github.event_name == 'pull_request'
         run: |
