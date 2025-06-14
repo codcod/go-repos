@@ -4,18 +4,20 @@ on:
   push:
     branches:
       - main
-      - master
   workflow_dispatch:
 
 permissions:
   contents: write
   issues: write
   pull-requests: write
+  id-token: write # For OIDC token generation
 
 jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    environment: production # Add environment protection
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,9 +26,10 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5 # Updated to v5
         with:
           go-version: '1.24'
+          cache: true # Enable Go module caching
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -39,9 +42,6 @@ jobs:
 
       - name: Download Go dependencies
         run: go mod download
-
-      - name: Install Go tools
-        run: make install-go-tools
 
       - name: Verify Go build
         run: make build

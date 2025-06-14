@@ -79,7 +79,7 @@ fmt: ## Format code
 	@if command -v goimports >/dev/null 2>&1; then \
 		goimports -w .; \
 	else \
-		echo "Installing goimports..."; \
+		echo "goimports not found, installing..."; \
 		go install golang.org/x/tools/cmd/goimports@latest; \
 		goimports -w .; \
 	fi
@@ -90,13 +90,21 @@ vet: ## Run go vet
 
 check: fmt vet lint ## Run all code quality checks
 
-security: ## Run security checks
+## Security targets
+security: ## Run security scans
 	@echo "Running security checks..."
+	@echo "Running govulncheck vulnerability scanner..."
 	@if ! command -v govulncheck >/dev/null 2>&1; then \
 		echo "Installing govulncheck..."; \
 		go install golang.org/x/vuln/cmd/govulncheck@latest; \
 	fi
 	govulncheck ./...
+	@echo "Running staticcheck..."
+	@if ! command -v staticcheck >/dev/null 2>&1; then \
+		echo "Installing staticcheck..."; \
+		go install honnef.co/go/tools/cmd/staticcheck@latest; \
+	fi
+	staticcheck ./...
 
 ## Cleanup targets
 clean: ## Clean build artifacts
@@ -119,12 +127,13 @@ mod-tidy: ## Tidy go modules
 ## Tools installation
 install-tools: ## Install development tools
 	@echo "Installing development tools..."
+	@$(MAKE) install-go-tools
 	@$(MAKE) install-lint
 	@$(MAKE) install-go-tools
 	@$(MAKE) setup-commitlint
 
 install-go-tools: ## Install Go development tools
-	@echo "Installing Go tools..."
+	@echo "Installing Go development tools..."
 	@if ! command -v goimports >/dev/null 2>&1; then \
 		echo "Installing goimports..."; \
 		go install golang.org/x/tools/cmd/goimports@latest; \
@@ -139,12 +148,11 @@ install-go-tools: ## Install Go development tools
 	fi
 
 install-lint: ## Install golangci-lint
-	@if ! command -v golangci-lint >/dev/null 2>&1; then \
-		echo "Installing golangci-lint..."; \
-		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.59.1; \
-	else \
-		echo "golangci-lint already installed"; \
-	fi
+	@echo "Installing golangci-lint..."
+	@# Remove existing golangci-lint to avoid version conflicts
+	@rm -f $$(go env GOPATH)/bin/golangci-lint 2>/dev/null || true
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin latest
+	@echo "golangci-lint installed successfully"
 
 setup-commitlint: ## Setup commitlint Git hooks
 	@echo "Setting up commitlint..."

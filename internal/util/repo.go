@@ -60,5 +60,5 @@ func ColoredRepoName(repo config.Repository, c *color.Color) string {
 
 // EnsureDirectoryExists ensures that a directory exists, creating it if necessary
 func EnsureDirectoryExists(path string) error {
-	return os.MkdirAll(path, 0755)
+	return os.MkdirAll(path, 0750)
 }

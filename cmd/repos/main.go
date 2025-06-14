@@ -1,3 +1,4 @@
+// cmd/repos/main.go
 package main
 
 import (
@@ -14,7 +15,7 @@ import (
 	"github.com/codcod/repos/internal/util"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
+	yaml "gopkg.in/yaml.v3"
 )
 
 var (
@@ -62,7 +63,7 @@ var cloneCmd = &cobra.Command{
 	Use:   "clone",
 	Short: "Clone repositories specified in config",
 	Long:  `Clone all repositories listed in the config file. Filter by tag if specified.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			color.Red("Error: %v", err)
@@ -102,7 +103,7 @@ var runCmd = &cobra.Command{
 	Short: "Run a command in each repository",
 	Long:  `Execute an arbitrary command in each repository. Filter by tag if specified.`,
 	Args:  cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		command := args[0]
 		if len(args) > 1 {
 			command = args[0] + " " + args[1]
@@ -154,7 +155,7 @@ var prCmd = &cobra.Command{
 	Use:   "pr",
 	Short: "Create pull requests for repositories with changes",
 	Long:  `Check for changes in repositories and create pull requests to GitHub.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			color.Red("Error: %v", err)
@@ -219,7 +220,7 @@ var rmCmd = &cobra.Command{
 	Use:   "rm",
 	Short: "Remove cloned repositories",
 	Long:  `Remove repositories that were previously cloned. Filter by tag if specified.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			color.Red("Error: %v", err)
@@ -255,7 +256,7 @@ var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Create a config.yaml file from discovered Git repositories",
 	Long:  `Scan the current directory for Git repositories and generate a config.yaml file based on discovered repositories.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		// Get current directory
 		currentDir, err := os.Getwd()
 		if err != nil {
@@ -297,7 +298,7 @@ var initCmd = &cobra.Command{
 		}
 
 		// Write to file
-		err = os.WriteFile(outputFile, yamlData, 0644)
+		err = os.WriteFile(outputFile, yamlData, 0600)
 		if err != nil {
 			color.Red("Error writing to file %s: %v", outputFile, err)
 			os.Exit(1)
@@ -381,7 +382,7 @@ func init() {
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "version",
 		Short: "Print version information",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Printf("repos %s (%s) built on %s\n", version, commit, date)
 		},
 	})

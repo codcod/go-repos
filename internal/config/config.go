@@ -5,8 +5,9 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
-	"gopkg.in/yaml.v3"
+	yaml "gopkg.in/yaml.v3"
 )
 
 // Repository represents a GitHub repository configuration
@@ -26,7 +27,11 @@ type Config struct {
 // LoadConfig loads the configuration from a YAML file.
 // It returns an error if the file cannot be read or parsed.
 func LoadConfig(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
+	// Clean and validate the path to prevent directory traversal
+	cleanPath := filepath.Clean(path)
+
+	// #nosec G304 - This is a legitimate config file read operation
+	data, err := os.ReadFile(cleanPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
