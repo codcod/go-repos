@@ -129,6 +129,7 @@ install-tools: ## Install development tools
 	@echo "Installing development tools..."
 	@$(MAKE) install-go-tools
 	@$(MAKE) install-lint
+	@$(MAKE) install-go-tools
 	@$(MAKE) setup-commitlint
 
 install-go-tools: ## Install Go development tools
