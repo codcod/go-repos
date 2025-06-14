@@ -55,6 +55,7 @@ func FindGitRepositories(rootPath string) ([]config.Repository, error) {
 func GetRemoteURL(repoPath string) (string, error) {
 	gitConfigPath := filepath.Join(repoPath, ".git", "config")
 
+	// #nosec G304 - This is a legitimate git config file read operation
 	data, err := os.ReadFile(gitConfigPath)
 	if err != nil {
 		return "", err

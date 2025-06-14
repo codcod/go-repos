@@ -16,7 +16,7 @@ func CreateTempConfig(t testing.TB, configYAML string) string {
 	t.Helper()
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
-	if err := os.WriteFile(configPath, []byte(configYAML), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configYAML), 0600); err != nil {
 		t.Fatalf("Failed to create test config file: %v", err)
 	}
 	return configPath
@@ -33,7 +33,7 @@ func CreateGitConfig(t testing.TB, gitDir, remoteURL string) {
 	fetch = +refs/heads/*:refs/remotes/origin/*`, remoteURL)
 
 	configPath := filepath.Join(gitDir, "config")
-	if err := os.WriteFile(configPath, []byte(gitConfig), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(gitConfig), 0600); err != nil {
 		t.Fatalf("Failed to write git config: %v", err)
 	}
 }
@@ -43,7 +43,7 @@ func CreateMockGitRepo(t testing.TB, baseDir, repoName, remoteURL string) string
 	t.Helper()
 	repoDir := filepath.Join(baseDir, repoName)
 	gitDir := filepath.Join(repoDir, ".git")
-	if err := os.MkdirAll(gitDir, 0755); err != nil {
+	if err := os.MkdirAll(gitDir, 0750); err != nil {
 		t.Fatalf("Failed to create git directory: %v", err)
 	}
 	CreateGitConfig(t, gitDir, remoteURL)
@@ -65,7 +65,7 @@ func CreateRealGitRepo(t testing.TB, repoDir string) {
 
 	// Create initial commit
 	testFile := filepath.Join(repoDir, "README.md")
-	if err := os.WriteFile(testFile, []byte("# Test Repository"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("# Test Repository"), 0600); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 	_ = exec.Command("git", "-C", repoDir, "add", "README.md").Run()
