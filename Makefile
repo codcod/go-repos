@@ -76,13 +76,27 @@ lint: ## Run linter
 fmt: ## Format code
 	@echo "Formatting code..."
 	gofmt -s -w .
-	goimports -w .
+	@if command -v goimports >/dev/null 2>&1; then \
+		goimports -w .; \
+	else \
+		echo "Installing goimports..."; \
+		go install golang.org/x/tools/cmd/goimports@latest; \
+		goimports -w .; \
+	fi
 
 vet: ## Run go vet
 	@echo "Running go vet..."
 	go vet ./...
 
 check: fmt vet lint ## Run all code quality checks
+
+security: ## Run security checks
+	@echo "Running security checks..."
+	@if ! command -v govulncheck >/dev/null 2>&1; then \
+		echo "Installing govulncheck..."; \
+		go install golang.org/x/vuln/cmd/govulncheck@latest; \
+	fi
+	govulncheck ./...
 
 ## Cleanup targets
 clean: ## Clean build artifacts
@@ -106,7 +120,23 @@ mod-tidy: ## Tidy go modules
 install-tools: ## Install development tools
 	@echo "Installing development tools..."
 	@$(MAKE) install-lint
+	@$(MAKE) install-go-tools
 	@$(MAKE) setup-commitlint
+
+install-go-tools: ## Install Go development tools
+	@echo "Installing Go tools..."
+	@if ! command -v goimports >/dev/null 2>&1; then \
+		echo "Installing goimports..."; \
+		go install golang.org/x/tools/cmd/goimports@latest; \
+	else \
+		echo "goimports already installed"; \
+	fi
+	@if ! command -v govulncheck >/dev/null 2>&1; then \
+		echo "Installing govulncheck..."; \
+		go install golang.org/x/vuln/cmd/govulncheck@latest; \
+	else \
+		echo "govulncheck already installed"; \
+	fi
 
 install-lint: ## Install golangci-lint
 	@if ! command -v golangci-lint >/dev/null 2>&1; then \
