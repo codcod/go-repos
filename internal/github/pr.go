@@ -170,7 +170,7 @@ func createGitHubPullRequestImpl(owner, repo string, options PROptions, baseBran
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check response
 	if resp.StatusCode != http.StatusCreated {

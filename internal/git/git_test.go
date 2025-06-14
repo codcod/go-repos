@@ -20,8 +20,8 @@ func TestHasChanges(t *testing.T) {
 	}
 
 	// Configure git user for commits
-	exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
-	exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
+	_ = exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
+	_ = exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
 
 	// Test clean repository
 	hasChanges, err := HasChanges(tmpDir)
@@ -112,14 +112,14 @@ func TestBranchExists(t *testing.T) {
 	}
 
 	// Configure git user
-	exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
-	exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
+	_ = exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
+	_ = exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
 
 	// Create initial commit
 	testFile := filepath.Join(tmpDir, "test.txt")
-	os.WriteFile(testFile, []byte("test"), 0644)
-	exec.Command("git", "-C", tmpDir, "add", "test.txt").Run()
-	exec.Command("git", "-C", tmpDir, "commit", "-m", "initial").Run()
+	_ = os.WriteFile(testFile, []byte("test"), 0644)
+	_ = exec.Command("git", "-C", tmpDir, "add", "test.txt").Run()
+	_ = exec.Command("git", "-C", tmpDir, "commit", "-m", "initial").Run()
 
 	// Test existing branch (main or master)
 	if BranchExists(tmpDir, "main") {
@@ -156,14 +156,14 @@ func TestCreateAndCheckoutBranch(t *testing.T) {
 	}
 
 	// Configure git user
-	exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
-	exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
+	_ = exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
+	_ = exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
 
 	// Create initial commit
 	testFile := filepath.Join(tmpDir, "test.txt")
-	os.WriteFile(testFile, []byte("test"), 0644)
-	exec.Command("git", "-C", tmpDir, "add", "test.txt").Run()
-	exec.Command("git", "-C", tmpDir, "commit", "-m", "initial").Run()
+	_ = os.WriteFile(testFile, []byte("test"), 0644)
+	_ = exec.Command("git", "-C", tmpDir, "add", "test.txt").Run()
+	_ = exec.Command("git", "-C", tmpDir, "commit", "-m", "initial").Run()
 
 	// Test creating new branch
 	branchName := "test-branch"
@@ -198,14 +198,14 @@ func TestAddAllChanges(t *testing.T) {
 	}
 
 	// Configure git user
-	exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
-	exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
+	_ = exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
+	_ = exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
 
 	// Create test files
 	testFile1 := filepath.Join(tmpDir, "test1.txt")
 	testFile2 := filepath.Join(tmpDir, "test2.txt")
-	os.WriteFile(testFile1, []byte("test1"), 0644)
-	os.WriteFile(testFile2, []byte("test2"), 0644)
+	_ = os.WriteFile(testFile1, []byte("test1"), 0644)
+	_ = os.WriteFile(testFile2, []byte("test2"), 0644)
 
 	// Add all changes
 	err := AddAllChanges(tmpDir)
@@ -238,13 +238,13 @@ func TestCommitChanges(t *testing.T) {
 	}
 
 	// Configure git user
-	exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
-	exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
+	_ = exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
+	_ = exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
 
 	// Create and stage a file
 	testFile := filepath.Join(tmpDir, "test.txt")
-	os.WriteFile(testFile, []byte("test"), 0644)
-	exec.Command("git", "-C", tmpDir, "add", "test.txt").Run()
+	_ = os.WriteFile(testFile, []byte("test"), 0644)
+	_ = exec.Command("git", "-C", tmpDir, "add", "test.txt").Run()
 
 	// Test commit
 	commitMsg := "Test commit message"
@@ -355,14 +355,14 @@ func BenchmarkHasChanges(b *testing.B) {
 	}
 
 	// Configure git user
-	exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
-	exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
+	_ = exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
+	_ = exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
 
 	// Create initial commit
 	testFile := filepath.Join(tmpDir, "test.txt")
-	os.WriteFile(testFile, []byte("test"), 0644)
-	exec.Command("git", "-C", tmpDir, "add", "test.txt").Run()
-	exec.Command("git", "-C", tmpDir, "commit", "-m", "initial").Run()
+	_ = os.WriteFile(testFile, []byte("test"), 0644)
+	_ = exec.Command("git", "-C", tmpDir, "add", "test.txt").Run()
+	_ = exec.Command("git", "-C", tmpDir, "commit", "-m", "initial").Run()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -383,12 +383,12 @@ func BenchmarkBranchExists(b *testing.B) {
 	}
 
 	// Configure git user and create initial commit
-	exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
-	exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
+	_ = exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
+	_ = exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
 	testFile := filepath.Join(tmpDir, "test.txt")
-	os.WriteFile(testFile, []byte("test"), 0644)
-	exec.Command("git", "-C", tmpDir, "add", "test.txt").Run()
-	exec.Command("git", "-C", tmpDir, "commit", "-m", "initial").Run()
+	_ = os.WriteFile(testFile, []byte("test"), 0644)
+	_ = exec.Command("git", "-C", tmpDir, "add", "test.txt").Run()
+	_ = exec.Command("git", "-C", tmpDir, "commit", "-m", "initial").Run()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

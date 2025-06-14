@@ -73,7 +73,7 @@ func TestPrepareLogFile(t *testing.T) {
 					t.Error("Expected log file but got nil")
 					return
 				}
-				defer logFile.Close()
+				defer func() { _ = logFile.Close() }()
 
 				if logFilePath == "" {
 					t.Error("Expected log file path but got empty string")
@@ -140,7 +140,7 @@ func TestOutputProcessor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test log file: %v", err)
 	}
-	defer logFile.Close()
+	defer func() { _ = logFile.Close() }()
 
 	tests := []struct {
 		name        string
@@ -182,15 +182,11 @@ func TestOutputProcessor(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Reset log file
-			logFile.Seek(0, 0)
-			logFile.Truncate(0)
+			_, _ = logFile.Seek(0, 0)
+			_ = logFile.Truncate(0)
 
-			processor := &OutputProcessor{
-				RepoName:  tt.repoName,
-				LogFile:   logFile,
-				IsStderr:  tt.isStderr,
-				HeaderSet: false,
-			}
+			// Track if stderr header has been set for this test
+			headerSet := false
 
 			// We can't easily test the goroutine and WaitGroup in unit tests,
 			// so we'll test the core logic directly
@@ -199,14 +195,14 @@ func TestOutputProcessor(t *testing.T) {
 				lines := strings.Split(strings.TrimSuffix(tt.input, "\n"), "\n")
 				for _, line := range lines {
 					if line != "" {
-						if tt.isStderr && !processor.HeaderSet {
-							logFile.WriteString("\n=== STDERR ===\n")
-							processor.HeaderSet = true
+						if tt.isStderr && !headerSet {
+							_, _ = logFile.WriteString("\n=== STDERR ===\n")
+							headerSet = true
 						}
-						logFile.WriteString(tt.repoName + " | " + line + "\n")
+						_, _ = logFile.WriteString(tt.repoName + " | " + line + "\n")
 					}
 				}
-				logFile.Sync()
+				_ = logFile.Sync()
 			}
 
 			// Verify log file content
@@ -311,8 +307,8 @@ func TestRunCommandWithComplexCommand(t *testing.T) {
 	// Create test files
 	testFile1 := filepath.Join(tmpDir, "file1.txt")
 	testFile2 := filepath.Join(tmpDir, "file2.txt")
-	os.WriteFile(testFile1, []byte("content1"), 0644)
-	os.WriteFile(testFile2, []byte("content2"), 0644)
+	_ = os.WriteFile(testFile1, []byte("content1"), 0644)
+	_ = os.WriteFile(testFile2, []byte("content2"), 0644)
 
 	// Test with complex shell command
 	err := RunCommand(repo, "find . -name '*.txt' | wc -l", "")
@@ -355,8 +351,8 @@ func TestRunCommandWithRepoPathFromURL(t *testing.T) {
 
 	// Change to temp directory so relative path works
 	originalDir, _ := os.Getwd()
-	os.Chdir(tmpDir)
-	defer os.Chdir(originalDir)
+	_ = os.Chdir(tmpDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
 	repo := config.Repository{
 		Name: "test-repo",
@@ -433,7 +429,7 @@ func BenchmarkPrepareLogFile(b *testing.B) {
 			b.Fatalf("PrepareLogFile() error = %v", err)
 		}
 		if logFile != nil {
-			logFile.Close()
+			_ = logFile.Close()
 		}
 	}
 }

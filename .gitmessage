@@ -1,0 +1,21 @@
+#!/bin/sh
+# Prepare commit message hook for commitlint
+
+# Check if this is an interactive commit (not automated)
+if [ "$2" = "" ] || [ "$2" = "template" ]; then
+    # Add a comment with commit message format guidelines
+    cat << EOF >> "$1"
+
+# Commit Message Format:
+# <type>(<scope>): <subject>
+#
+# <body>
+#
+# <footer>
+#
+# Types: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert
+# Example: feat(api): add user authentication endpoint
+# Example: fix(ui): resolve navigation menu overflow issue
+# Example: docs: update installation instructions
+EOF
+fi

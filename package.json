@@ -8,7 +8,8 @@
     "release:dry": "semantic-release --dry-run",
     "release:test": "./scripts/test-release.sh",
     "build": "make build",
-    "test": "go test ./..."
+    "test": "go test ./...",
+    "commitlint": "commitlint --edit"
   },
   "repository": {
     "type": "git",
@@ -24,6 +25,8 @@
   "author": "codcod",
   "license": "MIT",
   "devDependencies": {
+    "@commitlint/cli": "^18.4.4",
+    "@commitlint/config-conventional": "^18.4.4",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/commit-analyzer": "^11.1.0",
     "@semantic-release/exec": "^6.0.3",
