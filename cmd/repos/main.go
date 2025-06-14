@@ -15,7 +15,7 @@ import (
 	"github.com/codcod/repos/internal/util"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
+	yaml "gopkg.in/yaml.v3"
 )
 
 var (
