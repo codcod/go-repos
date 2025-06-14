@@ -1,3 +1,19 @@
+# [1.2.0](https://github.com/codcod/repos/compare/v1.1.0...v1.2.0) (2025-06-14)
+
+
+### Bug Fixes
+
+* add explicit yaml import aliases to resolve undefined yaml errors ([5bfcd54](https://github.com/codcod/repos/commit/5bfcd54b5bdc20607c01c642cacb584ffd74778f))
+* add install-go-tools target and ensure goimports is available in ci ([26d461f](https://github.com/codcod/repos/commit/26d461ffc2a40b44049153adbf94735e4ed26847))
+* replace broken gosec github action with direct tool installation ([7e5e7a0](https://github.com/codcod/repos/commit/7e5e7a0c7e1794d5627f22e7ada7bcd260d91400))
+* resolve golangci-lint path issues in ci environment ([6113c1b](https://github.com/codcod/repos/commit/6113c1b10e4e000ee987824db4145f8367ee17df))
+* update golangci-lint to latest version for go 1.24 compatibility ([4476dc0](https://github.com/codcod/repos/commit/4476dc04fa491f8d1c0f7cd6b76c1fd07dcc8a2f))
+
+
+### Features
+
+* a new release ([25776e5](https://github.com/codcod/repos/commit/25776e56b5e096c27d07afc66d70df9d0c23a45d))
+
 # [1.1.0](https://github.com/codcod/repos/compare/v1.0.1...v1.1.0) (2025-06-14)
 
 
