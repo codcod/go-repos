@@ -1,3 +1,5 @@
+// Package runner provides functionality to run commands in repositories
+// and process their output in real-time.
 package runner
 
 import (
@@ -75,6 +77,7 @@ func PrepareLogFile(repo config.Repository, logDir, command, repoDir string) (*o
 		repo.Name,
 		time.Now().Format("20060102_150405")))
 
+	// #nosec G304 - This is a legitimate log file creation in a controlled directory
 	logFile, err := os.Create(logFilePath)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to create log file: %w", err)
