@@ -2,7 +2,9 @@
 
 # Repos
 
-A CLI tool to manage multiple GitHub repositories. Clone them, run commands across all repositories, create pull requests, and more—all with colored output and comprehensive logging.
+A CLI tool to manage multiple GitHub repositories. Clone them, run commands
+across all repositories, create pull requests, and more—all with colored output
+and comprehensive logging.
 
 ## Features
 
