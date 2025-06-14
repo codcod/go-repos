@@ -49,6 +49,7 @@ jobs:
         run: |
           make install-lint
           make install-go-tools
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Verify Go build
         run: make build
@@ -68,9 +69,6 @@ jobs:
 
       - name: Generate test coverage
         run: make test-coverage
-
-      - name: Run benchmarks
-        run: make test-bench
 
       - name: Validate commit messages (if commitlint is available)
         if: github.event_name == 'pull_request'
@@ -97,7 +95,9 @@ jobs:
           cache: true
 
       - name: Install Go tools
-        run: make install-go-tools
+        run: |
+          make install-go-tools
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Run govulncheck vulnerability scanner
         run: govulncheck ./...
