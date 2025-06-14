@@ -40,7 +40,6 @@ var (
 	createOnly bool
 
 	// Init command flags
-	maxDepth   int
 	outputFile string
 	overwrite  bool
 )
@@ -271,8 +270,8 @@ var initCmd = &cobra.Command{
 		}
 
 		// Find Git repositories
-		color.Green("Scanning for Git repositories in %s (max depth: %d)...", currentDir, maxDepth)
-		repos, err := util.FindGitRepositories(currentDir, maxDepth)
+		color.Green("Scanning for Git repositories in %s...", currentDir)
+		repos, err := util.FindGitRepositories(currentDir)
 		if err != nil {
 			color.Red("Error scanning for repositories: %v", err)
 			os.Exit(1)
@@ -369,7 +368,6 @@ func init() {
 	prCmd.Flags().BoolVar(&createOnly, "create-only", false, "Only create PR, don't commit changes")
 
 	// Init command flags
-	initCmd.Flags().IntVar(&maxDepth, "depth", 3, "Maximum directory depth to scan for repositories")
 	initCmd.Flags().StringVarP(&outputFile, "output", "o", "config.yaml", "Output file name")
 	initCmd.Flags().BoolVar(&overwrite, "overwrite", false, "Overwrite existing file if it exists")
 

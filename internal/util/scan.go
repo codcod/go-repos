@@ -8,88 +8,47 @@ import (
 	"github.com/codcod/repos/internal/config"
 )
 
-// FindGitRepositories recursively scans a directory for git repositories
-func FindGitRepositories(rootPath string, maxDepth int) ([]config.Repository, error) {
+// FindGitRepositories scans a directory for git repositories (non-recursive)
+func FindGitRepositories(rootPath string) ([]config.Repository, error) {
 	var repos []config.Repository
 
-	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
+	entries, err := os.ReadDir(rootPath)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
 		}
 
-		// Skip the root directory itself
-		if path == rootPath {
-			return nil
-		}
+		entryPath := filepath.Join(rootPath, entry.Name())
 
-		// Look for .git directory first
-		if info.IsDir() && info.Name() == ".git" {
-			repoPath := filepath.Dir(path)
-			
-			// Calculate repository depth (the depth of the repository directory itself)
-			repoRelPath, err := filepath.Rel(rootPath, repoPath)
-			if err != nil {
-				return err
-			}
-			
-			repoDepth := 0
-			if repoRelPath != "." {
-				repoDepth = strings.Count(repoRelPath, string(os.PathSeparator)) + 1
-			}
-			
-			// Only include repository if it's within the max depth
-			if maxDepth > 0 && repoDepth > maxDepth {
-				return filepath.SkipDir
-			}
-			
-			repoName := filepath.Base(repoPath)
+		// Check if this directory is a git repository
+		if IsGitRepository(entryPath) {
+			repoName := entry.Name()
 
 			// Get remote URL
-			gitRemoteURL, _ := GetRemoteURL(repoPath)
+			gitRemoteURL, _ := GetRemoteURL(entryPath)
 
-			// Skip if no remote URL found - but don't skip the directory, just continue
+			// Skip if no remote URL found
 			if gitRemoteURL == "" {
-				return nil
+				continue
 			}
 
 			// Create repository entry
 			repo := config.Repository{
 				Name: repoName,
 				URL:  gitRemoteURL,
-				Path: repoPath,
+				Path: entryPath,
 				Tags: []string{"auto-discovered"},
 			}
 
 			repos = append(repos, repo)
-
-			// Skip deeper traversal of this directory
-			return filepath.SkipDir
 		}
+	}
 
-		// Calculate current depth relative to root for non-.git directories
-		relPath, err := filepath.Rel(rootPath, path)
-		if err != nil {
-			return err
-		}
-		
-		// Count directory separators to determine depth
-		depth := 0
-		if relPath != "." {
-			depth = strings.Count(relPath, string(os.PathSeparator)) + 1
-		}
-
-		// Skip if we've exceeded max depth
-		if maxDepth > 0 && depth > maxDepth {
-			if info.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-
-		return nil
-	})
-
-	return repos, err
+	return repos, nil
 }
 
 // GetRemoteURL retrieves the origin remote URL of a git repository

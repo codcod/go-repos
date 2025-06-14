@@ -102,17 +102,17 @@ func TestCreatePullRequestCreateOnlyMode(t *testing.T) {
 			"draft": options.Draft,
 		}
 		jsonData, _ := json.Marshal(data)
-		
+
 		req, _ := http.NewRequest("POST", server.URL+"/repos/"+owner+"/"+repo+"/pulls", bytes.NewBuffer(jsonData))
 		req.Header.Set("Authorization", "token "+options.Token)
 		req.Header.Set("Content-Type", "application/json")
-		
+
 		resp, err := client.Do(req)
 		if err != nil {
 			return err
 		}
 		defer resp.Body.Close()
-		
+
 		if resp.StatusCode != http.StatusCreated {
 			return err
 		}
@@ -229,19 +229,19 @@ func TestCreateGitHubPullRequestSuccess(t *testing.T) {
 			"draft": options.Draft,
 		}
 		jsonData, _ := json.Marshal(data)
-		
+
 		req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 		req.Header.Set("Accept", "application/vnd.github.v3+json")
 		req.Header.Set("Authorization", "token "+options.Token)
 		req.Header.Set("Content-Type", "application/json")
-		
+
 		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
 			return err
 		}
 		defer resp.Body.Close()
-		
+
 		if resp.StatusCode != http.StatusCreated {
 			return err
 		}
@@ -293,19 +293,19 @@ func TestCreateGitHubPullRequestFailure(t *testing.T) {
 			"draft": options.Draft,
 		}
 		jsonData, _ := json.Marshal(data)
-		
+
 		req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 		req.Header.Set("Accept", "application/vnd.github.v3+json")
 		req.Header.Set("Authorization", "token "+options.Token)
 		req.Header.Set("Content-Type", "application/json")
-		
+
 		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
 			return err
 		}
 		defer resp.Body.Close()
-		
+
 		if resp.StatusCode != http.StatusCreated {
 			var errorResponse map[string]interface{}
 			json.NewDecoder(resp.Body).Decode(&errorResponse)
@@ -392,7 +392,7 @@ func TestCreateGitHubPullRequestWithEnvToken(t *testing.T) {
 		if options.Token == "" {
 			return fmt.Errorf("GitHub token not provided and GITHUB_TOKEN environment variable not set")
 		}
-		
+
 		// Simulate successful API call
 		req, _ := http.NewRequest("POST", server.URL, nil)
 		req.Header.Set("Authorization", "token "+options.Token)

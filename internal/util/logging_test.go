@@ -15,6 +15,7 @@ func TestNewLogger(t *testing.T) {
 	logger := NewLogger()
 	if logger == nil {
 		t.Error("NewLogger() should not return nil")
+		return // Return early if logger is nil to avoid nil pointer dereference
 	}
 
 	if logger.repoColor == nil {
@@ -235,11 +236,11 @@ func TestLoggerWithSpecialCharacters(t *testing.T) {
 
 func TestLoggerRepoColorFunction(t *testing.T) {
 	logger := NewLogger()
-	
+
 	// Test that repoColor function works
 	testString := "test"
 	coloredString := logger.repoColor(testString)
-	
+
 	// When colors are enabled, the string should be different (contain ANSI codes)
 	// When colors are disabled, it should be the same
 	if color.NoColor {
@@ -265,13 +266,13 @@ func TestLoggerMultipleRepos(t *testing.T) {
 		{Name: "repo2", URL: "git@github.com:owner/repo2.git"},
 		{Name: "repo3", URL: "git@github.com:owner/repo3.git"},
 	}
-	
+
 	// Capture stdout using color package's output
 	var buf bytes.Buffer
 	color.Output = &buf
 
 	logger := NewLogger()
-	
+
 	for i, repo := range repos {
 		logger.Info(repo, "Message %d", i+1)
 	}
@@ -287,7 +288,7 @@ func TestLoggerMultipleRepos(t *testing.T) {
 			t.Errorf("Output should contain repo name %s, got: %s", repo.Name, output)
 		}
 	}
-	
+
 	// Check that all messages appear
 	for i := 1; i <= 3; i++ {
 		expectedMsg := fmt.Sprintf("Message %d", i)

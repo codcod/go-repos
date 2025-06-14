@@ -88,7 +88,7 @@ func TestGetEnvOrDefault(t *testing.T) {
 			result := getEnvOrDefault(tt.key, tt.defaultValue)
 
 			if result != tt.expected {
-				t.Errorf("getEnvOrDefault(%q, %q) = %q, want %q", 
+				t.Errorf("getEnvOrDefault(%q, %q) = %q, want %q",
 					tt.key, tt.defaultValue, result, tt.expected)
 			}
 		})
@@ -185,7 +185,7 @@ func TestVersionVariablesWithEnv(t *testing.T) {
 			// Test that environment variable is used
 			result := tc.getter()
 			if result != tc.envValue {
-				t.Errorf("Expected %s to be %q when env var is set, got %q", 
+				t.Errorf("Expected %s to be %q when env var is set, got %q",
 					tc.envVar, tc.envValue, result)
 			}
 		})
@@ -204,7 +204,7 @@ func TestGlobalVariablesInitialization(t *testing.T) {
 	if configFile == "" {
 		t.Error("configFile should have a default value")
 	}
-	
+
 	// Check that boolean flags have proper zero values
 	if parallel != false {
 		t.Error("parallel should default to false")
@@ -219,21 +219,16 @@ func TestGlobalVariablesInitialization(t *testing.T) {
 		t.Error("overwrite should default to false")
 	}
 
-	// Check that numeric flags have proper default values
-	if maxDepth != 3 {
-		t.Error("maxDepth should default to 3")
-	}
-
 	// Check that string flags are initialized (empty is OK)
-	_ = tag         // tag can be empty
-	_ = logDir      // logDir can be empty
-	_ = prTitle     // prTitle can be empty
-	_ = prBody      // prBody can be empty
-	_ = prBranch    // prBranch can be empty
-	_ = baseBranch  // baseBranch can be empty
-	_ = commitMsg   // commitMsg can be empty
-	_ = prToken     // prToken can be empty
-	_ = outputFile  // outputFile can be empty
+	_ = tag        // tag can be empty
+	_ = logDir     // logDir can be empty
+	_ = prTitle    // prTitle can be empty
+	_ = prBody     // prBody can be empty
+	_ = prBranch   // prBranch can be empty
+	_ = baseBranch // baseBranch can be empty
+	_ = commitMsg  // commitMsg can be empty
+	_ = prToken    // prToken can be empty
+	_ = outputFile // outputFile can be empty
 }
 
 func TestEnvironmentVariableEdgeCases(t *testing.T) {
@@ -281,7 +276,7 @@ func TestEnvironmentVariableEdgeCases(t *testing.T) {
 			// Test
 			result := getEnvOrDefault(tt.key, "default")
 			if result != tt.expected {
-				t.Errorf("getEnvOrDefault with %s failed: got %q, want %q", 
+				t.Errorf("getEnvOrDefault with %s failed: got %q, want %q",
 					tt.name, result, tt.expected)
 			}
 		})
@@ -291,7 +286,7 @@ func TestEnvironmentVariableEdgeCases(t *testing.T) {
 func BenchmarkGetEnvOrDefault(b *testing.B) {
 	key := "BENCHMARK_TEST_VAR"
 	defaultValue := "default_value"
-	
+
 	// Test with environment variable set
 	os.Setenv(key, "env_value")
 	defer os.Unsetenv(key)
@@ -305,7 +300,7 @@ func BenchmarkGetEnvOrDefault(b *testing.B) {
 func BenchmarkGetEnvOrDefaultNotSet(b *testing.B) {
 	key := "BENCHMARK_TEST_VAR_NOT_SET"
 	defaultValue := "default_value"
-	
+
 	// Ensure environment variable is not set
 	os.Unsetenv(key)
 
@@ -314,4 +309,3 @@ func BenchmarkGetEnvOrDefaultNotSet(b *testing.B) {
 		_ = getEnvOrDefault(key, defaultValue)
 	}
 }
-

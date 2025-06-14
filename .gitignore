@@ -28,3 +28,6 @@ custom/logs/
 # Other files
 cloned_repos/
 config.yaml
+
+# Coverage files
+coverage.*
