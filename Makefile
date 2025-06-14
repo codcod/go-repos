@@ -90,6 +90,22 @@ vet: ## Run go vet
 
 check: fmt vet lint ## Run all code quality checks
 
+## Security targets
+security: ## Run security scans
+	@echo "Running security checks..."
+	@echo "Running govulncheck vulnerability scanner..."
+	@if ! command -v govulncheck >/dev/null 2>&1; then \
+		echo "Installing govulncheck..."; \
+		go install golang.org/x/vuln/cmd/govulncheck@latest; \
+	fi
+	govulncheck ./...
+	@echo "Running staticcheck..."
+	@if ! command -v staticcheck >/dev/null 2>&1; then \
+		echo "Installing staticcheck..."; \
+		go install honnef.co/go/tools/cmd/staticcheck@latest; \
+	fi
+	staticcheck ./...
+
 ## Cleanup targets
 clean: ## Clean build artifacts
 	@echo "Cleaning up..."

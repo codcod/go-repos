@@ -92,12 +92,13 @@ jobs:
           go-version: '1.24'
           cache: true
 
-      - name: Run Gosec Security Scanner
-        uses: securecodewarrior/github-action-gosec@master
-        with:
-          args: './...'
+      - name: Install Go tools
+        run: make install-go-tools
 
-      - name: Run govulncheck
+      - name: Run govulncheck vulnerability scanner
+        run: govulncheck ./...
+
+      - name: Run staticcheck linter
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          govulncheck ./...
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          staticcheck ./...
