@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/codcod/repos/compare/v1.0.1...v1.1.0) (2025-06-14)
+
+
+### Features
+
+* remove max depth option ([5ba0c4a](https://github.com/codcod/repos/commit/5ba0c4a5624e49f316cc30bf5fad39d71fd55c42))
+
 ## [1.0.1](https://github.com/codcod/repos/compare/v1.0.0...v1.0.1) (2025-06-08)
 
 
