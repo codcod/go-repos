@@ -1,5 +1,7 @@
 # Semantic Release Migration Guide
 
+> **Quick Reference**: This document explains our migration to automated releases. For daily development workflow, see the [Development Guide](01_development.md).
+
 This document explains the migration from our homegrown semantic release solution to the official [semantic-release](https://semantic-release.gitbook.io/) project.
 
 ## What Changed
@@ -210,6 +212,13 @@ Potential improvements:
 - Add automated dependency updates
 - Add release notifications to Slack/Discord
 - Add support for pre-releases and beta channels
+
+## Related Documentation
+
+- [Development Guide](01_development.md) - Development setup and commit message conventions
+- [Migration Summary](03_migration_summary.md) - High-level overview of this migration
+- [Testing Guide](04_testing.md) - Testing the release process
+- [Main README](../README.md) - Project overview and usage
 
 ## Resources
 

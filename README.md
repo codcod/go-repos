@@ -2,30 +2,27 @@
 
 # Repos
 
-A CLI tool to manage multiple GitHub repositories: clone them and run arbitrary
-commands in each, with colored output and logging.
+A CLI tool to manage multiple GitHub repositories. Clone them, run commands across all repositories, create pull requests, and more—all with colored output and comprehensive logging.
 
 ## Features
 
-- Clone multiple repositories from a config file
-- Filter repositories by tag
-- Run commands in all or filtered repositories
-- Create pull requests for changes
-- Parallel execution support
-- Real-time, colorized logs
-- Per-repo log files
+- 🚀 **Multi-repository management**: Clone and manage multiple repositories from a single config file
+- 🏷️ **Tag-based filtering**: Run commands on specific repository groups using tags
+- ⚡ **Parallel execution**: Execute commands across repositories simultaneously for faster operations
+- 🎨 **Colorized output**: Real-time colored logs with repository identification
+- 📝 **Comprehensive logging**: Per-repository log files for detailed command history
+- 🔄 **Pull request automation**: Create and manage pull requests across multiple repositories
 
-## Installation
+## Installation:
 
-```sh
+```bash
 brew tap codcod/taps
 brew install repos
 ```
 
 ## Configuration
 
-To work properly, `repos` requires information about Git repositories. To
-provide it, create a `config.yaml` file in the root directory:
+The `config.yaml` file defines which repositories to manage and how to organize them.
 
 ```yaml
 repositories:
@@ -171,6 +168,12 @@ repos pr --draft
 # Create PRs for specific repositories
 repos pr -t backend
 ```
+
+### Documentation
+
+- [Development Guide](docs/01_development.md) - Setup, building, and commit conventions
+- [Testing Guide](docs/04_testing.md) - Comprehensive testing strategy and best practices  
+- [Scripts Documentation](scripts/README.md) - Utility scripts for development
 
 ## Alternatives
 

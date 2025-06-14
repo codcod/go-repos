@@ -1,3 +1,5 @@
+// Package config provides configuration management for repository operations.
+// It handles loading YAML configuration files and filtering repositories by tags.
 package config
 
 import (
@@ -21,7 +23,8 @@ type Config struct {
 	Repositories []Repository `yaml:"repositories"`
 }
 
-// LoadConfig loads the configuration from a YAML file
+// LoadConfig loads the configuration from a YAML file.
+// It returns an error if the file cannot be read or parsed.
 func LoadConfig(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -36,7 +39,9 @@ func LoadConfig(path string) (*Config, error) {
 	return &config, nil
 }
 
-// FilterRepositoriesByTag filters repositories by tag
+// FilterRepositoriesByTag filters repositories by tag.
+// If tag is empty, returns all repositories.
+// Tag matching is case-sensitive.
 func (c *Config) FilterRepositoriesByTag(tag string) []Repository {
 	if tag == "" {
 		return c.Repositories
@@ -53,4 +58,25 @@ func (c *Config) FilterRepositoriesByTag(tag string) []Repository {
 	}
 
 	return filtered
+}
+
+// HasTag checks if a repository has the specified tag.
+func (r *Repository) HasTag(tag string) bool {
+	for _, t := range r.Tags {
+		if t == tag {
+			return true
+		}
+	}
+	return false
+}
+
+// Validate checks if a repository configuration is valid.
+func (r *Repository) Validate() error {
+	if r.Name == "" {
+		return fmt.Errorf("repository name is required")
+	}
+	if r.URL == "" {
+		return fmt.Errorf("repository URL is required")
+	}
+	return nil
 }

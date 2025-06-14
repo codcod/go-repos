@@ -1,5 +1,7 @@
 # Migration Summary: Homegrown to semantic-release
 
+> **Overview**: This is a high-level summary of our semantic release migration. For technical details, see [Semantic Release Migration Guide](02_semantic_release.md).
+
 ## ✅ Migration Complete
 
 The migration from the homegrown semantic release solution to the official [semantic-release](https://semantic-release.gitbook.io/) project has been successfully completed.
@@ -142,6 +144,13 @@ VERSION=1.0.0 COMMIT=abc123 BUILD_DATE=2024-12-19 make build
 - [semantic-release Documentation](https://semantic-release.gitbook.io/)
 - [Conventional Commits Specification](https://www.conventionalcommits.org/)
 - [Local Documentation](docs/SEMANTIC_RELEASE.md)
+
+## Related Documentation
+
+- [Semantic Release Migration Guide](02_semantic_release.md) - Detailed technical migration documentation
+- [Development Guide](01_development.md) - Updated development workflow and commit conventions
+- [Code Improvements](05_code_improvements.md) - Other recent codebase improvements
+- [Main README](../README.md) - Updated project documentation
 
 ## 🎯 Success Criteria
 

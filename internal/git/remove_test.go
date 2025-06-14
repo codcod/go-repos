@@ -24,7 +24,7 @@ func TestRemoveRepository(t *testing.T) {
 			setupRepo: func(baseDir string) config.Repository {
 				repoDir := filepath.Join(baseDir, "valid-repo")
 				gitDir := filepath.Join(repoDir, ".git")
-				os.MkdirAll(gitDir, 0755)
+				_ = os.MkdirAll(gitDir, 0755)
 
 				return config.Repository{
 					Name: "valid-repo",
@@ -39,7 +39,7 @@ func TestRemoveRepository(t *testing.T) {
 			setupRepo: func(baseDir string) config.Repository {
 				customPath := filepath.Join(baseDir, "custom", "path", "repo")
 				gitDir := filepath.Join(customPath, ".git")
-				os.MkdirAll(gitDir, 0755)
+				_ = os.MkdirAll(gitDir, 0755)
 
 				return config.Repository{
 					Name: "custom-repo",
@@ -55,7 +55,7 @@ func TestRemoveRepository(t *testing.T) {
 				// No custom path - should derive from URL
 				repoDir := filepath.Join(baseDir, "url-derived-repo")
 				gitDir := filepath.Join(repoDir, ".git")
-				os.MkdirAll(gitDir, 0755)
+				_ = os.MkdirAll(gitDir, 0755)
 
 				return config.Repository{
 					Name: "url-derived-repo",
@@ -81,7 +81,7 @@ func TestRemoveRepository(t *testing.T) {
 			name: "error when directory is not a git repository",
 			setupRepo: func(baseDir string) config.Repository {
 				notGitDir := filepath.Join(baseDir, "not-git")
-				os.MkdirAll(notGitDir, 0755)
+				_ = os.MkdirAll(notGitDir, 0755)
 
 				return config.Repository{
 					Name: "not-git",
@@ -298,7 +298,7 @@ func TestRemoveRepositoryRelativePath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get working directory: %v", err)
 	}
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
 	err = os.Chdir(tmpDir)
 	if err != nil {
@@ -339,12 +339,12 @@ func BenchmarkRemoveRepository(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		repoDir := filepath.Join(tmpDir, fmt.Sprintf("bench-repo-%d", i))
 		gitDir := filepath.Join(repoDir, ".git")
-		os.MkdirAll(gitDir, 0755)
+		_ = os.MkdirAll(gitDir, 0755)
 
 		// Create some files
-		os.WriteFile(filepath.Join(repoDir, "file1.txt"), []byte("content"), 0644)
-		os.WriteFile(filepath.Join(repoDir, "file2.txt"), []byte("content"), 0644)
-		os.WriteFile(filepath.Join(gitDir, "config"), []byte("git config"), 0644)
+		_ = os.WriteFile(filepath.Join(repoDir, "file1.txt"), []byte("content"), 0644)
+		_ = os.WriteFile(filepath.Join(repoDir, "file2.txt"), []byte("content"), 0644)
+		_ = os.WriteFile(filepath.Join(gitDir, "config"), []byte("git config"), 0644)
 
 		repos[i] = config.Repository{
 			Name: fmt.Sprintf("bench-repo-%d", i),

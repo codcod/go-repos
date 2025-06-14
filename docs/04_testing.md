@@ -350,3 +350,22 @@ func TestNewFeature(t *testing.T) {
 - [Testing with Temporary Files](https://golang.org/pkg/testing/#T.TempDir)
 - [HTTP Testing](https://golang.org/pkg/net/http/httptest/)
 - [Benchmarking](https://golang.org/pkg/testing/#hdr-Benchmarks)
+- [Development Guide](01_development.md) - For commit message validation setup
+
+## Commit Message Validation
+
+This project uses [commitlint](https://commitlint.js.org/) to enforce consistent commit message formatting following the [Conventional Commits](https://www.conventionalcommits.org/) specification.
+
+> **Note**: For complete commit message guidelines and setup instructions, see the [Development Guide](01_development.md#commit-messages).
+
+### Quick Reference
+
+**Format**: `<type>(<scope>): <subject>`
+
+**Common types**: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`
+
+**Setup**: 
+```bash
+make install-commitlint
+make setup-commitlint
+```

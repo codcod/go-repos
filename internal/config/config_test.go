@@ -7,6 +7,48 @@ import (
 	"testing"
 )
 
+// writeTempConfig writes the given YAML to a temp file and returns its path.
+func writeTempConfig(t *testing.T, configYAML string) string {
+	t.Helper()
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	if err := os.WriteFile(configPath, []byte(configYAML), 0644); err != nil {
+		t.Fatalf("Failed to create test config file: %v", err)
+	}
+	return configPath
+}
+
+// Test data constants for consistency
+const (
+	validSingleRepoConfig = `repositories:
+  - name: test-repo
+    url: git@github.com:owner/test-repo.git
+    tags: [go, backend]
+    branch: main
+    path: /tmp/test-repo`
+
+	validMultiRepoConfig = `repositories:
+  - name: repo1
+    url: git@github.com:owner/repo1.git
+    tags: [go, backend]
+  - name: repo2
+    url: https://github.com/owner/repo2.git
+    tags: [javascript, frontend]
+    branch: develop`
+
+	invalidYAMLConfig = `repositories:
+  - name: test-repo
+    url: git@github.com:owner/test-repo.git
+    tags: [go, backend
+    branch: main`
+
+	emptyReposConfig = `repositories: []`
+
+	missingReposKeyConfig = `some_other_key:
+  - name: test-repo`
+)
+
+// TestLoadConfig verifies loading various config YAML scenarios.
 func TestLoadConfig(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -15,49 +57,32 @@ func TestLoadConfig(t *testing.T) {
 		wantRepos   int
 	}{
 		{
-			name: "valid config with single repository",
-			configYAML: `repositories:
-  - name: test-repo
-    url: git@github.com:owner/test-repo.git
-    tags: [go, backend]
-    branch: main
-    path: /tmp/test-repo`,
+			name:        "valid config with single repository",
+			configYAML:  validSingleRepoConfig,
 			expectError: false,
 			wantRepos:   1,
 		},
 		{
-			name: "valid config with multiple repositories",
-			configYAML: `repositories:
-  - name: repo1
-    url: git@github.com:owner/repo1.git
-    tags: [go, backend]
-  - name: repo2
-    url: https://github.com/owner/repo2.git
-    tags: [javascript, frontend]
-    branch: develop`,
+			name:        "valid config with multiple repositories",
+			configYAML:  validMultiRepoConfig,
 			expectError: false,
 			wantRepos:   2,
 		},
 		{
 			name:        "empty repositories",
-			configYAML:  `repositories: []`,
+			configYAML:  emptyReposConfig,
 			expectError: false,
 			wantRepos:   0,
 		},
 		{
-			name: "invalid YAML",
-			configYAML: `repositories:
-  - name: test-repo
-    url: git@github.com:owner/test-repo.git
-    tags: [go, backend
-    branch: main`,
+			name:        "invalid YAML",
+			configYAML:  invalidYAMLConfig,
 			expectError: true,
 			wantRepos:   0,
 		},
 		{
-			name: "missing repositories key",
-			configYAML: `some_other_key:
-  - name: test-repo`,
+			name:        "missing repositories key",
+			configYAML:  missingReposKeyConfig,
 			expectError: false,
 			wantRepos:   0,
 		},
@@ -65,16 +90,7 @@ func TestLoadConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create temporary config file
-			tmpDir := t.TempDir()
-			configPath := filepath.Join(tmpDir, "config.yaml")
-
-			err := os.WriteFile(configPath, []byte(tt.configYAML), 0644)
-			if err != nil {
-				t.Fatalf("Failed to create test config file: %v", err)
-			}
-
-			// Test LoadConfig
+			configPath := writeTempConfig(t, tt.configYAML)
 			config, err := LoadConfig(configPath)
 
 			if tt.expectError {
@@ -95,21 +111,13 @@ func TestLoadConfig(t *testing.T) {
 
 			// Additional validation for non-empty configs
 			if tt.wantRepos > 0 {
-				repo := config.Repositories[0]
-				if repo.Name == "" {
-					t.Error("Repository name should not be empty")
-				}
-				if repo.URL == "" {
-					t.Error("Repository URL should not be empty")
-				}
-				if len(repo.Tags) == 0 {
-					t.Error("Repository should have at least one tag")
-				}
+				validateFirstRepository(t, config.Repositories[0])
 			}
 		})
 	}
 }
 
+// TestLoadConfigFileNotFound checks error on missing config file.
 func TestLoadConfigFileNotFound(t *testing.T) {
 	_, err := LoadConfig("non-existent-file.yaml")
 	if err == nil {
@@ -117,31 +125,9 @@ func TestLoadConfigFileNotFound(t *testing.T) {
 	}
 }
 
+// TestFilterRepositoriesByTag tests filtering repositories by tag.
 func TestFilterRepositoriesByTag(t *testing.T) {
-	config := &Config{
-		Repositories: []Repository{
-			{
-				Name: "go-app",
-				URL:  "git@github.com:owner/go-app.git",
-				Tags: []string{"go", "backend", "microservice"},
-			},
-			{
-				Name: "react-ui",
-				URL:  "git@github.com:owner/react-ui.git",
-				Tags: []string{"javascript", "frontend", "react"},
-			},
-			{
-				Name: "python-api",
-				URL:  "git@github.com:owner/python-api.git",
-				Tags: []string{"python", "backend", "api"},
-			},
-			{
-				Name: "docs",
-				URL:  "git@github.com:owner/docs.git",
-				Tags: []string{"documentation"},
-			},
-		},
-	}
+	config := createTestConfigWithRepos()
 
 	tests := []struct {
 		name     string
@@ -183,22 +169,54 @@ func TestFilterRepositoriesByTag(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			filtered := config.FilterRepositoriesByTag(tt.tag)
-
-			if len(filtered) != len(tt.expected) {
-				t.Errorf("Expected %d repositories, got %d", len(tt.expected), len(filtered))
-				return
-			}
-
-			// Check that we got the expected repositories
-			for i, expectedName := range tt.expected {
-				if filtered[i].Name != expectedName {
-					t.Errorf("Expected repository %s at index %d, got %s", expectedName, i, filtered[i].Name)
-				}
-			}
+			validateFilteredResults(t, filtered, tt.expected)
 		})
 	}
 }
 
+// createTestConfigWithRepos creates a config with test repositories.
+func createTestConfigWithRepos() *Config {
+	return &Config{
+		Repositories: []Repository{
+			{
+				Name: "go-app",
+				URL:  "git@github.com:owner/go-app.git",
+				Tags: []string{"go", "backend", "microservice"},
+			},
+			{
+				Name: "react-ui",
+				URL:  "git@github.com:owner/react-ui.git",
+				Tags: []string{"javascript", "frontend", "react"},
+			},
+			{
+				Name: "python-api",
+				URL:  "git@github.com:owner/python-api.git",
+				Tags: []string{"python", "backend", "api"},
+			},
+			{
+				Name: "docs",
+				URL:  "git@github.com:owner/docs.git",
+				Tags: []string{"documentation"},
+			},
+		},
+	}
+}
+
+// validateFilteredResults validates filtered repository results.
+func validateFilteredResults(t *testing.T, filtered []Repository, expected []string) {
+	t.Helper()
+	if len(filtered) != len(expected) {
+		t.Errorf("Expected %d repositories, got %d", len(expected), len(filtered))
+		return
+	}
+	for i, expectedName := range expected {
+		if filtered[i].Name != expectedName {
+			t.Errorf("Expected repository %s at index %d, got %s", expectedName, i, filtered[i].Name)
+		}
+	}
+}
+
+// TestRepositoryFields checks parsing of all repository fields.
 func TestRepositoryFields(t *testing.T) {
 	configYAML := `repositories:
   - name: full-config-repo
@@ -210,15 +228,7 @@ func TestRepositoryFields(t *testing.T) {
     url: https://github.com/owner/minimal.git
     tags: [frontend]`
 
-	// Create temporary config file
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.yaml")
-
-	err := os.WriteFile(configPath, []byte(configYAML), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test config file: %v", err)
-	}
-
+	configPath := writeTempConfig(t, configYAML)
 	config, err := LoadConfig(configPath)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
@@ -228,79 +238,95 @@ func TestRepositoryFields(t *testing.T) {
 		t.Fatalf("Expected 2 repositories, got %d", len(config.Repositories))
 	}
 
-	// Test full config repository
-	fullRepo := config.Repositories[0]
-	if fullRepo.Name != "full-config-repo" {
-		t.Errorf("Expected name 'full-config-repo', got '%s'", fullRepo.Name)
-	}
-	if fullRepo.URL != "git@github.com:owner/repo.git" {
-		t.Errorf("Expected URL 'git@github.com:owner/repo.git', got '%s'", fullRepo.URL)
-	}
-	if fullRepo.Branch != "develop" {
-		t.Errorf("Expected branch 'develop', got '%s'", fullRepo.Branch)
-	}
-	if fullRepo.Path != "/custom/path" {
-		t.Errorf("Expected path '/custom/path', got '%s'", fullRepo.Path)
-	}
-	if len(fullRepo.Tags) != 2 || fullRepo.Tags[0] != "go" || fullRepo.Tags[1] != "backend" {
-		t.Errorf("Expected tags [go, backend], got %v", fullRepo.Tags)
+	validateFullConfigRepo(t, config.Repositories[0])
+	validateMinimalConfigRepo(t, config.Repositories[1])
+}
+
+// validateFullConfigRepo validates a repository with all fields set.
+func validateFullConfigRepo(t *testing.T, repo Repository) {
+	t.Helper()
+	expected := Repository{
+		Name:   "full-config-repo",
+		URL:    "git@github.com:owner/repo.git",
+		Branch: "develop",
+		Path:   "/custom/path",
+		Tags:   []string{"go", "backend"},
 	}
 
-	// Test minimal config repository
-	minimalRepo := config.Repositories[1]
-	if minimalRepo.Name != "minimal-config-repo" {
-		t.Errorf("Expected name 'minimal-config-repo', got '%s'", minimalRepo.Name)
+	if repo.Name != expected.Name {
+		t.Errorf("Expected name '%s', got '%s'", expected.Name, repo.Name)
 	}
-	if minimalRepo.URL != "https://github.com/owner/minimal.git" {
-		t.Errorf("Expected URL 'https://github.com/owner/minimal.git', got '%s'", minimalRepo.URL)
+	if repo.URL != expected.URL {
+		t.Errorf("Expected URL '%s', got '%s'", expected.URL, repo.URL)
 	}
-	if minimalRepo.Branch != "" {
-		t.Errorf("Expected empty branch, got '%s'", minimalRepo.Branch)
+	if repo.Branch != expected.Branch {
+		t.Errorf("Expected branch '%s', got '%s'", expected.Branch, repo.Branch)
 	}
-	if minimalRepo.Path != "" {
-		t.Errorf("Expected empty path, got '%s'", minimalRepo.Path)
+	if repo.Path != expected.Path {
+		t.Errorf("Expected path '%s', got '%s'", expected.Path, repo.Path)
 	}
-	if len(minimalRepo.Tags) != 1 || minimalRepo.Tags[0] != "frontend" {
-		t.Errorf("Expected tags [frontend], got %v", minimalRepo.Tags)
+	if len(repo.Tags) != len(expected.Tags) {
+		t.Errorf("Expected tags %v, got %v", expected.Tags, repo.Tags)
 	}
 }
 
+// validateMinimalConfigRepo validates a repository with minimal fields.
+func validateMinimalConfigRepo(t *testing.T, repo Repository) {
+	t.Helper()
+	if repo.Name != "minimal-config-repo" {
+		t.Errorf("Expected name 'minimal-config-repo', got '%s'", repo.Name)
+	}
+	if repo.URL != "https://github.com/owner/minimal.git" {
+		t.Errorf("Expected URL 'https://github.com/owner/minimal.git', got '%s'", repo.URL)
+	}
+	if repo.Branch != "" {
+		t.Errorf("Expected empty branch, got '%s'", repo.Branch)
+	}
+	if repo.Path != "" {
+		t.Errorf("Expected empty path, got '%s'", repo.Path)
+	}
+	if len(repo.Tags) != 1 || repo.Tags[0] != "frontend" {
+		t.Errorf("Expected tags [frontend], got %v", repo.Tags)
+	}
+}
+
+// TestFilterRepositoriesByTagEdgeCases checks filtering with empty/nil tags.
 func TestFilterRepositoriesByTagEdgeCases(t *testing.T) {
 	config := &Config{
 		Repositories: []Repository{
-			{
-				Name: "no-tags-repo",
-				URL:  "git@github.com:owner/no-tags.git",
-				Tags: []string{},
-			},
-			{
-				Name: "nil-tags-repo",
-				URL:  "git@github.com:owner/nil-tags.git",
-				Tags: nil,
-			},
+			{Name: "no-tags-repo", URL: "git@github.com:owner/no-tags.git", Tags: []string{}},
+			{Name: "nil-tags-repo", URL: "git@github.com:owner/nil-tags.git", Tags: nil},
 		},
 	}
 
-	// Test filtering when repositories have no tags
 	filtered := config.FilterRepositoriesByTag("any-tag")
 	if len(filtered) != 0 {
 		t.Errorf("Expected 0 repositories when filtering repos with no tags, got %d", len(filtered))
 	}
 
-	// Test filtering with empty tag (should return all)
 	filtered = config.FilterRepositoriesByTag("")
 	if len(filtered) != 2 {
 		t.Errorf("Expected 2 repositories when filtering with empty tag, got %d", len(filtered))
 	}
 }
 
+// BenchmarkFilterRepositoriesByTag benchmarks tag filtering on a large config.
 func BenchmarkFilterRepositoriesByTag(b *testing.B) {
-	// Create a large config for benchmarking
+	config := makeLargeConfigForBenchmark()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		filtered := config.FilterRepositoriesByTag("backend")
+		if len(filtered) != 100 {
+			b.Errorf("Expected 100 repositories, got %d", len(filtered))
+		}
+	}
+}
+
+// makeLargeConfigForBenchmark creates a large config for benchmarking.
+func makeLargeConfigForBenchmark() *Config {
 	config := &Config{
 		Repositories: make([]Repository, 1000),
 	}
-
-	// Fill with test data
 	for i := 0; i < 1000; i++ {
 		config.Repositories[i] = Repository{
 			Name: fmt.Sprintf("repo-%d", i),
@@ -308,18 +334,22 @@ func BenchmarkFilterRepositoriesByTag(b *testing.B) {
 			Tags: []string{"tag1", "tag2", "tag3"},
 		}
 	}
-
-	// Add some repositories with the target tag
 	for i := 0; i < 100; i++ {
 		config.Repositories[i].Tags = append(config.Repositories[i].Tags, "backend")
 	}
+	return config
+}
 
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		filtered := config.FilterRepositoriesByTag("backend")
-		if len(filtered) != 100 {
-			b.Errorf("Expected 100 repositories, got %d", len(filtered))
-		}
+// validateFirstRepository validates that a repository has required fields.
+func validateFirstRepository(t *testing.T, repo Repository) {
+	t.Helper()
+	if repo.Name == "" {
+		t.Error("Repository name should not be empty")
+	}
+	if repo.URL == "" {
+		t.Error("Repository URL should not be empty")
+	}
+	if len(repo.Tags) == 0 {
+		t.Error("Repository should have at least one tag")
 	}
 }

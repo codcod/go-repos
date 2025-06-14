@@ -71,17 +71,17 @@ func TestGetEnvOrDefault(t *testing.T) {
 			originalValue := os.Getenv(tt.key)
 			defer func() {
 				if originalValue != "" {
-					os.Setenv(tt.key, originalValue)
+					_ = os.Setenv(tt.key, originalValue)
 				} else {
-					os.Unsetenv(tt.key)
+					_ = os.Unsetenv(tt.key)
 				}
 			}()
 
 			// Set up test environment
 			if tt.setEnv {
-				os.Setenv(tt.key, tt.envValue)
+				_ = os.Setenv(tt.key, tt.envValue)
 			} else {
-				os.Unsetenv(tt.key)
+				_ = os.Unsetenv(tt.key)
 			}
 
 			// Test the function
@@ -112,9 +112,9 @@ func TestVersionVariables(t *testing.T) {
 	oldCommit := os.Getenv("COMMIT")
 	oldDate := os.Getenv("BUILD_DATE")
 
-	os.Unsetenv("VERSION")
-	os.Unsetenv("COMMIT")
-	os.Unsetenv("BUILD_DATE")
+	_ = os.Unsetenv("VERSION")
+	_ = os.Unsetenv("COMMIT")
+	_ = os.Unsetenv("BUILD_DATE")
 
 	// Reinitialize to test defaults
 	testVersion := getEnvOrDefault("VERSION", "dev")
@@ -133,13 +133,13 @@ func TestVersionVariables(t *testing.T) {
 
 	// Restore original environment variables
 	if oldVersion != "" {
-		os.Setenv("VERSION", oldVersion)
+		_ = os.Setenv("VERSION", oldVersion)
 	}
 	if oldCommit != "" {
-		os.Setenv("COMMIT", oldCommit)
+		_ = os.Setenv("COMMIT", oldCommit)
 	}
 	if oldDate != "" {
-		os.Setenv("BUILD_DATE", oldDate)
+		_ = os.Setenv("BUILD_DATE", oldDate)
 	}
 }
 
@@ -173,14 +173,14 @@ func TestVersionVariablesWithEnv(t *testing.T) {
 			original := os.Getenv(tc.envVar)
 			defer func() {
 				if original != "" {
-					os.Setenv(tc.envVar, original)
+					_ = os.Setenv(tc.envVar, original)
 				} else {
-					os.Unsetenv(tc.envVar)
+					_ = os.Unsetenv(tc.envVar)
 				}
 			}()
 
 			// Set test value
-			os.Setenv(tc.envVar, tc.envValue)
+			_ = os.Setenv(tc.envVar, tc.envValue)
 
 			// Test that environment variable is used
 			result := tc.getter()
@@ -264,14 +264,14 @@ func TestEnvironmentVariableEdgeCases(t *testing.T) {
 			original := os.Getenv(tt.key)
 			defer func() {
 				if original != "" {
-					os.Setenv(tt.key, original)
+					_ = os.Setenv(tt.key, original)
 				} else {
-					os.Unsetenv(tt.key)
+					_ = os.Unsetenv(tt.key)
 				}
 			}()
 
 			// Set test value
-			os.Setenv(tt.key, tt.envValue)
+			_ = os.Setenv(tt.key, tt.envValue)
 
 			// Test
 			result := getEnvOrDefault(tt.key, "default")
@@ -288,8 +288,8 @@ func BenchmarkGetEnvOrDefault(b *testing.B) {
 	defaultValue := "default_value"
 
 	// Test with environment variable set
-	os.Setenv(key, "env_value")
-	defer os.Unsetenv(key)
+	_ = os.Setenv(key, "env_value")
+	defer func() { _ = os.Unsetenv(key) }()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -302,7 +302,7 @@ func BenchmarkGetEnvOrDefaultNotSet(b *testing.B) {
 	defaultValue := "default_value"
 
 	// Ensure environment variable is not set
-	os.Unsetenv(key)
+	_ = os.Unsetenv(key)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

@@ -64,7 +64,7 @@ func TestCreatePullRequestCreateOnlyMode(t *testing.T) {
 		// Read and validate request body
 		body, _ := io.ReadAll(r.Body)
 		var prRequest map[string]interface{}
-		json.Unmarshal(body, &prRequest)
+		_ = json.Unmarshal(body, &prRequest)
 
 		if prRequest["title"] != "Test PR" {
 			t.Errorf("Expected title 'Test PR', got %v", prRequest["title"])
@@ -85,7 +85,7 @@ func TestCreatePullRequestCreateOnlyMode(t *testing.T) {
 			"html_url": "https://github.com/owner/test-repo/pull/1",
 			"number":   1,
 		}
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -111,7 +111,7 @@ func TestCreatePullRequestCreateOnlyMode(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusCreated {
 			return err
@@ -190,7 +190,7 @@ func TestCreateGitHubPullRequestSuccess(t *testing.T) {
 		// Verify request body
 		body, _ := io.ReadAll(r.Body)
 		var prRequest map[string]interface{}
-		json.Unmarshal(body, &prRequest)
+		_ = json.Unmarshal(body, &prRequest)
 
 		expectedFields := map[string]interface{}{
 			"title": "Test Title",
@@ -213,7 +213,7 @@ func TestCreateGitHubPullRequestSuccess(t *testing.T) {
 			"number":   1,
 			"title":    "Test Title",
 		}
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -240,7 +240,7 @@ func TestCreateGitHubPullRequestSuccess(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusCreated {
 			return err
@@ -277,7 +277,7 @@ func TestCreateGitHubPullRequestFailure(t *testing.T) {
 				},
 			},
 		}
-		json.NewEncoder(w).Encode(errorResponse)
+		_ = json.NewEncoder(w).Encode(errorResponse)
 	}))
 	defer server.Close()
 
@@ -304,11 +304,11 @@ func TestCreateGitHubPullRequestFailure(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusCreated {
 			var errorResponse map[string]interface{}
-			json.NewDecoder(resp.Body).Decode(&errorResponse)
+			_ = json.NewDecoder(resp.Body).Decode(&errorResponse)
 			return fmt.Errorf("failed to create PR: %v", errorResponse)
 		}
 		return nil
@@ -338,10 +338,10 @@ func TestCreateGitHubPullRequestNoToken(t *testing.T) {
 
 	// Clear environment variable
 	oldToken := os.Getenv("GITHUB_TOKEN")
-	os.Unsetenv("GITHUB_TOKEN")
+	_ = os.Unsetenv("GITHUB_TOKEN")
 	defer func() {
 		if oldToken != "" {
-			os.Setenv("GITHUB_TOKEN", oldToken)
+			_ = os.Setenv("GITHUB_TOKEN", oldToken)
 		}
 	}()
 
@@ -357,11 +357,11 @@ func TestCreateGitHubPullRequestNoToken(t *testing.T) {
 func TestCreateGitHubPullRequestWithEnvToken(t *testing.T) {
 	// Set token via environment variable
 	oldToken := os.Getenv("GITHUB_TOKEN")
-	os.Setenv("GITHUB_TOKEN", "env-token")
+	_ = os.Setenv("GITHUB_TOKEN", "env-token")
 	defer func() {
-		os.Unsetenv("GITHUB_TOKEN")
+		_ = os.Unsetenv("GITHUB_TOKEN")
 		if oldToken != "" {
-			os.Setenv("GITHUB_TOKEN", oldToken)
+			_ = os.Setenv("GITHUB_TOKEN", oldToken)
 		}
 	}()
 
@@ -372,7 +372,7 @@ func TestCreateGitHubPullRequestWithEnvToken(t *testing.T) {
 			t.Errorf("Expected env token, got %s", auth)
 		}
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(map[string]interface{}{"html_url": "test"})
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"html_url": "test"})
 	}))
 	defer server.Close()
 
@@ -398,7 +398,7 @@ func TestCreateGitHubPullRequestWithEnvToken(t *testing.T) {
 		req.Header.Set("Authorization", "token "+options.Token)
 		client := &http.Client{}
 		resp, _ := client.Do(req)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		return nil
 	}
 	defer func() { createGitHubPullRequest = originalFunc }()
@@ -428,7 +428,7 @@ func TestPROptionsDefaults(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		var prRequest map[string]interface{}
-		json.Unmarshal(body, &prRequest)
+		_ = json.Unmarshal(body, &prRequest)
 
 		// Check defaults
 		if prRequest["title"] == "" {
@@ -445,7 +445,7 @@ func TestPROptionsDefaults(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(map[string]interface{}{"html_url": "test"})
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"html_url": "test"})
 	}))
 	defer server.Close()
 
@@ -458,7 +458,7 @@ func BenchmarkCreateGitHubPullRequest(b *testing.B) {
 	// Mock server for benchmarking
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"html_url": "https://github.com/owner/repo/pull/1",
 		})
 	}))
@@ -485,7 +485,7 @@ func BenchmarkCreateGitHubPullRequest(b *testing.B) {
 		jsonData, _ := json.Marshal(data)
 		req, _ := http.NewRequest("POST", server.URL, bytes.NewBuffer(jsonData))
 		resp, _ := client.Do(req)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		return nil
 	}
 	defer func() { createGitHubPullRequest = originalFunc }()

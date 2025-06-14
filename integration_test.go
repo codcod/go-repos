@@ -34,7 +34,7 @@ func buildBinary() error {
 }
 
 func cleanupBinary() {
-	os.Remove("repos-test")
+	_ = os.Remove("repos-test")
 }
 
 func TestCLIVersion(t *testing.T) {
@@ -82,9 +82,9 @@ func TestCLIInvalidCommand(t *testing.T) {
 func TestCLICloneWithoutConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalDir, _ := os.Getwd()
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
-	os.Chdir(tmpDir)
+	_ = os.Chdir(tmpDir)
 
 	cmd := exec.Command(filepath.Join(originalDir, "repos-test"), "clone")
 	output, err := cmd.CombinedOutput()
@@ -101,19 +101,19 @@ func TestCLICloneWithoutConfig(t *testing.T) {
 func TestCLIInitCommand(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalDir, _ := os.Getwd()
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
-	os.Chdir(tmpDir)
+	_ = os.Chdir(tmpDir)
 
 	// Create a mock git repository
 	repoDir := filepath.Join(tmpDir, "test-repo")
 	gitDir := filepath.Join(repoDir, ".git")
-	os.MkdirAll(gitDir, 0755)
+	_ = os.MkdirAll(gitDir, 0755)
 
 	// Create a mock git config
 	configContent := `[remote "origin"]
 	url = git@github.com:owner/test-repo.git`
-	os.WriteFile(filepath.Join(gitDir, "config"), []byte(configContent), 0644)
+	_ = os.WriteFile(filepath.Join(gitDir, "config"), []byte(configContent), 0644)
 
 	// Run init command
 	cmd := exec.Command(filepath.Join(originalDir, "repos-test"), "init", "--overwrite")
@@ -145,13 +145,13 @@ func TestCLIInitCommand(t *testing.T) {
 func TestCLIRunCommandWithConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalDir, _ := os.Getwd()
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
-	os.Chdir(tmpDir)
+	_ = os.Chdir(tmpDir)
 
 	// Create a test repository directory
 	repoDir := filepath.Join(tmpDir, "test-repo")
-	os.MkdirAll(repoDir, 0755)
+	_ = os.MkdirAll(repoDir, 0755)
 
 	// Create a test config.yaml
 	configContent := `repositories:
@@ -184,15 +184,15 @@ func TestCLIRunCommandWithConfig(t *testing.T) {
 func TestCLIRunCommandWithTag(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalDir, _ := os.Getwd()
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
-	os.Chdir(tmpDir)
+	_ = os.Chdir(tmpDir)
 
 	// Create test repository directories
 	repo1Dir := filepath.Join(tmpDir, "repo1")
 	repo2Dir := filepath.Join(tmpDir, "repo2")
-	os.MkdirAll(repo1Dir, 0755)
-	os.MkdirAll(repo2Dir, 0755)
+	_ = os.MkdirAll(repo1Dir, 0755)
+	_ = os.MkdirAll(repo2Dir, 0755)
 
 	// Create a test config.yaml with multiple repos and tags
 	configContent := `repositories:
@@ -229,13 +229,13 @@ func TestCLIRunCommandWithTag(t *testing.T) {
 func TestCLIWithCustomConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalDir, _ := os.Getwd()
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
-	os.Chdir(tmpDir)
+	_ = os.Chdir(tmpDir)
 
 	// Create a test repository directory
 	repoDir := filepath.Join(tmpDir, "custom-repo")
-	os.MkdirAll(repoDir, 0755)
+	_ = os.MkdirAll(repoDir, 0755)
 
 	// Create a custom config file
 	customConfigContent := `repositories:
@@ -265,13 +265,13 @@ func TestCLIWithCustomConfig(t *testing.T) {
 func TestCLILogging(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalDir, _ := os.Getwd()
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
-	os.Chdir(tmpDir)
+	_ = os.Chdir(tmpDir)
 
 	// Create a test repository directory
 	repoDir := filepath.Join(tmpDir, "log-test-repo")
-	os.MkdirAll(repoDir, 0755)
+	_ = os.MkdirAll(repoDir, 0755)
 
 	// Create a test config.yaml
 	configContent := `repositories:
@@ -356,19 +356,17 @@ func TestCLIParallelExecution(t *testing.T) {
 
 	tmpDir := t.TempDir()
 	originalDir, _ := os.Getwd()
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
-	os.Chdir(tmpDir)
+	_ = os.Chdir(tmpDir)
 
 	// Create multiple test repository directories
 	numRepos := 3
-	var repoPaths []string
 	var configLines []string
 
 	for i := 0; i < numRepos; i++ {
 		repoDir := filepath.Join(tmpDir, fmt.Sprintf("parallel-repo-%d", i))
-		os.MkdirAll(repoDir, 0755)
-		repoPaths = append(repoPaths, repoDir)
+		_ = os.MkdirAll(repoDir, 0755)
 
 		configLines = append(configLines, fmt.Sprintf(`  - name: parallel-repo-%d
     url: git@github.com:owner/parallel-repo-%d.git
@@ -412,13 +410,13 @@ func TestCLIParallelExecution(t *testing.T) {
 func TestCLIErrorHandling(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalDir, _ := os.Getwd()
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
-	os.Chdir(tmpDir)
+	_ = os.Chdir(tmpDir)
 
 	// Create a test repository directory
 	repoDir := filepath.Join(tmpDir, "error-test-repo")
-	os.MkdirAll(repoDir, 0755)
+	_ = os.MkdirAll(repoDir, 0755)
 
 	// Create a test config.yaml
 	configContent := `repositories:

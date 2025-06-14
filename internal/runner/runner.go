@@ -51,12 +51,12 @@ func (p *OutputProcessor) ProcessOutput(reader io.Reader, wg *sync.WaitGroup) {
 		if p.LogFile != nil {
 			// Add stderr section header if needed
 			if p.IsStderr && !p.HeaderSet {
-				p.LogFile.WriteString("\n=== STDERR ===\n")
+				_, _ = p.LogFile.WriteString("\n=== STDERR ===\n")
 				p.HeaderSet = true
 			}
 
-			p.LogFile.WriteString(fmt.Sprintf("%s | %s\n", p.RepoName, line))
-			p.LogFile.Sync()
+			_, _ = fmt.Fprintf(p.LogFile, "%s | %s\n", p.RepoName, line)
+			_ = p.LogFile.Sync()
 		}
 	}
 }
@@ -81,11 +81,11 @@ func PrepareLogFile(repo config.Repository, logDir, command, repoDir string) (*o
 	}
 
 	// Write header information
-	logFile.WriteString(fmt.Sprintf("Repository: %s\n", repo.Name))
-	logFile.WriteString(fmt.Sprintf("Command: %s\n", command))
-	logFile.WriteString(fmt.Sprintf("Directory: %s\n", repoDir))
-	logFile.WriteString(fmt.Sprintf("Timestamp: %s\n\n", time.Now().Format(time.RFC3339)))
-	logFile.WriteString("=== STDOUT ===\n")
+	_, _ = fmt.Fprintf(logFile, "Repository: %s\n", repo.Name)
+	_, _ = fmt.Fprintf(logFile, "Command: %s\n", command)
+	_, _ = fmt.Fprintf(logFile, "Directory: %s\n", repoDir)
+	_, _ = fmt.Fprintf(logFile, "Timestamp: %s\n\n", time.Now().Format(time.RFC3339))
+	_, _ = logFile.WriteString("=== STDOUT ===\n")
 
 	return logFile, logFilePath, nil
 }
@@ -122,7 +122,7 @@ func RunCommand(repo config.Repository, command string, logDir string) error {
 		return err
 	}
 	if logFile != nil {
-		defer logFile.Close()
+		defer func() { _ = logFile.Close() }()
 	}
 
 	// Run the command
