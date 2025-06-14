@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/codcod/repos/internal/config"
@@ -22,9 +21,9 @@ func TestFindGitRepositories(t *testing.T) {
 	//   │   ├── .git/
 	//   │   │   └── config
 	//   │   └── subdir/
-	//   ├── nested/
+	//   ├── nested/          (directory - will be ignored)
 	//   │   └── deep/
-	//   │       └── repo3/   (git repo)
+	//   │       └── repo3/   (git repo - will be ignored)
 	//   │           └── .git/
 	//   ├── not-git/         (regular directory)
 	//   └── empty-git/       (has .git but no config)
@@ -53,7 +52,7 @@ func TestFindGitRepositories(t *testing.T) {
 	}
 	createGitConfig(t, repo2GitDir, "https://github.com/owner/repo2.git")
 
-	// Setup nested repo3
+	// Setup nested repo3 (will be ignored)
 	repo3Dir := filepath.Join(tmpDir, "nested", "deep", "repo3")
 	repo3GitDir := filepath.Join(repo3Dir, ".git")
 	err = os.MkdirAll(repo3GitDir, 0755)
@@ -76,117 +75,56 @@ func TestFindGitRepositories(t *testing.T) {
 		t.Fatalf("Failed to create empty-git directory: %v", err)
 	}
 
-	tests := []struct {
-		name         string
-		maxDepth     int
-		expectedRepos []string // repository names
-	}{
-		{
-			name:         "find all repositories with unlimited depth",
-			maxDepth:     0,
-			expectedRepos: []string{"repo1", "repo2", "repo3"},
-		},
-		{
-			name:         "find repositories with depth 1",
-			maxDepth:     1,
-			expectedRepos: []string{"repo1", "repo2"},
-		},
-		{
-			name:         "find repositories with depth 2",
-			maxDepth:     2,
-			expectedRepos: []string{"repo1", "repo2"},
-		},
-		{
-			name:         "find repositories with depth 3",
-			maxDepth:     3,
-			expectedRepos: []string{"repo1", "repo2", "repo3"},
-		},
-		{
-			name:         "very shallow depth",
-			maxDepth:     1,
-			expectedRepos: []string{"repo1", "repo2"},
-		},
+	repos, err := FindGitRepositories(tmpDir)
+	if err != nil {
+		t.Fatalf("FindGitRepositories() error = %v", err)
 	}
 
-	for _, tt := range tests {
-	t.Run(tt.name, func(t *testing.T) {
-		repos, err := FindGitRepositories(tmpDir, tt.maxDepth)
-		if err != nil {
-			t.Fatalf("FindGitRepositories() error = %v", err)
+	expectedRepos := []string{"repo1", "repo2"}
+	if len(repos) != len(expectedRepos) {
+		t.Errorf("FindGitRepositories() found %d repositories, expected %d", len(repos), len(expectedRepos))
+		t.Errorf("Found: %v", getRepoNames(repos))
+		t.Errorf("Expected: %v", expectedRepos)
+		return
+	}
+
+	// Check that we found the expected repositories
+	foundNames := getRepoNames(repos)
+	for _, expectedName := range expectedRepos {
+		if !contains(foundNames, expectedName) {
+			t.Errorf("Expected to find repository '%s' but didn't", expectedName)
+		}
+	}
+
+	// Verify repository details
+	for _, repo := range repos {
+		if repo.Name == "" {
+			t.Error("Repository name should not be empty")
+		}
+		if repo.URL == "" {
+			t.Error("Repository URL should not be empty")
+		}
+		if len(repo.Tags) == 0 {
+			t.Error("Repository should have auto-discovered tag")
+		}
+		if repo.Tags[0] != "auto-discovered" {
+			t.Errorf("Expected tag 'auto-discovered', got '%s'", repo.Tags[0])
+		}
+		if repo.Path == "" {
+			t.Error("Repository path should not be empty")
 		}
 
-		if len(repos) != len(tt.expectedRepos) {
-			// Debug output
-			t.Logf("Test directory: %s", tmpDir)
-			t.Logf("Max depth: %d", tt.maxDepth)
-			
-			// Walk the directory to see what was actually created
-			filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-				relPath, _ := filepath.Rel(tmpDir, path)
-				depth := len(strings.Split(relPath, string(os.PathSeparator)))
-				t.Logf("Directory walk: %s (relative: %s, depth: %d, isDir: %t)", path, relPath, depth, info.IsDir())
-				
-				if info.IsDir() && info.Name() == ".git" {
-					repoPath := filepath.Dir(path)
-					url, urlErr := GetRemoteURL(repoPath)
-					t.Logf("Found .git at %s, remote URL: %s, error: %v", repoPath, url, urlErr)
-				}
-				return nil
-			})
-			
-			for _, repo := range repos {
-				relPath, _ := filepath.Rel(tmpDir, repo.Path)
-				depth := len(strings.Split(relPath, string(os.PathSeparator)))
-				t.Logf("Found repo: %s at path %s (relative: %s, depth: %d)", repo.Name, repo.Path, relPath, depth)
-			}
-			t.Errorf("FindGitRepositories() found %d repositories, expected %d", len(repos), len(tt.expectedRepos))
-			t.Errorf("Found: %v", getRepoNames(repos))
-			t.Errorf("Expected: %v", tt.expectedRepos)
-			return
+		// Verify path exists and is a git repository
+		if !IsGitRepository(repo.Path) {
+			t.Errorf("Repository path '%s' is not a git repository", repo.Path)
 		}
-
-			// Check that we found the expected repositories
-			foundNames := getRepoNames(repos)
-			for _, expectedName := range tt.expectedRepos {
-				if !contains(foundNames, expectedName) {
-					t.Errorf("Expected to find repository '%s' but didn't", expectedName)
-				}
-			}
-
-			// Verify repository details
-			for _, repo := range repos {
-				if repo.Name == "" {
-					t.Error("Repository name should not be empty")
-				}
-				if repo.URL == "" {
-					t.Error("Repository URL should not be empty")
-				}
-				if len(repo.Tags) == 0 {
-					t.Error("Repository should have auto-discovered tag")
-				}
-				if repo.Tags[0] != "auto-discovered" {
-					t.Errorf("Expected tag 'auto-discovered', got '%s'", repo.Tags[0])
-				}
-				if repo.Path == "" {
-					t.Error("Repository path should not be empty")
-				}
-
-				// Verify path exists and is a git repository
-				if !IsGitRepository(repo.Path) {
-					t.Errorf("Repository path '%s' is not a git repository", repo.Path)
-				}
-			}
-		})
 	}
 }
 
 func TestFindGitRepositoriesEmptyDirectory(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	repos, err := FindGitRepositories(tmpDir, 0)
+	repos, err := FindGitRepositories(tmpDir)
 	if err != nil {
 		t.Fatalf("FindGitRepositories() error = %v", err)
 	}
@@ -199,7 +137,7 @@ func TestFindGitRepositoriesEmptyDirectory(t *testing.T) {
 func TestFindGitRepositoriesNonExistentDirectory(t *testing.T) {
 	nonExistentDir := "/path/that/does/not/exist"
 
-	_, err := FindGitRepositories(nonExistentDir, 0)
+	_, err := FindGitRepositories(nonExistentDir)
 	if err == nil {
 		t.Error("Expected error for non-existent directory")
 	}
@@ -336,50 +274,6 @@ func TestGetRemoteURLNoConfigFile(t *testing.T) {
 	}
 }
 
-func TestFindGitRepositoriesWithSymlinks(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Create a real repository
-	realRepoDir := filepath.Join(tmpDir, "real-repo")
-	realGitDir := filepath.Join(realRepoDir, ".git")
-	err := os.MkdirAll(realGitDir, 0755)
-	if err != nil {
-		t.Fatalf("Failed to create real repo: %v", err)
-	}
-	createGitConfig(t, realGitDir, "git@github.com:owner/real-repo.git")
-
-	// Create a symlink to the repository
-	symlinkPath := filepath.Join(tmpDir, "symlink-repo")
-	err = os.Symlink(realRepoDir, symlinkPath)
-	if err != nil {
-		// Skip test if symlinks aren't supported (e.g., Windows without privileges)
-		t.Skipf("Symlinks not supported: %v", err)
-	}
-
-	repos, err := FindGitRepositories(tmpDir, 0)
-	if err != nil {
-		t.Fatalf("FindGitRepositories() error = %v", err)
-	}
-
-	// Should find both the real repo and potentially the symlinked one
-	// The exact behavior may vary by platform
-	if len(repos) < 1 {
-		t.Error("Should find at least the real repository")
-	}
-
-	foundReal := false
-	for _, repo := range repos {
-		if repo.Name == "real-repo" {
-			foundReal = true
-			break
-		}
-	}
-
-	if !foundReal {
-		t.Error("Should find the real repository")
-	}
-}
-
 func BenchmarkFindGitRepositories(b *testing.B) {
 	// Create temporary directory with multiple repositories
 	tmpDir := b.TempDir()
@@ -398,7 +292,7 @@ func BenchmarkFindGitRepositories(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err := FindGitRepositories(tmpDir, 0)
+		_, err := FindGitRepositories(tmpDir)
 		if err != nil {
 			b.Fatalf("FindGitRepositories() error = %v", err)
 		}

@@ -127,7 +127,7 @@ func TestPrepareLogFileInvalidDirectory(t *testing.T) {
 	// Test with invalid path (contains null character on Unix)
 	invalidPath := "invalid\x00path"
 	_, _, err := PrepareLogFile(repo, invalidPath, "echo test", "/tmp")
-	
+
 	// This should fail on most systems
 	if err == nil {
 		t.Log("Warning: PrepareLogFile did not fail with invalid path - this may be platform specific")

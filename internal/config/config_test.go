@@ -39,8 +39,8 @@ func TestLoadConfig(t *testing.T) {
 			wantRepos:   2,
 		},
 		{
-			name: "empty repositories",
-			configYAML: `repositories: []`,
+			name:        "empty repositories",
+			configYAML:  `repositories: []`,
 			expectError: false,
 			wantRepos:   0,
 		},
@@ -68,7 +68,7 @@ func TestLoadConfig(t *testing.T) {
 			// Create temporary config file
 			tmpDir := t.TempDir()
 			configPath := filepath.Join(tmpDir, "config.yaml")
-			
+
 			err := os.WriteFile(configPath, []byte(tt.configYAML), 0644)
 			if err != nil {
 				t.Fatalf("Failed to create test config file: %v", err)
@@ -213,7 +213,7 @@ func TestRepositoryFields(t *testing.T) {
 	// Create temporary config file
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
-	
+
 	err := os.WriteFile(configPath, []byte(configYAML), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create test config file: %v", err)

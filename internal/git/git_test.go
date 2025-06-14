@@ -13,12 +13,12 @@ import (
 func TestHasChanges(t *testing.T) {
 	// Create a temporary git repository for testing
 	tmpDir := t.TempDir()
-	
+
 	// Initialize git repo
 	if err := exec.Command("git", "init", tmpDir).Run(); err != nil {
 		t.Skip("git not available, skipping test")
 	}
-	
+
 	// Configure git user for commits
 	exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
 	exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
@@ -94,7 +94,7 @@ func TestHasChanges(t *testing.T) {
 
 func TestHasChangesInvalidRepo(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Test non-git directory
 	_, err := HasChanges(tmpDir)
 	if err == nil {
@@ -105,12 +105,12 @@ func TestHasChangesInvalidRepo(t *testing.T) {
 func TestBranchExists(t *testing.T) {
 	// Create a temporary git repository
 	tmpDir := t.TempDir()
-	
+
 	// Initialize git repo
 	if err := exec.Command("git", "init", tmpDir).Run(); err != nil {
 		t.Skip("git not available, skipping test")
 	}
-	
+
 	// Configure git user
 	exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
 	exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
@@ -149,12 +149,12 @@ func TestBranchExists(t *testing.T) {
 func TestCreateAndCheckoutBranch(t *testing.T) {
 	// Create a temporary git repository
 	tmpDir := t.TempDir()
-	
+
 	// Initialize git repo
 	if err := exec.Command("git", "init", tmpDir).Run(); err != nil {
 		t.Skip("git not available, skipping test")
 	}
-	
+
 	// Configure git user
 	exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
 	exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
@@ -191,12 +191,12 @@ func TestCreateAndCheckoutBranch(t *testing.T) {
 func TestAddAllChanges(t *testing.T) {
 	// Create a temporary git repository
 	tmpDir := t.TempDir()
-	
+
 	// Initialize git repo
 	if err := exec.Command("git", "init", tmpDir).Run(); err != nil {
 		t.Skip("git not available, skipping test")
 	}
-	
+
 	// Configure git user
 	exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
 	exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
@@ -218,7 +218,7 @@ func TestAddAllChanges(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get git status: %v", err)
 	}
-	
+
 	status := string(output)
 	if !strings.Contains(status, "A  test1.txt") {
 		t.Error("test1.txt should be staged")
@@ -231,12 +231,12 @@ func TestAddAllChanges(t *testing.T) {
 func TestCommitChanges(t *testing.T) {
 	// Create a temporary git repository
 	tmpDir := t.TempDir()
-	
+
 	// Initialize git repo
 	if err := exec.Command("git", "init", tmpDir).Run(); err != nil {
 		t.Skip("git not available, skipping test")
 	}
-	
+
 	// Configure git user
 	exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
 	exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
@@ -258,7 +258,7 @@ func TestCommitChanges(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get git log: %v", err)
 	}
-	
+
 	logOutput := string(output)
 	if !strings.Contains(logOutput, commitMsg) {
 		t.Errorf("Commit message should contain '%s', got: %s", commitMsg, logOutput)
@@ -268,7 +268,7 @@ func TestCommitChanges(t *testing.T) {
 func TestRunGitCommand(t *testing.T) {
 	// Create a temporary git repository
 	tmpDir := t.TempDir()
-	
+
 	// Initialize git repo
 	if err := exec.Command("git", "init", tmpDir).Run(); err != nil {
 		t.Skip("git not available, skipping test")
@@ -279,7 +279,7 @@ func TestRunGitCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RunGitCommand() error = %v", err)
 	}
-	
+
 	// Should return empty for clean repo
 	if len(output) != 0 {
 		t.Errorf("Expected empty output for clean repo, got: %s", string(output))
@@ -295,9 +295,9 @@ func TestRunGitCommand(t *testing.T) {
 func TestCloneRepositoryMocking(t *testing.T) {
 	// Note: This test would require mocking the git command or using a test repository
 	// For now, we'll test the basic structure and error cases
-	
+
 	tmpDir := t.TempDir()
-	
+
 	repo := config.Repository{
 		Name: "test-repo",
 		URL:  "https://github.com/nonexistent/repo.git",
@@ -313,7 +313,7 @@ func TestCloneRepositoryMocking(t *testing.T) {
 
 func TestCloneRepositoryExistingDirectory(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Create a directory that already exists
 	repoDir := filepath.Join(tmpDir, "existing-repo")
 	err := os.MkdirAll(repoDir, 0755)
@@ -337,7 +337,7 @@ func TestCloneRepositoryExistingDirectory(t *testing.T) {
 func TestPushBranch(t *testing.T) {
 	// This test requires a remote repository, so we'll test error cases
 	tmpDir := t.TempDir()
-	
+
 	// Test with non-git directory
 	err := PushBranch(tmpDir, "main")
 	if err == nil {
@@ -348,12 +348,12 @@ func TestPushBranch(t *testing.T) {
 func BenchmarkHasChanges(b *testing.B) {
 	// Create a temporary git repository
 	tmpDir := b.TempDir()
-	
+
 	// Initialize git repo
 	if err := exec.Command("git", "init", tmpDir).Run(); err != nil {
 		b.Skip("git not available, skipping benchmark")
 	}
-	
+
 	// Configure git user
 	exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
 	exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()
@@ -376,12 +376,12 @@ func BenchmarkHasChanges(b *testing.B) {
 func BenchmarkBranchExists(b *testing.B) {
 	// Create a temporary git repository
 	tmpDir := b.TempDir()
-	
+
 	// Initialize git repo
 	if err := exec.Command("git", "init", tmpDir).Run(); err != nil {
 		b.Skip("git not available, skipping benchmark")
 	}
-	
+
 	// Configure git user and create initial commit
 	exec.Command("git", "-C", tmpDir, "config", "user.email", "test@example.com").Run()
 	exec.Command("git", "-C", tmpDir, "config", "user.name", "Test User").Run()

@@ -18,13 +18,13 @@ func TestMain(m *testing.M) {
 	if err := buildBinary(); err != nil {
 		os.Exit(1)
 	}
-	
+
 	// Run tests
 	code := m.Run()
-	
+
 	// Cleanup
 	cleanupBinary()
-	
+
 	os.Exit(code)
 }
 
@@ -83,7 +83,7 @@ func TestCLICloneWithoutConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalDir, _ := os.Getwd()
 	defer os.Chdir(originalDir)
-	
+
 	os.Chdir(tmpDir)
 
 	cmd := exec.Command(filepath.Join(originalDir, "repos-test"), "clone")
@@ -102,14 +102,14 @@ func TestCLIInitCommand(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalDir, _ := os.Getwd()
 	defer os.Chdir(originalDir)
-	
+
 	os.Chdir(tmpDir)
 
 	// Create a mock git repository
 	repoDir := filepath.Join(tmpDir, "test-repo")
 	gitDir := filepath.Join(repoDir, ".git")
 	os.MkdirAll(gitDir, 0755)
-	
+
 	// Create a mock git config
 	configContent := `[remote "origin"]
 	url = git@github.com:owner/test-repo.git`
@@ -146,7 +146,7 @@ func TestCLIRunCommandWithConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalDir, _ := os.Getwd()
 	defer os.Chdir(originalDir)
-	
+
 	os.Chdir(tmpDir)
 
 	// Create a test repository directory
@@ -185,7 +185,7 @@ func TestCLIRunCommandWithTag(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalDir, _ := os.Getwd()
 	defer os.Chdir(originalDir)
-	
+
 	os.Chdir(tmpDir)
 
 	// Create test repository directories
@@ -230,7 +230,7 @@ func TestCLIWithCustomConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalDir, _ := os.Getwd()
 	defer os.Chdir(originalDir)
-	
+
 	os.Chdir(tmpDir)
 
 	// Create a test repository directory
@@ -266,7 +266,7 @@ func TestCLILogging(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalDir, _ := os.Getwd()
 	defer os.Chdir(originalDir)
-	
+
 	os.Chdir(tmpDir)
 
 	// Create a test repository directory
@@ -313,7 +313,7 @@ func TestCLILogging(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to read log file: %v", err)
 		}
-		
+
 		logStr := string(logContent)
 		if !strings.Contains(logStr, "test logging") {
 			t.Errorf("log file should contain command output, got: %s", logStr)
@@ -327,11 +327,11 @@ func TestCLILogging(t *testing.T) {
 func TestCLIEnvironmentVariables(t *testing.T) {
 	// Test version command with custom environment variables
 	cmd := exec.Command("./repos-test", "version")
-	cmd.Env = append(os.Environ(), 
+	cmd.Env = append(os.Environ(),
 		"VERSION=test-version",
-		"COMMIT=test-commit", 
+		"COMMIT=test-commit",
 		"BUILD_DATE=test-date")
-	
+
 	output, err := cmd.Output()
 	if err != nil {
 		t.Fatalf("version command with env vars failed: %v", err)
@@ -357,19 +357,19 @@ func TestCLIParallelExecution(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalDir, _ := os.Getwd()
 	defer os.Chdir(originalDir)
-	
+
 	os.Chdir(tmpDir)
 
 	// Create multiple test repository directories
 	numRepos := 3
 	var repoPaths []string
 	var configLines []string
-	
+
 	for i := 0; i < numRepos; i++ {
 		repoDir := filepath.Join(tmpDir, fmt.Sprintf("parallel-repo-%d", i))
 		os.MkdirAll(repoDir, 0755)
 		repoPaths = append(repoPaths, repoDir)
-		
+
 		configLines = append(configLines, fmt.Sprintf(`  - name: parallel-repo-%d
     url: git@github.com:owner/parallel-repo-%d.git
     tags: [parallel]
@@ -388,7 +388,7 @@ func TestCLIParallelExecution(t *testing.T) {
 	cmd := exec.Command(filepath.Join(originalDir, "repos-test"), "run", "-p", "sleep", "1")
 	output, err := cmd.Output()
 	duration := time.Since(start)
-	
+
 	if err != nil {
 		t.Fatalf("parallel run command failed: %v, output: %s", err, string(output))
 	}
@@ -413,7 +413,7 @@ func TestCLIErrorHandling(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalDir, _ := os.Getwd()
 	defer os.Chdir(originalDir)
-	
+
 	os.Chdir(tmpDir)
 
 	// Create a test repository directory
@@ -435,7 +435,7 @@ func TestCLIErrorHandling(t *testing.T) {
 	// Run a command that should fail
 	cmd := exec.Command(filepath.Join(originalDir, "repos-test"), "run", "exit", "1")
 	output, err := cmd.CombinedOutput()
-	
+
 	// Command should fail but repos should handle it gracefully
 	if err == nil {
 		t.Error("command with exit 1 should fail")

@@ -25,7 +25,7 @@ func TestRemoveRepository(t *testing.T) {
 				repoDir := filepath.Join(baseDir, "valid-repo")
 				gitDir := filepath.Join(repoDir, ".git")
 				os.MkdirAll(gitDir, 0755)
-				
+
 				return config.Repository{
 					Name: "valid-repo",
 					URL:  "git@github.com:owner/valid-repo.git",
@@ -40,7 +40,7 @@ func TestRemoveRepository(t *testing.T) {
 				customPath := filepath.Join(baseDir, "custom", "path", "repo")
 				gitDir := filepath.Join(customPath, ".git")
 				os.MkdirAll(gitDir, 0755)
-				
+
 				return config.Repository{
 					Name: "custom-repo",
 					URL:  "git@github.com:owner/custom-repo.git",
@@ -56,7 +56,7 @@ func TestRemoveRepository(t *testing.T) {
 				repoDir := filepath.Join(baseDir, "url-derived-repo")
 				gitDir := filepath.Join(repoDir, ".git")
 				os.MkdirAll(gitDir, 0755)
-				
+
 				return config.Repository{
 					Name: "url-derived-repo",
 					URL:  "git@github.com:owner/url-derived-repo.git",
@@ -82,7 +82,7 @@ func TestRemoveRepository(t *testing.T) {
 			setupRepo: func(baseDir string) config.Repository {
 				notGitDir := filepath.Join(baseDir, "not-git")
 				os.MkdirAll(notGitDir, 0755)
-				
+
 				return config.Repository{
 					Name: "not-git",
 					URL:  "git@github.com:owner/not-git.git",
@@ -141,24 +141,24 @@ func TestRemoveRepository(t *testing.T) {
 
 func TestRemoveRepositoryWithNestedFiles(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Create a repository with nested files and directories
 	repoDir := filepath.Join(tmpDir, "nested-repo")
 	gitDir := filepath.Join(repoDir, ".git")
 	subDir := filepath.Join(repoDir, "subdir")
 	deepDir := filepath.Join(repoDir, "deep", "nested", "path")
-	
+
 	// Create directory structure
 	err := os.MkdirAll(gitDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create git directory: %v", err)
 	}
-	
+
 	err = os.MkdirAll(subDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create subdirectory: %v", err)
 	}
-	
+
 	err = os.MkdirAll(deepDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create deep directory: %v", err)
@@ -201,7 +201,7 @@ func TestRemoveRepositoryWithNestedFiles(t *testing.T) {
 
 func TestRemoveRepositorySymlinks(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Create a real repository
 	realRepoDir := filepath.Join(tmpDir, "real-repo")
 	gitDir := filepath.Join(realRepoDir, ".git")
@@ -242,7 +242,7 @@ func TestRemoveRepositorySymlinks(t *testing.T) {
 
 func TestRemoveRepositoryReadOnlyFiles(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Create repository with read-only files
 	repoDir := filepath.Join(tmpDir, "readonly-repo")
 	gitDir := filepath.Join(repoDir, ".git")
@@ -292,14 +292,14 @@ func TestRemoveRepositoryEmptyPath(t *testing.T) {
 
 func TestRemoveRepositoryRelativePath(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Change to temp directory for relative path test
 	originalDir, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Failed to get working directory: %v", err)
 	}
 	defer os.Chdir(originalDir)
-	
+
 	err = os.Chdir(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to change directory: %v", err)
@@ -340,7 +340,7 @@ func BenchmarkRemoveRepository(b *testing.B) {
 		repoDir := filepath.Join(tmpDir, fmt.Sprintf("bench-repo-%d", i))
 		gitDir := filepath.Join(repoDir, ".git")
 		os.MkdirAll(gitDir, 0755)
-		
+
 		// Create some files
 		os.WriteFile(filepath.Join(repoDir, "file1.txt"), []byte("content"), 0644)
 		os.WriteFile(filepath.Join(repoDir, "file2.txt"), []byte("content"), 0644)
@@ -366,11 +366,11 @@ func BenchmarkRemoveRepository(b *testing.B) {
 // Helper functions
 
 func containsString(str, substr string) bool {
-	return len(str) >= len(substr) && (str == substr || 
-		(len(str) > len(substr) && 
-			(str[:len(substr)] == substr || 
-			 str[len(str)-len(substr):] == substr ||
-			 strings.Contains(str, substr))))
+	return len(str) >= len(substr) && (str == substr ||
+		(len(str) > len(substr) &&
+			(str[:len(substr)] == substr ||
+				str[len(str)-len(substr):] == substr ||
+				strings.Contains(str, substr))))
 }
 
 func trimGitSuffix(url string) string {

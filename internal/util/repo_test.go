@@ -292,8 +292,6 @@ func TestColoredRepoName(t *testing.T) {
 	}
 }
 
-
-
 func TestEnsureDirectoryExists(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -352,7 +350,7 @@ func TestEnsureDirectoryExistsInvalidPath(t *testing.T) {
 	// Test with invalid path (on Unix systems, null character is invalid)
 	invalidPath := "invalid\x00path"
 	err := EnsureDirectoryExists(invalidPath)
-	
+
 	// This should fail on most systems
 	if err == nil {
 		t.Log("Warning: EnsureDirectoryExists did not fail with invalid path - this may be platform specific")

@@ -85,8 +85,8 @@ See [Example commands](#example-commands) for more examples of commands to run.
 To configure, clone and remove repositories:
 
 ```sh
-# Scan deeper directories (up to 5 levels)
-repos init --depth 5
+# Scan current directory for git repositories
+repos init
 
 # Create a different output file
 repos init -o my-repos-config.yaml
