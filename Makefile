@@ -71,7 +71,15 @@ test-all: test-unit test-integration test-coverage test-race ## Run all tests
 ## Code quality targets
 lint: ## Run linter
 	@echo "Running linter..."
-	golangci-lint run
+	@if command -v golangci-lint >/dev/null 2>&1; then \
+		golangci-lint run; \
+	elif [ -f "$$(go env GOPATH)/bin/golangci-lint" ]; then \
+		$$(go env GOPATH)/bin/golangci-lint run; \
+	else \
+		echo "golangci-lint not found, installing..."; \
+		$(MAKE) install-lint; \
+		$$(go env GOPATH)/bin/golangci-lint run; \
+	fi
 
 fmt: ## Format code
 	@echo "Formatting code..."

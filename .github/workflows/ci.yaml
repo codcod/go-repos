@@ -49,6 +49,7 @@ jobs:
         run: |
           make install-lint
           make install-go-tools
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Verify Go build
         run: make build
@@ -97,7 +98,9 @@ jobs:
           cache: true
 
       - name: Install Go tools
-        run: make install-go-tools
+        run: |
+          make install-go-tools
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Run govulncheck vulnerability scanner
         run: govulncheck ./...
