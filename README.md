@@ -187,8 +187,6 @@ repositories.
 * [repo](https://android.googlesource.com/tools/repo): A repository management
 tool often used for Android source code.
 
-
-
 ## License
 
 MIT
