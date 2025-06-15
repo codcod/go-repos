@@ -73,13 +73,12 @@ jobs:
       - name: Run integration tests
         run: make test-integration
 
-      - name: Build multi-platform binaries
+      - name: Debug build environment
         run: |
-          echo "Building multi-platform binaries with debug:"
+          echo "Build environment debug info:"
           make debug-vars
-          make build-all
-          echo "Testing Linux binary version:"
-          ./bin/repos-linux-amd64 version
+          git describe --tags --always --dirty || echo "git describe failed"
+          git rev-parse --short HEAD || echo "git rev-parse failed"
 
       - name: Release
         env:

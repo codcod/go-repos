@@ -11,8 +11,8 @@
       "@semantic-release/exec",
       {
         "verifyReleaseCmd": "echo 'Verifying release for version ${nextRelease.version}'",
-        "prepareCmd": "VERSION=${nextRelease.version} COMMIT=$(git rev-parse --short HEAD) BUILD_DATE=$(date -u +\"%Y-%m-%d\") make build",
-        "publishCmd": "echo 'Built binary ready for release'"
+        "prepareCmd": "VERSION=${nextRelease.version} make build-all",
+        "publishCmd": "echo 'Built binaries ready for release'"
       }
     ],
     [
@@ -20,9 +20,19 @@
       {
         "assets": [
           {
-            "path": "bin/repos",
-            "name": "repos-${nextRelease.version}",
-            "label": "repos CLI binary"
+            "path": "bin/repos-linux-amd64",
+            "name": "repos-${nextRelease.version}-linux-amd64",
+            "label": "repos CLI binary for Linux (amd64)"
+          },
+          {
+            "path": "bin/repos-darwin-amd64",
+            "name": "repos-${nextRelease.version}-darwin-amd64",
+            "label": "repos CLI binary for macOS (amd64)"
+          },
+          {
+            "path": "bin/repos-windows-amd64.exe",
+            "name": "repos-${nextRelease.version}-windows-amd64.exe",
+            "label": "repos CLI binary for Windows (amd64)"
           }
         ]
       }
