@@ -53,20 +53,8 @@ jobs:
           make install-go-tools
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
-      - name: Debug git environment
-        run: |
-          git status
-          git describe --tags --always --dirty || echo "git describe failed"
-          git rev-parse --short HEAD || echo "git rev-parse failed"
-          date -u +"%Y-%m-%d"
-
-      - name: Verify Go build with debug
-        run: |
-          echo "Testing make variables:"
-          make debug-vars
-          make build
-          echo "Testing binary version:"
-          ./bin/repos version
+      - name: Verify Go build
+        run: make build
 
       - name: Run code quality checks
         run: |
