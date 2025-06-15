@@ -162,6 +162,7 @@ func GetHealthCheckers(options HealthOptions) []HealthChecker {
 	// Start with safe, non-git checkers by default
 	allCheckers := []HealthChecker{
 		&DeprecatedComponentsChecker{},
+		&CyclomaticComplexityChecker{},
 		&DependencyChecker{},
 		&DocumentationChecker{},
 		&LicenseChecker{},

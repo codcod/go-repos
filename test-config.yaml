@@ -1,5 +1,0 @@
-repositories:
-  - name: repos
-    url: https://github.com/codcod/repos.git
-    tags: [go, cli]
-    path: .
