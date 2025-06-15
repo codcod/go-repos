@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/codcod/repos/compare/v1.2.0...v1.2.1) (2025-06-15)
+
+
+### Bug Fixes
+
+* enable build-time version information with environment fallback ([c5e0bfc](https://github.com/codcod/repos/commit/c5e0bfc476b2eff1cf625bec971f0ad24dfe841f))
+
 # [1.2.0](https://github.com/codcod/repos/compare/v1.1.0...v1.2.0) (2025-06-14)
 
 
