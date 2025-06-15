@@ -11,6 +11,7 @@ import (
 	"github.com/codcod/repos/internal/config"
 	"github.com/codcod/repos/internal/git"
 	"github.com/codcod/repos/internal/github"
+	"github.com/codcod/repos/internal/health"
 	"github.com/codcod/repos/internal/runner"
 	"github.com/codcod/repos/internal/util"
 	"github.com/fatih/color"
@@ -43,6 +44,16 @@ var (
 	// Init command flags
 	outputFile string
 	overwrite  bool
+
+	// Health command flags
+	healthFormat         string
+	healthOutputFile     string
+	healthTimeout        int
+	healthCategories     []string
+	healthExclude        []string
+	healthThreshold      int
+	healthSummary        bool
+	healthListCategories bool
 )
 
 // getEnvOrDefault returns the environment variable value or default if empty
@@ -266,6 +277,66 @@ var rmCmd = &cobra.Command{
 	},
 }
 
+var healthCmd = &cobra.Command{
+	Use:   "health",
+	Short: "Check the health status of repositories",
+	Long:  `Analyze repositories for health indicators including git status, dependencies, security, and documentation.`,
+	Run: func(_ *cobra.Command, _ []string) {
+		// Handle list-categories flag
+		if healthListCategories {
+			listHealthCategories()
+			return
+		}
+
+		cfg, err := config.LoadConfig(configFile)
+		if err != nil {
+			color.Red("Error: %v", err)
+			os.Exit(1)
+		}
+
+		repositories := cfg.FilterRepositoriesByTag(tag)
+		if len(repositories) == 0 {
+			color.Yellow("No repositories found with tag: %s", tag)
+			return
+		}
+
+		color.Green("Checking health of %d repositories...", len(repositories))
+
+		// Configure health options
+		options := health.HealthOptions{
+			IncludeCategories: healthCategories,
+			ExcludeCategories: healthExclude,
+			Threshold:         healthThreshold,
+			Format:            healthFormat,
+			OutputFile:        healthOutputFile,
+			Parallel:          parallel,
+			Timeout:           healthTimeout,
+		}
+
+		// Perform health checks
+		report := health.CheckAllRepositories(repositories, options)
+
+		// Display results
+		if healthSummary {
+			health.PrintSummaryTable(report)
+		} else {
+			err := health.PrintHealthReport(report, options)
+			if err != nil {
+				color.Red("Error displaying health report: %v", err)
+				os.Exit(1)
+			}
+		}
+
+		// Exit with appropriate code based on results
+		if report.Summary.Critical > 0 {
+			os.Exit(2) // Critical issues found
+		} else if report.Summary.Warning > 0 {
+			os.Exit(1) // Warnings found
+		}
+		// Success: exit 0
+	},
+}
+
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Create a config.yaml file from discovered Git repositories",
@@ -327,6 +398,28 @@ var initCmd = &cobra.Command{
 	},
 }
 
+// listHealthCategories displays all available health check categories
+func listHealthCategories() {
+	factory := health.NewCheckerFactory()
+	categories := factory.GetCategoryInfo()
+
+	fmt.Println("Available Health Check Categories:")
+	fmt.Println("==================================")
+	fmt.Println()
+
+	for _, category := range categories {
+		color.Cyan("📂 %s", category.Name)
+		fmt.Printf("   %s\n", category.Description)
+		fmt.Printf("   Checkers: %s\n", strings.Join(category.Checkers, ", "))
+		fmt.Println()
+	}
+
+	fmt.Println("Usage examples:")
+	fmt.Printf("  %s health --categories git,security\n", os.Args[0])
+	fmt.Printf("  %s health --exclude documentation\n", os.Args[0])
+	fmt.Printf("  %s health --categories code-quality\n", os.Args[0])
+}
+
 // Process repositories with clean error handling
 func processRepos(repositories []config.Repository, parallel bool, processor func(config.Repository) error) error {
 	logger := util.NewLogger()
@@ -386,11 +479,22 @@ func init() {
 	initCmd.Flags().StringVarP(&outputFile, "output", "o", "config.yaml", "Output file name")
 	initCmd.Flags().BoolVar(&overwrite, "overwrite", false, "Overwrite existing file if it exists")
 
+	// Health command flags
+	healthCmd.Flags().StringVar(&healthFormat, "format", "table", "Output format for health check (table, json, yaml)")
+	healthCmd.Flags().StringVar(&healthOutputFile, "output-file", "", "File to write health check output")
+	healthCmd.Flags().StringSliceVar(&healthCategories, "categories", nil, "Comma-separated list of categories to check")
+	healthCmd.Flags().StringSliceVar(&healthExclude, "exclude", nil, "Comma-separated list of checks to exclude")
+	healthCmd.Flags().IntVar(&healthThreshold, "threshold", 0, "Threshold for failing checks")
+	healthCmd.Flags().BoolVar(&healthSummary, "summary", false, "Show summary of health check results")
+	healthCmd.Flags().IntVar(&healthTimeout, "timeout", 30, "Timeout in seconds for individual health checks (default: 30)")
+	healthCmd.Flags().BoolVar(&healthListCategories, "list-categories", false, "List all available health check categories")
+
 	rootCmd.AddCommand(cloneCmd)
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(prCmd)
 	rootCmd.AddCommand(rmCmd)
-	rootCmd.AddCommand(initCmd) // Add the init command
+	rootCmd.AddCommand(initCmd)   // Add the init command
+	rootCmd.AddCommand(healthCmd) // Add the health command
 
 	// Add version command
 	rootCmd.AddCommand(&cobra.Command{
