@@ -43,8 +43,20 @@ jobs:
       - name: Download Go dependencies
         run: go mod download
 
-      - name: Verify Go build
-        run: make build
+      - name: Debug git environment
+        run: |
+          git status
+          git describe --tags --always --dirty || echo "git describe failed"
+          git rev-parse --short HEAD || echo "git rev-parse failed"
+          date -u +"%Y-%m-%d"
+
+      - name: Verify Go build with debug
+        run: |
+          echo "Testing make variables:"
+          make debug-vars
+          make build
+          echo "Testing binary version:"
+          ./bin/repos version
 
       - name: Run code quality checks
         run: |
@@ -62,7 +74,12 @@ jobs:
         run: make test-integration
 
       - name: Build multi-platform binaries
-        run: make build-all
+        run: |
+          echo "Building multi-platform binaries with debug:"
+          make debug-vars
+          make build-all
+          echo "Testing Linux binary version:"
+          ./bin/repos-linux-amd64 version
 
       - name: Release
         env:

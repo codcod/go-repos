@@ -23,6 +23,12 @@ build: ## Build the application
 	@echo "Building $(APP_NAME)..."
 	go build $(LDFLAGS) -o bin/$(APP_NAME) $(CMD_DIR)/repos
 
+debug-vars: ## Debug build variables
+	@echo "VERSION: $(VERSION)"
+	@echo "COMMIT: $(COMMIT)"
+	@echo "BUILD_DATE: $(BUILD_DATE)"
+	@echo "LDFLAGS: $(LDFLAGS)"
+
 build-all: ## Build for all platforms
 	@echo "Building for multiple platforms..."
 	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o bin/$(APP_NAME)-linux-amd64 $(CMD_DIR)/repos

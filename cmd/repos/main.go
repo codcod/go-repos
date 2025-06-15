@@ -45,7 +45,7 @@ var (
 	overwrite  bool
 )
 
-// getEnvOrDefault returns the value of the environment variable or a default value
+// getEnvOrDefault returns the environment variable value or default if empty
 func getEnvOrDefault(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
@@ -55,21 +55,15 @@ func getEnvOrDefault(key, defaultValue string) string {
 
 // init function to handle environment variable fallback for version info
 func init() {
-	// If build-time flags weren't set (still defaults), use environment variables
+	// Use environment variables as fallback when build-time flags weren't set
 	if version == "dev" {
-		if envVersion := getEnvOrDefault("VERSION", ""); envVersion != "" {
-			version = envVersion
-		}
+		version = getEnvOrDefault("VERSION", version)
 	}
 	if commit == "unknown" {
-		if envCommit := getEnvOrDefault("COMMIT", ""); envCommit != "" {
-			commit = envCommit
-		}
+		commit = getEnvOrDefault("COMMIT", commit)
 	}
 	if date == "unknown" {
-		if envDate := getEnvOrDefault("BUILD_DATE", ""); envDate != "" {
-			date = envDate
-		}
+		date = getEnvOrDefault("BUILD_DATE", date)
 	}
 }
 
