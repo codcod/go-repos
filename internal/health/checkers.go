@@ -96,27 +96,27 @@ func (f *CheckerFactory) CreateCheckerByName(name string) CheckerInterface {
 // createCheckerByName helper function to reduce complexity
 func (f *CheckerFactory) createCheckerByName(name string) CheckerInterface {
 	gitCheckers := map[string]CheckerInterface{
-		"Git Status":   &GitStatusChecker{},
-		"Last Commit":  &LastCommitChecker{},
+		"Git Status":  &GitStatusChecker{},
+		"Last Commit": &LastCommitChecker{},
 	}
-	
+
 	securityCheckers := map[string]CheckerInterface{
 		"Branch Protection": &BranchProtectionChecker{},
 		"Security":          &SecurityChecker{},
 	}
-	
+
 	qualityCheckers := map[string]CheckerInterface{
-		"Dependencies":           &DependencyChecker{},
-		"Deprecated Components":  &DeprecatedComponentsChecker{},
+		"Dependencies":          &DependencyChecker{},
+		"Deprecated Components": &DeprecatedComponentsChecker{},
 		"Cyclomatic Complexity": &CyclomaticComplexityChecker{},
 	}
-	
+
 	otherCheckers := map[string]CheckerInterface{
 		"License":       &LicenseChecker{},
 		"CI Status":     &CIStatusChecker{},
 		"Documentation": &DocumentationChecker{},
 	}
-	
+
 	// Search in all checker maps
 	if checker := gitCheckers[name]; checker != nil {
 		return checker
@@ -130,7 +130,7 @@ func (f *CheckerFactory) createCheckerByName(name string) CheckerInterface {
 	if checker := otherCheckers[name]; checker != nil {
 		return checker
 	}
-	
+
 	return nil
 }
 
@@ -1999,13 +1999,13 @@ func (c *CyclomaticComplexityChecker) determineComplexityStatus(metrics Complexi
 			fmt.Sprintf("Found %d files with very high complexity (>20)", metrics.veryHighComplexityFiles),
 			3
 	}
-	
+
 	if metrics.highComplexityFiles > metrics.totalFiles/4 || metrics.maxComplexity > 15 {
 		return HealthStatusWarning,
 			fmt.Sprintf("Found %d files with high complexity (>10)", metrics.highComplexityFiles),
 			2
 	}
-	
+
 	return HealthStatusHealthy,
 		"Code complexity is within acceptable limits",
 		1
@@ -2214,7 +2214,7 @@ func (c *CyclomaticComplexityChecker) calculateJavaComplexity(filePath string) i
 	if !isValidFilePath(filePath) {
 		return 0
 	}
-	
+
 	content, err := os.ReadFile(filePath) // #nosec G304 - filePath is validated
 	if err != nil {
 		return 0
@@ -2241,7 +2241,7 @@ func (c *CyclomaticComplexityChecker) calculateJSComplexity(filePath string) int
 	if !isValidFilePath(filePath) {
 		return 0
 	}
-	
+
 	content, err := os.ReadFile(filePath) // #nosec G304 - filePath is validated
 	if err != nil {
 		return 0
@@ -2268,7 +2268,7 @@ func (c *CyclomaticComplexityChecker) calculatePythonComplexity(filePath string)
 	if !isValidFilePath(filePath) {
 		return 0
 	}
-	
+
 	content, err := os.ReadFile(filePath) // #nosec G304 - filePath is validated
 	if err != nil {
 		return 0
@@ -2295,7 +2295,7 @@ func (c *CyclomaticComplexityChecker) calculateCComplexity(filePath string) int 
 	if !isValidFilePath(filePath) {
 		return 0
 	}
-	
+
 	content, err := os.ReadFile(filePath) // #nosec G304 - filePath is validated
 	if err != nil {
 		return 0
