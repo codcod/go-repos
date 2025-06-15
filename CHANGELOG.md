@@ -1,3 +1,16 @@
+# [1.3.0](https://github.com/codcod/repos/compare/v1.2.2...v1.3.0) (2025-06-15)
+
+
+### Bug Fixes
+
+* resolve all linter issues in cyclomatic complexity checker ([65905bb](https://github.com/codcod/repos/commit/65905bbeb79964cb852062dcd59338924ffe1b91))
+
+
+### Features
+
+* add cyclomatic complexity checker ([da1e319](https://github.com/codcod/repos/commit/da1e31933917c067fde5cbcb6feec5aeee4c1bef))
+* add repository health dashboard with multi-language support ([6826445](https://github.com/codcod/repos/commit/6826445cee93bd3341a720b9e7a74c6e5945af8a))
+
 ## [1.2.2](https://github.com/codcod/repos/compare/v1.2.1...v1.2.2) (2025-06-15)
 
 
