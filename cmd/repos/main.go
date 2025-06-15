@@ -25,10 +25,10 @@ var (
 	logDir      string
 	defaultLogs = "logs"
 
-	// Version information - will be set via build flags or environment variables
-	version = getEnvOrDefault("VERSION", "dev")
-	commit  = getEnvOrDefault("COMMIT", "unknown")
-	date    = getEnvOrDefault("BUILD_DATE", "unknown")
+	// Version information - will be set via build flags, with environment variable fallback
+	version = "dev"
+	commit  = "unknown"
+	date    = "unknown"
 
 	// PR command flags
 	prTitle    string
@@ -51,6 +51,26 @@ func getEnvOrDefault(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// init function to handle environment variable fallback for version info
+func init() {
+	// If build-time flags weren't set (still defaults), use environment variables
+	if version == "dev" {
+		if envVersion := getEnvOrDefault("VERSION", ""); envVersion != "" {
+			version = envVersion
+		}
+	}
+	if commit == "unknown" {
+		if envCommit := getEnvOrDefault("COMMIT", ""); envCommit != "" {
+			commit = envCommit
+		}
+	}
+	if date == "unknown" {
+		if envDate := getEnvOrDefault("BUILD_DATE", ""); envDate != "" {
+			date = envDate
+		}
+	}
 }
 
 var rootCmd = &cobra.Command{
