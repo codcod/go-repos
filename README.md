@@ -14,6 +14,7 @@ and comprehensive logging.
 - 🎨 **Colorized output**: Real-time colored logs with repository identification
 - 📝 **Comprehensive logging**: Per-repository log files for detailed command history
 - 🔄 **Pull request automation**: Create and manage pull requests across multiple repositories
+- 🏥 **Health dashboard**: Comprehensive repository health analysis including security, dependencies, code quality, and documentation
 
 ## Installation:
 
@@ -171,10 +172,46 @@ repos pr --draft
 repos pr -t backend
 ```
 
+### Repository Health Dashboard
+
+Analyze the health and maintenance status of your repositories:
+
+```sh
+# Check health of all repositories
+repos health
+
+# Check specific categories
+repos health --categories git,security
+
+# Check only repositories with specific tags
+repos health -t backend
+
+# Generate HTML report
+repos health --format html --output-file health-report.html
+
+# List all available health check categories
+repos health --list-categories
+
+# Run with parallel execution
+repos health -p
+```
+
+The health dashboard provides comprehensive checks including:
+- **Git**: Repository status and commit activity
+- **Dependencies**: Package management and outdated dependencies
+- **Security**: Vulnerabilities and security policies
+- **Code Quality**: Cyclomatic complexity analysis
+- **Documentation**: README quality and completeness
+- **Compliance**: License files and legal requirements
+- **Automation**: CI/CD configuration
+
+For detailed information, see the [Health Dashboard Guide](docs/06_health_dashboard.md).
+
 ### Documentation
 
 - [Development Guide](docs/01_development.md) - Setup, building, and commit conventions
-- [Testing Guide](docs/04_testing.md) - Comprehensive testing strategy and best practices  
+- [Testing Guide](docs/04_testing.md) - Comprehensive testing strategy and best practices
+- [Health Dashboard Guide](docs/06_health_dashboard.md) - Repository health analysis and code quality checks
 - [Scripts Documentation](scripts/README.md) - Utility scripts for development
 
 ## Alternatives
