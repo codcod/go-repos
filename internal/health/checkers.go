@@ -90,30 +90,48 @@ func (f *CheckerFactory) CreateAllCheckers() []CheckerInterface {
 
 // CreateCheckerByName creates a specific checker by name
 func (f *CheckerFactory) CreateCheckerByName(name string) CheckerInterface {
-	switch name {
-	case "Git Status":
-		return &GitStatusChecker{}
-	case "Last Commit":
-		return &LastCommitChecker{}
-	case "Branch Protection":
-		return &BranchProtectionChecker{}
-	case "Dependencies":
-		return &DependencyChecker{}
-	case "Security":
-		return &SecurityChecker{}
-	case "License":
-		return &LicenseChecker{}
-	case "CI Status":
-		return &CIStatusChecker{}
-	case "Documentation":
-		return &DocumentationChecker{}
-	case "Deprecated Components":
-		return &DeprecatedComponentsChecker{}
-	case "Cyclomatic Complexity":
-		return &CyclomaticComplexityChecker{}
-	default:
-		return nil
+	return f.createCheckerByName(name)
+}
+
+// createCheckerByName helper function to reduce complexity
+func (f *CheckerFactory) createCheckerByName(name string) CheckerInterface {
+	gitCheckers := map[string]CheckerInterface{
+		"Git Status":   &GitStatusChecker{},
+		"Last Commit":  &LastCommitChecker{},
 	}
+	
+	securityCheckers := map[string]CheckerInterface{
+		"Branch Protection": &BranchProtectionChecker{},
+		"Security":          &SecurityChecker{},
+	}
+	
+	qualityCheckers := map[string]CheckerInterface{
+		"Dependencies":           &DependencyChecker{},
+		"Deprecated Components":  &DeprecatedComponentsChecker{},
+		"Cyclomatic Complexity": &CyclomaticComplexityChecker{},
+	}
+	
+	otherCheckers := map[string]CheckerInterface{
+		"License":       &LicenseChecker{},
+		"CI Status":     &CIStatusChecker{},
+		"Documentation": &DocumentationChecker{},
+	}
+	
+	// Search in all checker maps
+	if checker := gitCheckers[name]; checker != nil {
+		return checker
+	}
+	if checker := securityCheckers[name]; checker != nil {
+		return checker
+	}
+	if checker := qualityCheckers[name]; checker != nil {
+		return checker
+	}
+	if checker := otherCheckers[name]; checker != nil {
+		return checker
+	}
+	
+	return nil
 }
 
 // CreateCheckersByCategory creates checkers for a specific category
@@ -296,6 +314,49 @@ func fileExistsInPath(repoPath string, files []string) []string {
 func commandAvailable(command string) bool {
 	_, err := exec.LookPath(command)
 	return err == nil
+}
+
+// isValidFilePath validates file paths to prevent directory traversal attacks
+func isValidFilePath(filePath string) bool {
+	// Check for directory traversal patterns
+	if strings.Contains(filePath, "..") {
+		return false
+	}
+
+	// Check for absolute paths outside of expected directories
+	if filepath.IsAbs(filePath) {
+		// Allow only paths within reasonable directories
+		allowedPrefixes := []string{
+			"/Users/",
+			"/home/",
+			"/tmp/",
+			"/var/",
+			"/opt/",
+		}
+
+		hasValidPrefix := false
+		for _, prefix := range allowedPrefixes {
+			if strings.HasPrefix(filePath, prefix) {
+				hasValidPrefix = true
+				break
+			}
+		}
+
+		if !hasValidPrefix {
+			return false
+		}
+	}
+
+	// Check file extension is reasonable
+	ext := filepath.Ext(filePath)
+	validExts := []string{".go", ".java", ".js", ".ts", ".py", ".c", ".cpp", ".h", ".hpp"}
+	for _, validExt := range validExts {
+		if ext == validExt {
+			return true
+		}
+	}
+
+	return false
 }
 
 // GitStatusChecker checks the git status of the repository
@@ -1873,66 +1934,81 @@ func (c *CyclomaticComplexityChecker) Category() string {
 
 func (c *CyclomaticComplexityChecker) Check(repo config.Repository) HealthCheck {
 	repoPath := GetRepoPath(repo)
-	
+
 	if _, err := os.Stat(repoPath); os.IsNotExist(err) {
-		return createHealthCheck(c.Name(), c.Category(), HealthStatusCritical, 
+		return createHealthCheck(c.Name(), c.Category(), HealthStatusCritical,
 			"Repository path does not exist", "", 1)
 	}
 
 	// Analyze complexity across different languages
 	complexityResults := c.analyzeComplexity(repoPath)
-	
+
 	if len(complexityResults) == 0 {
 		return createHealthCheck(c.Name(), c.Category(), HealthStatusWarning,
 			"No supported code files found for complexity analysis", "", 2)
 	}
 
-	totalFiles := len(complexityResults)
-	highComplexityFiles := 0
-	veryHighComplexityFiles := 0
-	maxComplexity := 0
-	avgComplexity := 0
-	totalComplexity := 0
-
-	for _, result := range complexityResults {
-		totalComplexity += result.Complexity
-		if result.Complexity > maxComplexity {
-			maxComplexity = result.Complexity
-		}
-		if result.Complexity > 10 {
-			highComplexityFiles++
-		}
-		if result.Complexity > 20 {
-			veryHighComplexityFiles++
-		}
-	}
-
-	if totalFiles > 0 {
-		avgComplexity = totalComplexity / totalFiles
-	}
-
-	// Determine status based on complexity metrics
-	var status HealthStatus
-	var message string
-	severity := 1
-
-	if veryHighComplexityFiles > 0 {
-		status = HealthStatusCritical
-		message = fmt.Sprintf("Found %d files with very high complexity (>20)", veryHighComplexityFiles)
-		severity = 3
-	} else if highComplexityFiles > totalFiles/4 || maxComplexity > 15 {
-		status = HealthStatusWarning
-		message = fmt.Sprintf("Found %d files with high complexity (>10)", highComplexityFiles)
-		severity = 2
-	} else {
-		status = HealthStatusHealthy
-		message = "Code complexity is within acceptable limits"
-		severity = 1
-	}
-
-	details := c.formatComplexityResults(complexityResults, totalFiles, avgComplexity, maxComplexity)
+	// Calculate metrics and determine status
+	metrics := c.calculateComplexityMetrics(complexityResults)
+	status, message, severity := c.determineComplexityStatus(metrics)
+	details := c.formatComplexityResults(complexityResults, metrics.totalFiles, metrics.avgComplexity, metrics.maxComplexity)
 
 	return createHealthCheck(c.Name(), c.Category(), status, message, details, severity)
+}
+
+// ComplexityMetrics holds calculated complexity metrics
+type ComplexityMetrics struct {
+	totalFiles              int
+	highComplexityFiles     int
+	veryHighComplexityFiles int
+	maxComplexity           int
+	avgComplexity           int
+	totalComplexity         int
+}
+
+// calculateComplexityMetrics calculates complexity metrics from results
+func (c *CyclomaticComplexityChecker) calculateComplexityMetrics(results []ComplexityResult) ComplexityMetrics {
+	metrics := ComplexityMetrics{
+		totalFiles: len(results),
+	}
+
+	for _, result := range results {
+		metrics.totalComplexity += result.Complexity
+		if result.Complexity > metrics.maxComplexity {
+			metrics.maxComplexity = result.Complexity
+		}
+		if result.Complexity > 10 {
+			metrics.highComplexityFiles++
+		}
+		if result.Complexity > 20 {
+			metrics.veryHighComplexityFiles++
+		}
+	}
+
+	if metrics.totalFiles > 0 {
+		metrics.avgComplexity = metrics.totalComplexity / metrics.totalFiles
+	}
+
+	return metrics
+}
+
+// determineComplexityStatus determines the health status based on metrics
+func (c *CyclomaticComplexityChecker) determineComplexityStatus(metrics ComplexityMetrics) (HealthStatus, string, int) {
+	if metrics.veryHighComplexityFiles > 0 {
+		return HealthStatusCritical,
+			fmt.Sprintf("Found %d files with very high complexity (>20)", metrics.veryHighComplexityFiles),
+			3
+	}
+	
+	if metrics.highComplexityFiles > metrics.totalFiles/4 || metrics.maxComplexity > 15 {
+		return HealthStatusWarning,
+			fmt.Sprintf("Found %d files with high complexity (>10)", metrics.highComplexityFiles),
+			2
+	}
+	
+	return HealthStatusHealthy,
+		"Code complexity is within acceptable limits",
+		1
 }
 
 // ComplexityResult represents the complexity analysis result for a file
@@ -1967,14 +2043,14 @@ func (c *CyclomaticComplexityChecker) analyzeComplexity(repoPath string) []Compl
 // analyzeGoFiles analyzes Go files for cyclomatic complexity
 func (c *CyclomaticComplexityChecker) analyzeGoFiles(repoPath string) []ComplexityResult {
 	var results []ComplexityResult
-	
+
 	goFiles := c.findFiles(repoPath, "*.go")
 	for _, file := range goFiles {
 		// Skip vendor and test files for main complexity analysis
 		if strings.Contains(file, "vendor/") || strings.Contains(file, ".git/") {
 			continue
 		}
-		
+
 		complexity := c.calculateGoComplexity(file)
 		if complexity > 0 {
 			results = append(results, ComplexityResult{
@@ -1985,20 +2061,20 @@ func (c *CyclomaticComplexityChecker) analyzeGoFiles(repoPath string) []Complexi
 			})
 		}
 	}
-	
+
 	return results
 }
 
 // analyzeJavaFiles analyzes Java files for cyclomatic complexity
 func (c *CyclomaticComplexityChecker) analyzeJavaFiles(repoPath string) []ComplexityResult {
 	var results []ComplexityResult
-	
+
 	javaFiles := c.findFiles(repoPath, "*.java")
 	for _, file := range javaFiles {
 		if strings.Contains(file, "target/") || strings.Contains(file, ".git/") {
 			continue
 		}
-		
+
 		complexity := c.calculateJavaComplexity(file)
 		if complexity > 0 {
 			results = append(results, ComplexityResult{
@@ -2009,30 +2085,30 @@ func (c *CyclomaticComplexityChecker) analyzeJavaFiles(repoPath string) []Comple
 			})
 		}
 	}
-	
+
 	return results
 }
 
 // analyzeJavaScriptFiles analyzes JavaScript/TypeScript files for cyclomatic complexity
 func (c *CyclomaticComplexityChecker) analyzeJavaScriptFiles(repoPath string) []ComplexityResult {
 	var results []ComplexityResult
-	
+
 	jsFiles := c.findFiles(repoPath, "*.js")
 	tsFiles := c.findFiles(repoPath, "*.ts")
 	allFiles := append(jsFiles, tsFiles...)
-	
+
 	for _, file := range allFiles {
 		if strings.Contains(file, "node_modules/") || strings.Contains(file, ".git/") ||
-		   strings.Contains(file, "dist/") || strings.Contains(file, "build/") {
+			strings.Contains(file, "dist/") || strings.Contains(file, "build/") {
 			continue
 		}
-		
+
 		complexity := c.calculateJSComplexity(file)
 		language := "JavaScript"
 		if strings.HasSuffix(file, ".ts") {
 			language = "TypeScript"
 		}
-		
+
 		if complexity > 0 {
 			results = append(results, ComplexityResult{
 				File:       file,
@@ -2042,21 +2118,21 @@ func (c *CyclomaticComplexityChecker) analyzeJavaScriptFiles(repoPath string) []
 			})
 		}
 	}
-	
+
 	return results
 }
 
 // analyzePythonFiles analyzes Python files for cyclomatic complexity
 func (c *CyclomaticComplexityChecker) analyzePythonFiles(repoPath string) []ComplexityResult {
 	var results []ComplexityResult
-	
+
 	pyFiles := c.findFiles(repoPath, "*.py")
 	for _, file := range pyFiles {
 		if strings.Contains(file, "__pycache__/") || strings.Contains(file, ".git/") ||
-		   strings.Contains(file, "venv/") || strings.Contains(file, ".venv/") {
+			strings.Contains(file, "venv/") || strings.Contains(file, ".venv/") {
 			continue
 		}
-		
+
 		complexity := c.calculatePythonComplexity(file)
 		if complexity > 0 {
 			results = append(results, ComplexityResult{
@@ -2067,30 +2143,30 @@ func (c *CyclomaticComplexityChecker) analyzePythonFiles(repoPath string) []Comp
 			})
 		}
 	}
-	
+
 	return results
 }
 
 // analyzeCFiles analyzes C/C++ files for cyclomatic complexity
 func (c *CyclomaticComplexityChecker) analyzeCFiles(repoPath string) []ComplexityResult {
 	var results []ComplexityResult
-	
+
 	cFiles := c.findFiles(repoPath, "*.c")
 	cppFiles := c.findFiles(repoPath, "*.cpp")
 	hFiles := c.findFiles(repoPath, "*.h")
 	allFiles := append(append(cFiles, cppFiles...), hFiles...)
-	
+
 	for _, file := range allFiles {
 		if strings.Contains(file, ".git/") {
 			continue
 		}
-		
+
 		complexity := c.calculateCComplexity(file)
 		language := "C"
 		if strings.HasSuffix(file, ".cpp") {
 			language = "C++"
 		}
-		
+
 		if complexity > 0 {
 			results = append(results, ComplexityResult{
 				File:       file,
@@ -2100,13 +2176,18 @@ func (c *CyclomaticComplexityChecker) analyzeCFiles(repoPath string) []Complexit
 			})
 		}
 	}
-	
+
 	return results
 }
 
 // calculateGoComplexity calculates cyclomatic complexity for Go files
 func (c *CyclomaticComplexityChecker) calculateGoComplexity(filePath string) int {
-	content, err := os.ReadFile(filePath)
+	// Validate file path to prevent directory traversal
+	if !isValidFilePath(filePath) {
+		return 0
+	}
+
+	content, err := os.ReadFile(filePath) // #nosec G304 - filePath is validated
 	if err != nil {
 		return 0
 	}
@@ -2129,7 +2210,12 @@ func (c *CyclomaticComplexityChecker) calculateGoComplexity(filePath string) int
 
 // calculateJavaComplexity calculates cyclomatic complexity for Java files
 func (c *CyclomaticComplexityChecker) calculateJavaComplexity(filePath string) int {
-	content, err := os.ReadFile(filePath)
+	// Validate file path to prevent directory traversal
+	if !isValidFilePath(filePath) {
+		return 0
+	}
+	
+	content, err := os.ReadFile(filePath) // #nosec G304 - filePath is validated
 	if err != nil {
 		return 0
 	}
@@ -2151,7 +2237,12 @@ func (c *CyclomaticComplexityChecker) calculateJavaComplexity(filePath string) i
 
 // calculateJSComplexity calculates cyclomatic complexity for JavaScript/TypeScript files
 func (c *CyclomaticComplexityChecker) calculateJSComplexity(filePath string) int {
-	content, err := os.ReadFile(filePath)
+	// Validate file path to prevent directory traversal
+	if !isValidFilePath(filePath) {
+		return 0
+	}
+	
+	content, err := os.ReadFile(filePath) // #nosec G304 - filePath is validated
 	if err != nil {
 		return 0
 	}
@@ -2173,7 +2264,12 @@ func (c *CyclomaticComplexityChecker) calculateJSComplexity(filePath string) int
 
 // calculatePythonComplexity calculates cyclomatic complexity for Python files
 func (c *CyclomaticComplexityChecker) calculatePythonComplexity(filePath string) int {
-	content, err := os.ReadFile(filePath)
+	// Validate file path to prevent directory traversal
+	if !isValidFilePath(filePath) {
+		return 0
+	}
+	
+	content, err := os.ReadFile(filePath) // #nosec G304 - filePath is validated
 	if err != nil {
 		return 0
 	}
@@ -2195,7 +2291,12 @@ func (c *CyclomaticComplexityChecker) calculatePythonComplexity(filePath string)
 
 // calculateCComplexity calculates cyclomatic complexity for C/C++ files
 func (c *CyclomaticComplexityChecker) calculateCComplexity(filePath string) int {
-	content, err := os.ReadFile(filePath)
+	// Validate file path to prevent directory traversal
+	if !isValidFilePath(filePath) {
+		return 0
+	}
+	
+	content, err := os.ReadFile(filePath) // #nosec G304 - filePath is validated
 	if err != nil {
 		return 0
 	}
@@ -2244,23 +2345,23 @@ func (c *CyclomaticComplexityChecker) getCFunctions(filePath string) []FunctionC
 // findFiles finds files matching a pattern in the repository
 func (c *CyclomaticComplexityChecker) findFiles(repoPath, pattern string) []string {
 	var files []string
-	
+
 	err := filepath.Walk(repoPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // Continue walking
 		}
-		
+
 		if matched, _ := filepath.Match(pattern, info.Name()); matched {
 			files = append(files, path)
 		}
-		
+
 		return nil
 	})
-	
+
 	if err != nil {
 		return []string{}
 	}
-	
+
 	return files
 }
 
@@ -2271,11 +2372,23 @@ func (c *CyclomaticComplexityChecker) formatComplexityResults(results []Complexi
 	}
 
 	var details strings.Builder
-	details.WriteString("Cyclomatic Complexity Analysis:\n")
-	details.WriteString(fmt.Sprintf("📊 Total files analyzed: %d\n", totalFiles))
-	details.WriteString(fmt.Sprintf("📈 Average complexity: %d\n", avgComplexity))
-	details.WriteString(fmt.Sprintf("🔝 Maximum complexity: %d\n\n", maxComplexity))
+	c.writeAnalysisHeader(&details, totalFiles, avgComplexity, maxComplexity)
+	c.writeLanguageResults(&details, results)
+	c.writeComplexityGuidelines(&details)
 
+	return details.String()
+}
+
+// writeAnalysisHeader writes the header section of the analysis
+func (c *CyclomaticComplexityChecker) writeAnalysisHeader(details *strings.Builder, totalFiles, avgComplexity, maxComplexity int) {
+	details.WriteString("Cyclomatic Complexity Analysis:\n")
+	fmt.Fprintf(details, "📊 Total files analyzed: %d\n", totalFiles)
+	fmt.Fprintf(details, "📈 Average complexity: %d\n", avgComplexity)
+	fmt.Fprintf(details, "🔝 Maximum complexity: %d\n\n", maxComplexity)
+}
+
+// writeLanguageResults writes the results grouped by language
+func (c *CyclomaticComplexityChecker) writeLanguageResults(details *strings.Builder, results []ComplexityResult) {
 	// Group by language
 	languageGroups := make(map[string][]ComplexityResult)
 	for _, result := range results {
@@ -2283,48 +2396,68 @@ func (c *CyclomaticComplexityChecker) formatComplexityResults(results []Complexi
 	}
 
 	for language, langResults := range languageGroups {
-		details.WriteString(fmt.Sprintf("🔤 %s Files:\n", language))
-		
-		// Show only files with high complexity to keep output manageable
-		highComplexityFiles := []ComplexityResult{}
-		for _, result := range langResults {
-			if result.Complexity > 8 { // Show files with complexity > 8
-				highComplexityFiles = append(highComplexityFiles, result)
-			}
-		}
-		
-		if len(highComplexityFiles) == 0 {
-			details.WriteString("   ✅ All files have acceptable complexity (≤8)\n")
-		} else {
-			for _, result := range highComplexityFiles {
-				complexity := result.Complexity
-				status := "⚠️"
-				if complexity > 20 {
-					status = "🚨"
-				} else if complexity > 15 {
-					status = "⚠️"
-				} else if complexity > 10 {
-					status = "⚡"
-				}
-				
-				relPath := strings.TrimPrefix(result.File, filepath.Dir(result.File))
-				if relPath == result.File {
-					relPath = filepath.Base(result.File)
-				}
-				
-				details.WriteString(fmt.Sprintf("   %s %s (complexity: %d)\n", status, relPath, complexity))
-			}
-		}
+		fmt.Fprintf(details, "🔤 %s Files:\n", language)
+		c.writeLanguageFileResults(details, langResults)
 		details.WriteString("\n")
 	}
+}
 
+// writeLanguageFileResults writes the results for files of a specific language
+func (c *CyclomaticComplexityChecker) writeLanguageFileResults(details *strings.Builder, langResults []ComplexityResult) {
+	// Show only files with high complexity to keep output manageable
+	highComplexityFiles := c.filterHighComplexityFiles(langResults)
+
+	if len(highComplexityFiles) == 0 {
+		details.WriteString("   ✅ All files have acceptable complexity (≤8)\n")
+		return
+	}
+
+	for _, result := range highComplexityFiles {
+		status := c.getComplexityStatus(result.Complexity)
+		relPath := c.getRelativePath(result.File)
+		fmt.Fprintf(details, "   %s %s (complexity: %d)\n", status, relPath, result.Complexity)
+	}
+}
+
+// filterHighComplexityFiles filters files with complexity > 8
+func (c *CyclomaticComplexityChecker) filterHighComplexityFiles(results []ComplexityResult) []ComplexityResult {
+	var highComplexityFiles []ComplexityResult
+	for _, result := range results {
+		if result.Complexity > 8 {
+			highComplexityFiles = append(highComplexityFiles, result)
+		}
+	}
+	return highComplexityFiles
+}
+
+// getComplexityStatus returns the appropriate status icon for complexity level
+func (c *CyclomaticComplexityChecker) getComplexityStatus(complexity int) string {
+	if complexity > 20 {
+		return "🚨"
+	} else if complexity > 15 {
+		return "⚠️"
+	} else if complexity > 10 {
+		return "⚡"
+	}
+	return "⚠️"
+}
+
+// getRelativePath gets a relative path for display
+func (c *CyclomaticComplexityChecker) getRelativePath(filePath string) string {
+	relPath := strings.TrimPrefix(filePath, filepath.Dir(filePath))
+	if relPath == filePath {
+		relPath = filepath.Base(filePath)
+	}
+	return relPath
+}
+
+// writeComplexityGuidelines writes the complexity guidelines section
+func (c *CyclomaticComplexityChecker) writeComplexityGuidelines(details *strings.Builder) {
 	details.WriteString("📋 Complexity Guidelines:\n")
 	details.WriteString("   1-8:   Simple, easy to maintain\n")
 	details.WriteString("   9-10:  Moderate complexity\n")
 	details.WriteString("   11-20: High complexity, consider refactoring\n")
 	details.WriteString("   21+:   Very high complexity, needs refactoring\n")
-
-	return details.String()
 }
 
 // Example usage of the optimized checker system:
