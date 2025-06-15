@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/codcod/repos/compare/v1.2.1...v1.2.2) (2025-06-15)
+
+
+### Bug Fixes
+
+* ensure version information in github releases ([39d0cf2](https://github.com/codcod/repos/commit/39d0cf25dd7df359a8035d1be74156dd57dbc1ab))
+
 ## [1.2.1](https://github.com/codcod/repos/compare/v1.2.0...v1.2.1) (2025-06-15)
 
 
