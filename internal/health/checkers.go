@@ -83,7 +83,6 @@ func (f *CheckerFactory) CreateAllCheckers() []CheckerInterface {
 		&LicenseChecker{},
 		&CIStatusChecker{},
 		&DocumentationChecker{},
-		&CyclomaticComplexityChecker{},
 		&DeprecatedComponentsChecker{},
 	}
 }
@@ -107,8 +106,6 @@ func (f *CheckerFactory) CreateCheckerByName(name string) CheckerInterface {
 		return &CIStatusChecker{}
 	case "Documentation":
 		return &DocumentationChecker{}
-	case "Cyclomatic Complexity":
-		return &CyclomaticComplexityChecker{}
 	case "Deprecated Components":
 		return &DeprecatedComponentsChecker{}
 	default:
@@ -450,7 +447,7 @@ func (c *BranchProtectionChecker) Check(repo config.Repository) HealthCheck {
 
 	c.checkLocalProtectionConfig(repoPath, &info)
 	c.checkGitHubProtection(repoPath, defaultBranch, &issues, &warnings, &info)
-	c.checkCommonProtectionPatterns(repoPath, &warnings, &info)
+	c.checkCommonProtectionPatterns(repoPath, &info)
 	c.checkDefaultBranchName(defaultBranch, &warnings)
 	c.checkMergePatterns(repoPath, defaultBranch, &info)
 
@@ -469,6 +466,32 @@ func (c *BranchProtectionChecker) createHealthCheck(status HealthStatus, message
 	}
 }
 
+func (c *BranchProtectionChecker) getDefaultBranch(repoPath string) (string, error) {
+	output, err := executeCommandWithoutContext(repoPath, "git", "symbolic-ref", "refs/remotes/origin/HEAD")
+	if err != nil {
+		// Fallback to checking common branch names
+		branches := []string{"main", "master", "develop"}
+		for _, branch := range branches {
+			_, err := executeCommandWithoutContext(repoPath, "git", "show-ref", "--verify", "--quiet", "refs/heads/"+branch)
+			if err == nil {
+				return branch, nil
+			}
+		}
+		return "main", fmt.Errorf("unable to determine default branch")
+	}
+
+	// Extract branch name from refs/remotes/origin/HEAD -> origin/main
+	branch := strings.TrimSpace(string(output))
+	if strings.Contains(branch, "refs/remotes/origin/") {
+		branch = strings.TrimPrefix(branch, "refs/remotes/origin/")
+	}
+	if branch == "" {
+		return "main", nil
+	}
+	return branch, nil
+}
+
+// checkLocalProtectionConfig checks local branch protection configuration
 func (c *BranchProtectionChecker) checkLocalProtectionConfig(repoPath string, info *[]string) {
 	branchProtectionFiles := []string{
 		".github/branch-protection.yml",
@@ -484,6 +507,13 @@ func (c *BranchProtectionChecker) checkLocalProtectionConfig(repoPath string, in
 			break
 		}
 	}
+}
+
+// checkGitHubProtection checks GitHub branch protection via API
+type protectionStatus struct {
+	hasProtection bool
+	details       string
+	error         string
 }
 
 func (c *BranchProtectionChecker) checkGitHubProtection(repoPath, defaultBranch string, issues, warnings, info *[]string) {
@@ -505,12 +535,60 @@ func (c *BranchProtectionChecker) checkGitHubProtection(repoPath, defaultBranch 
 	}
 }
 
-func (c *BranchProtectionChecker) checkDefaultBranchName(defaultBranch string, warnings *[]string) {
-	if defaultBranch != "main" && defaultBranch != "master" && defaultBranch != "develop" {
-		*warnings = append(*warnings, fmt.Sprintf("Unusual default branch name: '%s'", defaultBranch))
+func (c *BranchProtectionChecker) checkGitHubBranchProtection(repoPath, defaultBranch string) protectionStatus {
+	ctx, cancel := CreateHealthContext()
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "gh", "api", fmt.Sprintf("repos/:owner/:repo/branches/%s/protection", defaultBranch))
+	cmd.Dir = repoPath
+
+	output, err := cmd.Output()
+	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return protectionStatus{error: "GitHub API check timed out"}
+		}
+		return protectionStatus{error: fmt.Sprintf("GitHub API error: %v", err)}
+	}
+
+	if len(output) > 0 && !strings.Contains(string(output), "Branch not protected") {
+		return protectionStatus{hasProtection: true, details: "GitHub branch protection rules detected"}
+	}
+
+	return protectionStatus{hasProtection: false}
+}
+
+// checkCommonProtectionPatterns checks for common protection patterns
+func (c *BranchProtectionChecker) checkCommonProtectionPatterns(repoPath string, info *[]string) {
+	// Check for common patterns that indicate branch protection awareness
+	protectionPatterns := []string{
+		".github/CODEOWNERS",
+		".github/pull_request_template.md",
+		".github/workflows/ci.yml",
+		".github/workflows/ci.yaml",
+	}
+
+	for _, pattern := range protectionPatterns {
+		if _, err := os.Stat(filepath.Join(repoPath, pattern)); err == nil {
+			*info = append(*info, fmt.Sprintf("Found protection-related file: %s", pattern))
+		}
 	}
 }
 
+func (c *BranchProtectionChecker) checkMergeCommitPatterns(repoPath, defaultBranch string) string {
+	output, err := executeCommandWithoutContext(repoPath, "git", "log", "--oneline", "--merges", "-10", defaultBranch)
+	if err != nil {
+		return ""
+	}
+
+	mergeCount := len(strings.Split(strings.TrimSpace(string(output)), "\n"))
+	if mergeCount > 0 && len(output) > 0 {
+		return fmt.Sprintf("Found %d recent merge commits (indicates pull request workflow)", mergeCount)
+	}
+
+	return ""
+}
+
+// checkMergePatterns checks for merge patterns in the repository
 func (c *BranchProtectionChecker) checkMergePatterns(repoPath, defaultBranch string, info *[]string) {
 	if mergeCommitInfo := c.checkMergeCommitPatterns(repoPath, defaultBranch); mergeCommitInfo != "" {
 		*info = append(*info, mergeCommitInfo)
@@ -543,6 +621,19 @@ func (c *BranchProtectionChecker) createHealthCheckFromResults(defaultBranch str
 	}
 
 	return c.createHealthCheck(status, message, details, severity)
+}
+
+// commandExists checks if a command is available
+func (c *BranchProtectionChecker) commandExists(command string) bool {
+	_, err := exec.LookPath(command)
+	return err == nil
+}
+
+// checkDefaultBranchName checks if the default branch name follows conventions
+func (c *BranchProtectionChecker) checkDefaultBranchName(defaultBranch string, warnings *[]string) {
+	if defaultBranch != "main" && defaultBranch != "master" && defaultBranch != "develop" {
+		*warnings = append(*warnings, fmt.Sprintf("Unusual default branch name: '%s'", defaultBranch))
+	}
 }
 
 // DependencyChecker checks for outdated dependencies
@@ -1471,12 +1562,12 @@ func (d *DeprecatedComponentsChecker) scanGoFiles(repoPath string) []DeprecatedI
 
 	// Common Go deprecated patterns
 	deprecatedPatterns := map[string]DeprecatedItem{
-		"ioutil.ReadFile":     {Pattern: "ioutil.ReadFile", Replacement: "os.ReadFile", Severity: "warning", Description: "ioutil.ReadFile deprecated since Go 1.16"},
-		"ioutil.WriteFile":    {Pattern: "ioutil.WriteFile", Replacement: "os.WriteFile", Severity: "warning", Description: "ioutil.WriteFile deprecated since Go 1.16"},
-		"ioutil.ReadAll":      {Pattern: "ioutil.ReadAll", Replacement: "io.ReadAll", Severity: "warning", Description: "ioutil.ReadAll deprecated since Go 1.16"},
-		"ioutil.ReadDir":      {Pattern: "ioutil.ReadDir", Replacement: "os.ReadDir", Severity: "warning", Description: "ioutil.ReadDir deprecated since Go 1.16"},
-		"ioutil.TempDir":      {Pattern: "ioutil.TempDir", Replacement: "os.MkdirTemp", Severity: "warning", Description: "ioutil.TempDir deprecated since Go 1.17"},
-		"ioutil.TempFile":     {Pattern: "ioutil.TempFile", Replacement: "os.CreateTemp", Severity: "warning", Description: "ioutil.TempFile deprecated since Go 1.17"},
+		"ioutil.ReadFile":          {Pattern: "ioutil.ReadFile", Replacement: "os.ReadFile", Severity: "warning", Description: "ioutil.ReadFile deprecated since Go 1.16"},
+		"ioutil.WriteFile":         {Pattern: "ioutil.WriteFile", Replacement: "os.WriteFile", Severity: "warning", Description: "ioutil.WriteFile deprecated since Go 1.16"},
+		"ioutil.ReadAll":           {Pattern: "ioutil.ReadAll", Replacement: "io.ReadAll", Severity: "warning", Description: "ioutil.ReadAll deprecated since Go 1.16"},
+		"ioutil.ReadDir":           {Pattern: "ioutil.ReadDir", Replacement: "os.ReadDir", Severity: "warning", Description: "ioutil.ReadDir deprecated since Go 1.16"},
+		"ioutil.TempDir":           {Pattern: "ioutil.TempDir", Replacement: "os.MkdirTemp", Severity: "warning", Description: "ioutil.TempDir deprecated since Go 1.17"},
+		"ioutil.TempFile":          {Pattern: "ioutil.TempFile", Replacement: "os.CreateTemp", Severity: "warning", Description: "ioutil.TempFile deprecated since Go 1.17"},
 		"golang.org/x/net/context": {Pattern: "golang.org/x/net/context", Replacement: "context", Severity: "critical", Description: "Use standard library context package instead"},
 	}
 
@@ -1495,13 +1586,13 @@ func (d *DeprecatedComponentsChecker) scanJavaFiles(repoPath string) []Deprecate
 
 	// Common Java deprecated patterns
 	deprecatedPatterns := map[string]DeprecatedItem{
-		"@Deprecated":                    {Pattern: "@Deprecated", Replacement: "Check for modern alternative", Severity: "warning", Description: "Using deprecated Java API"},
-		"java.util.Date":                {Pattern: "java.util.Date", Replacement: "java.time.LocalDate/LocalDateTime", Severity: "warning", Description: "Use modern Java time API"},
-		"SimpleDateFormat":              {Pattern: "SimpleDateFormat", Replacement: "DateTimeFormatter", Severity: "warning", Description: "Use thread-safe DateTimeFormatter"},
-		"StringBuffer":                  {Pattern: "StringBuffer", Replacement: "StringBuilder", Severity: "warning", Description: "StringBuilder is more efficient for single-threaded use"},
-		"java.util.Vector":              {Pattern: "java.util.Vector", Replacement: "java.util.ArrayList", Severity: "warning", Description: "Vector is legacy, use ArrayList or Collections.synchronizedList"},
-		"java.util.Hashtable":           {Pattern: "java.util.Hashtable", Replacement: "java.util.HashMap", Severity: "warning", Description: "Hashtable is legacy, use HashMap or ConcurrentHashMap"},
-		"java.util.Stack":               {Pattern: "java.util.Stack", Replacement: "java.util.Deque", Severity: "warning", Description: "Stack is legacy, use ArrayDeque"},
+		"@Deprecated":         {Pattern: "@Deprecated", Replacement: "Check for modern alternative", Severity: "warning", Description: "Using deprecated Java API"},
+		"java.util.Date":      {Pattern: "java.util.Date", Replacement: "java.time.LocalDate/LocalDateTime", Severity: "warning", Description: "Use modern Java time API"},
+		"SimpleDateFormat":    {Pattern: "SimpleDateFormat", Replacement: "DateTimeFormatter", Severity: "warning", Description: "Use thread-safe DateTimeFormatter"},
+		"StringBuffer":        {Pattern: "StringBuffer", Replacement: "StringBuilder", Severity: "warning", Description: "StringBuilder is more efficient for single-threaded use"},
+		"java.util.Vector":    {Pattern: "java.util.Vector", Replacement: "java.util.ArrayList", Severity: "warning", Description: "Vector is legacy, use ArrayList or Collections.synchronizedList"},
+		"java.util.Hashtable": {Pattern: "java.util.Hashtable", Replacement: "java.util.HashMap", Severity: "warning", Description: "Hashtable is legacy, use HashMap or ConcurrentHashMap"},
+		"java.util.Stack":     {Pattern: "java.util.Stack", Replacement: "java.util.Deque", Severity: "warning", Description: "Stack is legacy, use ArrayDeque"},
 	}
 
 	for _, file := range javaFiles {
@@ -1521,16 +1612,16 @@ func (d *DeprecatedComponentsChecker) scanJavaScriptFiles(repoPath string) []Dep
 
 	// Common JavaScript/TypeScript deprecated patterns
 	deprecatedPatterns := map[string]DeprecatedItem{
-		"var ":                          {Pattern: "var ", Replacement: "const/let", Severity: "warning", Description: "Use const or let instead of var"},
-		"$.ajax":                        {Pattern: "$.ajax", Replacement: "fetch() or axios", Severity: "warning", Description: "Use modern HTTP client instead of jQuery ajax"},
-		"componentWillMount":            {Pattern: "componentWillMount", Replacement: "componentDidMount", Severity: "critical", Description: "React lifecycle method deprecated"},
-		"componentWillReceiveProps":     {Pattern: "componentWillReceiveProps", Replacement: "componentDidUpdate", Severity: "critical", Description: "React lifecycle method deprecated"},
-		"componentWillUpdate":           {Pattern: "componentWillUpdate", Replacement: "componentDidUpdate", Severity: "critical", Description: "React lifecycle method deprecated"},
-		"UNSAFE_componentWillMount":     {Pattern: "UNSAFE_componentWillMount", Replacement: "componentDidMount", Severity: "warning", Description: "Unsafe React lifecycle method"},
+		"var ":                             {Pattern: "var ", Replacement: "const/let", Severity: "warning", Description: "Use const or let instead of var"},
+		"$.ajax":                           {Pattern: "$.ajax", Replacement: "fetch() or axios", Severity: "warning", Description: "Use modern HTTP client instead of jQuery ajax"},
+		"componentWillMount":               {Pattern: "componentWillMount", Replacement: "componentDidMount", Severity: "critical", Description: "React lifecycle method deprecated"},
+		"componentWillReceiveProps":        {Pattern: "componentWillReceiveProps", Replacement: "componentDidUpdate", Severity: "critical", Description: "React lifecycle method deprecated"},
+		"componentWillUpdate":              {Pattern: "componentWillUpdate", Replacement: "componentDidUpdate", Severity: "critical", Description: "React lifecycle method deprecated"},
+		"UNSAFE_componentWillMount":        {Pattern: "UNSAFE_componentWillMount", Replacement: "componentDidMount", Severity: "warning", Description: "Unsafe React lifecycle method"},
 		"UNSAFE_componentWillReceiveProps": {Pattern: "UNSAFE_componentWillReceiveProps", Replacement: "componentDidUpdate", Severity: "warning", Description: "Unsafe React lifecycle method"},
-		"UNSAFE_componentWillUpdate":    {Pattern: "UNSAFE_componentWillUpdate", Replacement: "componentDidUpdate", Severity: "warning", Description: "Unsafe React lifecycle method"},
-		"ReactDOM.findDOMNode":          {Pattern: "ReactDOM.findDOMNode", Replacement: "useRef hook", Severity: "warning", Description: "findDOMNode is deprecated in StrictMode"},
-		"String.prototype.substr":       {Pattern: ".substr(", Replacement: ".substring(", Severity: "warning", Description: "substr() is deprecated, use substring()"},
+		"UNSAFE_componentWillUpdate":       {Pattern: "UNSAFE_componentWillUpdate", Replacement: "componentDidUpdate", Severity: "warning", Description: "Unsafe React lifecycle method"},
+		"ReactDOM.findDOMNode":             {Pattern: "ReactDOM.findDOMNode", Replacement: "useRef hook", Severity: "warning", Description: "findDOMNode is deprecated in StrictMode"},
+		"String.prototype.substr":          {Pattern: ".substr(", Replacement: ".substring(", Severity: "warning", Description: "substr() is deprecated, use substring()"},
 	}
 
 	for _, file := range jsFiles {
@@ -1548,15 +1639,15 @@ func (d *DeprecatedComponentsChecker) scanPythonFiles(repoPath string) []Depreca
 
 	// Common Python deprecated patterns
 	deprecatedPatterns := map[string]DeprecatedItem{
-		"imp.":                          {Pattern: "imp.", Replacement: "importlib", Severity: "warning", Description: "imp module is deprecated since Python 3.4"},
-		"optparse":                      {Pattern: "optparse", Replacement: "argparse", Severity: "warning", Description: "optparse is deprecated since Python 2.7"},
-		"platform.dist":                {Pattern: "platform.dist", Replacement: "platform.freedesktop_os_release", Severity: "warning", Description: "platform.dist deprecated since Python 3.5"},
-		"cgi.escape":                    {Pattern: "cgi.escape", Replacement: "html.escape", Severity: "warning", Description: "cgi.escape deprecated since Python 3.2"},
-		"collections.Mapping":          {Pattern: "collections.Mapping", Replacement: "collections.abc.Mapping", Severity: "warning", Description: "Import from collections.abc instead"},
-		"collections.MutableMapping":   {Pattern: "collections.MutableMapping", Replacement: "collections.abc.MutableMapping", Severity: "warning", Description: "Import from collections.abc instead"},
-		"collections.Sequence":         {Pattern: "collections.Sequence", Replacement: "collections.abc.Sequence", Severity: "warning", Description: "Import from collections.abc instead"},
-		"collections.Iterable":         {Pattern: "collections.Iterable", Replacement: "collections.abc.Iterable", Severity: "warning", Description: "Import from collections.abc instead"},
-		"asyncio.coroutine":            {Pattern: "asyncio.coroutine", Replacement: "async def", Severity: "warning", Description: "Use async/await syntax instead of @asyncio.coroutine"},
+		"imp.":                       {Pattern: "imp.", Replacement: "importlib", Severity: "warning", Description: "imp module is deprecated since Python 3.4"},
+		"optparse":                   {Pattern: "optparse", Replacement: "argparse", Severity: "warning", Description: "optparse is deprecated since Python 2.7"},
+		"platform.dist":              {Pattern: "platform.dist", Replacement: "platform.freedesktop_os_release", Severity: "warning", Description: "platform.dist deprecated since Python 3.5"},
+		"cgi.escape":                 {Pattern: "cgi.escape", Replacement: "html.escape", Severity: "warning", Description: "cgi.escape deprecated since Python 3.2"},
+		"collections.Mapping":        {Pattern: "collections.Mapping", Replacement: "collections.abc.Mapping", Severity: "warning", Description: "Import from collections.abc instead"},
+		"collections.MutableMapping": {Pattern: "collections.MutableMapping", Replacement: "collections.abc.MutableMapping", Severity: "warning", Description: "Import from collections.abc instead"},
+		"collections.Sequence":       {Pattern: "collections.Sequence", Replacement: "collections.abc.Sequence", Severity: "warning", Description: "Import from collections.abc instead"},
+		"collections.Iterable":       {Pattern: "collections.Iterable", Replacement: "collections.abc.Iterable", Severity: "warning", Description: "Import from collections.abc instead"},
+		"asyncio.coroutine":          {Pattern: "asyncio.coroutine", Replacement: "async def", Severity: "warning", Description: "Use async/await syntax instead of @asyncio.coroutine"},
 	}
 
 	for _, file := range pythonFiles {
@@ -1575,14 +1666,14 @@ func (d *DeprecatedComponentsChecker) scanDockerFiles(repoPath string) []Depreca
 
 	// Common Docker deprecated patterns
 	deprecatedPatterns := map[string]DeprecatedItem{
-		"MAINTAINER":                   {Pattern: "MAINTAINER", Replacement: "LABEL maintainer=", Severity: "warning", Description: "MAINTAINER instruction is deprecated"},
-		"FROM ubuntu:14.04":           {Pattern: "FROM ubuntu:14.04", Replacement: "FROM ubuntu:20.04 or later", Severity: "critical", Description: "Ubuntu 14.04 is end-of-life"},
-		"FROM ubuntu:16.04":           {Pattern: "FROM ubuntu:16.04", Replacement: "FROM ubuntu:20.04 or later", Severity: "warning", Description: "Ubuntu 16.04 is end-of-life"},
-		"FROM centos:6":               {Pattern: "FROM centos:6", Replacement: "FROM centos:8 or rocky/alma", Severity: "critical", Description: "CentOS 6 is end-of-life"},
-		"FROM centos:7":               {Pattern: "FROM centos:7", Replacement: "FROM centos:8 or rocky/alma", Severity: "warning", Description: "CentOS 7 will be end-of-life soon"},
-		"FROM node:10":                {Pattern: "FROM node:10", Replacement: "FROM node:18 or later", Severity: "critical", Description: "Node.js 10 is end-of-life"},
-		"FROM node:12":                {Pattern: "FROM node:12", Replacement: "FROM node:18 or later", Severity: "warning", Description: "Node.js 12 is end-of-life"},
-		"FROM python:2":               {Pattern: "FROM python:2", Replacement: "FROM python:3", Severity: "critical", Description: "Python 2 is end-of-life"},
+		"MAINTAINER":        {Pattern: "MAINTAINER", Replacement: "LABEL maintainer=", Severity: "warning", Description: "MAINTAINER instruction is deprecated"},
+		"FROM ubuntu:14.04": {Pattern: "FROM ubuntu:14.04", Replacement: "FROM ubuntu:20.04 or later", Severity: "critical", Description: "Ubuntu 14.04 is end-of-life"},
+		"FROM ubuntu:16.04": {Pattern: "FROM ubuntu:16.04", Replacement: "FROM ubuntu:20.04 or later", Severity: "warning", Description: "Ubuntu 16.04 is end-of-life"},
+		"FROM centos:6":     {Pattern: "FROM centos:6", Replacement: "FROM centos:8 or rocky/alma", Severity: "critical", Description: "CentOS 6 is end-of-life"},
+		"FROM centos:7":     {Pattern: "FROM centos:7", Replacement: "FROM centos:8 or rocky/alma", Severity: "warning", Description: "CentOS 7 will be end-of-life soon"},
+		"FROM node:10":      {Pattern: "FROM node:10", Replacement: "FROM node:18 or later", Severity: "critical", Description: "Node.js 10 is end-of-life"},
+		"FROM node:12":      {Pattern: "FROM node:12", Replacement: "FROM node:18 or later", Severity: "warning", Description: "Node.js 12 is end-of-life"},
+		"FROM python:2":     {Pattern: "FROM python:2", Replacement: "FROM python:3", Severity: "critical", Description: "Python 2 is end-of-life"},
 	}
 
 	for _, file := range dockerFiles {
@@ -1601,11 +1692,11 @@ func (d *DeprecatedComponentsChecker) scanKubernetesFiles(repoPath string) []Dep
 
 	// Common Kubernetes deprecated API versions
 	deprecatedPatterns := map[string]DeprecatedItem{
-		"apiVersion: extensions/v1beta1":          {Pattern: "apiVersion: extensions/v1beta1", Replacement: "apps/v1", Severity: "critical", Description: "extensions/v1beta1 API is deprecated"},
-		"apiVersion: apps/v1beta1":                {Pattern: "apiVersion: apps/v1beta1", Replacement: "apps/v1", Severity: "critical", Description: "apps/v1beta1 API is deprecated"},
-		"apiVersion: apps/v1beta2":                {Pattern: "apiVersion: apps/v1beta2", Replacement: "apps/v1", Severity: "warning", Description: "apps/v1beta2 API is deprecated"},
-		"apiVersion: networking.k8s.io/v1beta1":  {Pattern: "apiVersion: networking.k8s.io/v1beta1", Replacement: "networking.k8s.io/v1", Severity: "warning", Description: "networking.k8s.io/v1beta1 API is deprecated"},
-		"apiVersion: policy/v1beta1":              {Pattern: "apiVersion: policy/v1beta1", Replacement: "policy/v1", Severity: "warning", Description: "policy/v1beta1 API is deprecated"},
+		"apiVersion: extensions/v1beta1":                {Pattern: "apiVersion: extensions/v1beta1", Replacement: "apps/v1", Severity: "critical", Description: "extensions/v1beta1 API is deprecated"},
+		"apiVersion: apps/v1beta1":                      {Pattern: "apiVersion: apps/v1beta1", Replacement: "apps/v1", Severity: "critical", Description: "apps/v1beta1 API is deprecated"},
+		"apiVersion: apps/v1beta2":                      {Pattern: "apiVersion: apps/v1beta2", Replacement: "apps/v1", Severity: "warning", Description: "apps/v1beta2 API is deprecated"},
+		"apiVersion: networking.k8s.io/v1beta1":         {Pattern: "apiVersion: networking.k8s.io/v1beta1", Replacement: "networking.k8s.io/v1", Severity: "warning", Description: "networking.k8s.io/v1beta1 API is deprecated"},
+		"apiVersion: policy/v1beta1":                    {Pattern: "apiVersion: policy/v1beta1", Replacement: "policy/v1", Severity: "warning", Description: "policy/v1beta1 API is deprecated"},
 		"apiVersion: rbac.authorization.k8s.io/v1beta1": {Pattern: "apiVersion: rbac.authorization.k8s.io/v1beta1", Replacement: "rbac.authorization.k8s.io/v1", Severity: "warning", Description: "rbac.authorization.k8s.io/v1beta1 API is deprecated"},
 	}
 

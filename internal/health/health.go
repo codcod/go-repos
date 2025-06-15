@@ -161,11 +161,11 @@ func CheckAllRepositories(repositories []config.Repository, options HealthOption
 func GetHealthCheckers(options HealthOptions) []HealthChecker {
 	// Start with safe, non-git checkers by default
 	allCheckers := []HealthChecker{
+		&DeprecatedComponentsChecker{},
+		&DependencyChecker{},
 		&DocumentationChecker{},
 		&LicenseChecker{},
 		&CIStatusChecker{},
-		&DependencyChecker{},
-		&CyclomaticComplexityChecker{},
 		// Add git checkers only if explicitly requested or no filters specified
 	}
 
