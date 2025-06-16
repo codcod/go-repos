@@ -21,7 +21,7 @@ type Analyzer interface {
 	Language() string
 	SupportedExtensions() []string
 	CanAnalyze(repo Repository) bool
-	Analyze(ctx context.Context, repo Repository) (*AnalysisResult, error)
+	Analyze(ctx context.Context, repoPath string, config AnalyzerConfig) (*AnalysisResult, error)
 }
 
 // LegacyAnalyzer represents the legacy analyzer interface for backward compatibility
@@ -99,12 +99,16 @@ type CheckReport struct {
 
 // RepositoryResult represents results for a single repository
 type RepositoryResult struct {
-	Repository Repository    `json:"repository"`
-	Results    []CheckResult `json:"results"`
-	Status     HealthStatus  `json:"status"`
-	Score      int           `json:"score"`
-	MaxScore   int           `json:"max_score"`
-	Error      error         `json:"error,omitempty"`
+	Repository     Repository      `json:"repository"`
+	CheckResults   []CheckResult   `json:"check_results"`
+	AnalysisResult *AnalysisResult `json:"analysis_result,omitempty"`
+	Status         HealthStatus    `json:"status"`
+	Score          int             `json:"score"`
+	MaxScore       int             `json:"max_score"`
+	StartTime      time.Time       `json:"start_time"`
+	EndTime        time.Time       `json:"end_time"`
+	Duration       time.Duration   `json:"duration"`
+	Error          string          `json:"error,omitempty"`
 }
 
 // Summary represents a summary of check results
@@ -123,4 +127,53 @@ type CategorySummary struct {
 	IssuesFound   int     `json:"issues_found"`
 	WarningsFound int     `json:"warnings_found"`
 	AverageScore  float64 `json:"average_score"`
+}
+
+// CheckerRegistry represents a registry for health checkers
+type CheckerRegistry interface {
+	Register(checker Checker)
+	Unregister(checkerID string)
+	GetChecker(checkerID string) (Checker, error)
+	GetCheckers() []Checker
+	GetCheckersForRepository(repo Repository) []Checker
+	GetCheckersByCategory(category string) []Checker
+	GetEnabledCheckers(config map[string]CheckerConfig) []Checker
+	RunChecker(ctx context.Context, checkerID string, repoCtx RepositoryContext) (CheckResult, error)
+	RunCheckers(ctx context.Context, checkerIDs []string, repoCtx RepositoryContext) ([]CheckResult, error)
+	RunAllEnabledCheckers(ctx context.Context, repoCtx RepositoryContext, config map[string]CheckerConfig) ([]CheckResult, error)
+}
+
+// AnalyzerRegistry represents a registry for language analyzers
+type AnalyzerRegistry interface {
+	Register(analyzer Analyzer)
+	Unregister(language string)
+	GetAnalyzer(language string) (Analyzer, error)
+	GetAnalyzers() []Analyzer
+	GetSupportedLanguages() []string
+}
+
+// WorkflowResult represents the result of a complete health check workflow
+type WorkflowResult struct {
+	StartTime         time.Time          `json:"start_time"`
+	EndTime           time.Time          `json:"end_time"`
+	Duration          time.Duration      `json:"duration"`
+	TotalRepos        int                `json:"total_repos"`
+	RepositoryResults []RepositoryResult `json:"repository_results"`
+	Summary           WorkflowSummary    `json:"summary"`
+}
+
+// WorkflowSummary provides aggregated statistics for a workflow
+type WorkflowSummary struct {
+	SuccessfulRepos int                  `json:"successful_repos"`
+	FailedRepos     int                  `json:"failed_repos"`
+	AverageScore    int                  `json:"average_score"`
+	TotalIssues     int                  `json:"total_issues"`
+	StatusCounts    map[HealthStatus]int `json:"status_counts"`
+	SeverityCounts  map[Severity]int     `json:"severity_counts"`
+}
+
+// Orchestrator represents the orchestration engine interface
+type Orchestrator interface {
+	ExecuteHealthCheck(ctx context.Context, repos []Repository) (*WorkflowResult, error)
+	ExecuteRepositoryCheck(ctx context.Context, repo Repository) (RepositoryResult, error)
 }

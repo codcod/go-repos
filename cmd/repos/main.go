@@ -2,11 +2,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/codcod/repos/internal/config"
 	"github.com/codcod/repos/internal/git"
@@ -14,6 +16,12 @@ import (
 	"github.com/codcod/repos/internal/health"
 	"github.com/codcod/repos/internal/runner"
 	"github.com/codcod/repos/internal/util"
+
+	// Add orchestration imports
+	"github.com/codcod/repos/internal/checkers/registry"
+	"github.com/codcod/repos/internal/core"
+	"github.com/codcod/repos/internal/orchestration"
+	"github.com/codcod/repos/internal/platform/commands"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v3"
@@ -57,6 +65,15 @@ var (
 	complexityReport     bool
 	complexityDetailed   bool
 	maxComplexity        int
+
+	// Orchestration command flags
+	orchestrationConfig   string
+	orchestrationProfile  string
+	orchestrationPipeline string
+	orchestrationParallel bool
+	orchestrationTimeout  int
+	orchestrationDryRun   bool
+	orchestrationVerbose  bool
 )
 
 // getEnvOrDefault returns the environment variable value or default if empty
@@ -520,12 +537,22 @@ func init() {
 	healthCmd.Flags().BoolVar(&complexityDetailed, "complexity-detailed", false, "Generate flake8-style detailed complexity report")
 	healthCmd.Flags().IntVar(&maxComplexity, "max-complexity", 10, "Maximum allowed cyclomatic complexity for functions (default: 10)")
 
+	// Orchestration command flags
+	orchestrateCmd.Flags().StringVar(&orchestrationConfig, "config", "orchestration.yaml", "orchestration config file path")
+	orchestrateCmd.Flags().StringVar(&orchestrationProfile, "profile", "", "Profile name to apply from orchestration config")
+	orchestrateCmd.Flags().StringVar(&orchestrationPipeline, "pipeline", "", "Pipeline name to execute")
+	orchestrateCmd.Flags().BoolVar(&orchestrationParallel, "parallel", false, "Execute pipeline steps in parallel")
+	orchestrateCmd.Flags().IntVar(&orchestrationTimeout, "timeout", 30, "Timeout in seconds for orchestration (default: 30)")
+	orchestrateCmd.Flags().BoolVar(&orchestrationDryRun, "dry-run", false, "Dry run mode - show what would be executed")
+	orchestrateCmd.Flags().BoolVar(&orchestrationVerbose, "verbose", false, "Enable verbose output for orchestration")
+
 	rootCmd.AddCommand(cloneCmd)
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(prCmd)
 	rootCmd.AddCommand(rmCmd)
-	rootCmd.AddCommand(initCmd)   // Add the init command
-	rootCmd.AddCommand(healthCmd) // Add the health command
+	rootCmd.AddCommand(initCmd)        // Add the init command
+	rootCmd.AddCommand(healthCmd)      // Add the health command
+	rootCmd.AddCommand(orchestrateCmd) // Add the orchestration command
 
 	// Add version command
 	rootCmd.AddCommand(&cobra.Command{
@@ -541,5 +568,197 @@ func main() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
+	}
+}
+
+var orchestrateCmd = &cobra.Command{
+	Use:   "orchestrate",
+	Short: "Run orchestrated health checks using pipelines",
+	Long:  `Execute modular health checks using the orchestration engine with configurable pipelines and advanced reporting.`,
+	Run: func(_ *cobra.Command, _ []string) {
+		// Load advanced configuration
+		advancedConfig, err := config.LoadAdvancedConfig(orchestrationConfig)
+		if err != nil {
+			color.Red("Error loading orchestration config: %v", err)
+			os.Exit(1)
+		}
+
+		// Apply profile if specified
+		if orchestrationProfile != "" {
+			if profile, exists := advancedConfig.Profiles[orchestrationProfile]; exists {
+				err := advancedConfig.ApplyProfile(orchestrationProfile, profile)
+				if err != nil {
+					color.Red("Error applying profile '%s': %v", orchestrationProfile, err)
+					os.Exit(1)
+				}
+			} else {
+				color.Red("Profile '%s' not found in configuration", orchestrationProfile)
+				os.Exit(1)
+			}
+		}
+
+		// Load basic config for repositories
+		cfg, err := config.LoadConfig(configFile)
+		if err != nil {
+			color.Red("Error: %v", err)
+			os.Exit(1)
+		}
+
+		repositories := cfg.FilterRepositoriesByTag(tag)
+		if len(repositories) == 0 {
+			color.Yellow("No repositories found with tag: %s", tag)
+			return
+		}
+
+		// Convert repositories to core.Repository format
+		coreRepos := make([]core.Repository, len(repositories))
+		for i, repo := range repositories {
+			coreRepos[i] = core.Repository{
+				Name:     repo.Name,
+				Path:     filepath.Join("cloned_repos", repo.Name),
+				URL:      repo.URL,
+				Branch:   repo.Branch,
+				Tags:     repo.Tags,
+				Metadata: make(map[string]string),
+			}
+		}
+
+		color.Green("Running orchestrated health checks on %d repositories...", len(repositories))
+
+		// Create command executor and registries
+		executor := commands.NewOSCommandExecutor(time.Duration(orchestrationTimeout) * time.Second)
+		checkerRegistry := registry.NewCheckerRegistry(executor)
+
+		// Create simple logger
+		logger := &simpleLogger{}
+
+		// Create orchestration engine
+		engine := orchestration.NewEngine(checkerRegistry, nil, advancedConfig, logger)
+
+		// Determine pipeline to use
+		pipelineName := orchestrationPipeline
+		if pipelineName == "" {
+			pipelineName = "default"
+		}
+
+		// For now, use the engine directly since we don't have pipeline config yet
+		// In a production system, you would look up the pipeline configuration
+		// pipeline, exists := advancedConfig.Pipelines[pipelineName]
+		// if !exists {
+		//     color.Red("Pipeline '%s' not found in configuration", pipelineName)
+		//     os.Exit(1)
+		// }
+
+		// Execute pipeline
+		if orchestrationDryRun {
+			color.Yellow("Dry run mode - would execute pipeline '%s' on %d repositories", pipelineName, len(coreRepos))
+			return
+		}
+
+		ctx := context.Background()
+		if orchestrationTimeout > 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(context.Background(), time.Duration(orchestrationTimeout)*time.Second)
+			defer cancel()
+		}
+
+		result, err := engine.ExecuteHealthCheck(ctx, coreRepos)
+		if err != nil {
+			color.Red("Error executing health checks: %v", err)
+			os.Exit(1)
+		}
+
+		// Display results
+		displayOrchestrationResults(result, orchestrationVerbose)
+
+		// Exit with appropriate code based on results
+		if result.Summary.FailedRepos > 0 {
+			os.Exit(2) // Critical issues found
+		}
+		// No warnings field in summary, so just exit successfully
+	},
+}
+
+// simpleLogger provides a basic logger implementation
+type simpleLogger struct{}
+
+func (l *simpleLogger) Debug(msg string, fields ...core.Field) {
+	if orchestrationVerbose {
+		fmt.Printf("[DEBUG] "+msg, l.formatFields(fields)...)
+	}
+}
+
+func (l *simpleLogger) Info(msg string, fields ...core.Field) {
+	fmt.Printf("[INFO] "+msg, l.formatFields(fields)...)
+}
+
+func (l *simpleLogger) Warn(msg string, fields ...core.Field) {
+	args := l.formatFields(fields)
+	color.Yellow("[WARN] "+msg, args...)
+}
+
+func (l *simpleLogger) Error(msg string, fields ...core.Field) {
+	args := l.formatFields(fields)
+	color.Red("[ERROR] "+msg, args...)
+}
+
+func (l *simpleLogger) formatFields(fields []core.Field) []interface{} {
+	if len(fields) == 0 {
+		return []interface{}{}
+	}
+
+	var args []interface{}
+	for _, field := range fields {
+		args = append(args, field.Value)
+	}
+	return args
+}
+
+// displayOrchestrationResults displays the results from orchestration
+func displayOrchestrationResults(result *core.WorkflowResult, verbose bool) {
+	color.Green("\n=== Orchestration Results ===")
+
+	fmt.Printf("Duration: %v\n", result.Duration)
+	fmt.Printf("Total Repositories: %d\n", result.TotalRepos)
+	fmt.Printf("Start Time: %v\n", result.StartTime.Format("2006-01-02 15:04:05"))
+	fmt.Printf("End Time: %v\n", result.EndTime.Format("2006-01-02 15:04:05"))
+
+	color.Cyan("\n=== Summary ===")
+	fmt.Printf("Successful: %d\n", result.Summary.SuccessfulRepos)
+	fmt.Printf("Failed: %d\n", result.Summary.FailedRepos)
+	fmt.Printf("Average Score: %d\n", result.Summary.AverageScore)
+	fmt.Printf("Total Issues: %d\n", result.Summary.TotalIssues)
+
+	if verbose {
+		color.Cyan("\n=== Repository Details ===")
+		for _, repoResult := range result.RepositoryResults {
+			status := "✓"
+			statusColor := color.GreenString
+			if repoResult.Error != "" {
+				status = "✗"
+				statusColor = color.RedString
+			} else if repoResult.Status == core.StatusWarning {
+				status = "⚠"
+				statusColor = color.YellowString
+			}
+
+			fmt.Printf("%s %s (Duration: %v, Score: %d/%d)\n",
+				statusColor(status), repoResult.Repository.Name,
+				repoResult.Duration, repoResult.Score, repoResult.MaxScore)
+
+			if repoResult.Error != "" {
+				fmt.Printf("   Error: %s\n", repoResult.Error)
+			}
+
+			if len(repoResult.CheckResults) > 0 {
+				fmt.Printf("   Checks completed: %d\n", len(repoResult.CheckResults))
+				for _, checkResult := range repoResult.CheckResults {
+					if checkResult.Status != core.StatusHealthy {
+						fmt.Printf("     - %s: %s (%d issues)\n",
+							checkResult.Name, checkResult.Status, len(checkResult.Issues))
+					}
+				}
+			}
+		}
 	}
 }
