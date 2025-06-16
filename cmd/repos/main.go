@@ -18,10 +18,12 @@ import (
 	"github.com/codcod/repos/internal/util"
 
 	// Add orchestration imports
+	analyzer_registry "github.com/codcod/repos/internal/analyzers/registry"
 	"github.com/codcod/repos/internal/checkers/registry"
 	"github.com/codcod/repos/internal/core"
 	"github.com/codcod/repos/internal/orchestration"
 	"github.com/codcod/repos/internal/platform/commands"
+	"github.com/codcod/repos/internal/platform/filesystem"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v3"
@@ -626,12 +628,22 @@ var orchestrateCmd = &cobra.Command{
 		// Convert repositories to core.Repository format
 		coreRepos := make([]core.Repository, len(repositories))
 		for i, repo := range repositories {
+			// Use the actual repository path if it exists, otherwise use the specified path
+			repoPath := repo.Path
+			if repoPath == "" {
+				repoPath = filepath.Join("cloned_repos", repo.Name)
+			}
+
+			// Detect language from repository tags or directory structure
+			language := detectRepositoryLanguage(repo, repoPath)
+
 			coreRepos[i] = core.Repository{
 				Name:     repo.Name,
-				Path:     filepath.Join("cloned_repos", repo.Name),
+				Path:     repoPath,
 				URL:      repo.URL,
 				Branch:   repo.Branch,
 				Tags:     repo.Tags,
+				Language: language,
 				Metadata: make(map[string]string),
 			}
 		}
@@ -642,8 +654,12 @@ var orchestrateCmd = &cobra.Command{
 		executor := commands.NewOSCommandExecutor(time.Duration(orchestrationTimeout) * time.Second)
 		checkerRegistry := registry.NewCheckerRegistry(executor)
 
+		// Create filesystem and analyzer registry
+		fs := filesystem.NewOSFileSystem()
+		analyzerReg := analyzer_registry.NewRegistryWithStandardAnalyzers(fs, logger)
+
 		// Create orchestration engine
-		engine := orchestration.NewEngine(checkerRegistry, nil, advConfig, logger)
+		engine := orchestration.NewEngine(checkerRegistry, analyzerReg, advConfig, logger)
 
 		// Determine pipeline to use
 		pipelineName := orchestrationPipeline
@@ -769,4 +785,70 @@ func displayOrchestrationResults(result *core.WorkflowResult, verbose bool) {
 			}
 		}
 	}
+}
+
+// detectRepositoryLanguage attempts to detect the primary language of a repository
+//
+//nolint:gocyclo
+func detectRepositoryLanguage(repo config.Repository, repoPath string) string {
+	// First, check tags for language hints
+	for _, tag := range repo.Tags {
+		switch tag {
+		case "go", "golang":
+			return "go"
+		case "python", "py":
+			return "python"
+		case "javascript", "js", "node", "nodejs":
+			return "javascript"
+		case "java":
+			return "java"
+		case "rust":
+			return "rust"
+		case "cpp", "c++":
+			return "cpp"
+		case "c":
+			return "c"
+		}
+	}
+
+	// If no language tag found, try to detect from directory structure
+	if _, err := os.Stat(repoPath); err == nil {
+		// Check for language-specific files
+		if hasFile(repoPath, "go.mod", "main.go", "*.go") {
+			return "go"
+		}
+		if hasFile(repoPath, "requirements.txt", "setup.py", "pyproject.toml", "*.py") {
+			return "python"
+		}
+		if hasFile(repoPath, "package.json", "*.js", "*.ts") {
+			return "javascript"
+		}
+		if hasFile(repoPath, "pom.xml", "build.gradle", "*.java") {
+			return "java"
+		}
+		if hasFile(repoPath, "Cargo.toml", "*.rs") {
+			return "rust"
+		}
+	}
+
+	return "" // Unknown language
+}
+
+// hasFile checks if any of the specified files exist in the repository path
+func hasFile(repoPath string, patterns ...string) bool {
+	for _, pattern := range patterns {
+		if strings.Contains(pattern, "*") {
+			// Use glob pattern
+			matches, err := filepath.Glob(filepath.Join(repoPath, pattern))
+			if err == nil && len(matches) > 0 {
+				return true
+			}
+		} else {
+			// Check for exact file
+			if _, err := os.Stat(filepath.Join(repoPath, pattern)); err == nil {
+				return true
+			}
+		}
+	}
+	return false
 }

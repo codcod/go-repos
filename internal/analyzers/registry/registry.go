@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"fmt"
 
 	golang "github.com/codcod/repos/internal/analyzers/go"
 	java_analyzer "github.com/codcod/repos/internal/analyzers/java"
@@ -27,10 +28,33 @@ func (r *Registry) Register(analyzer core.Analyzer) {
 	r.analyzers[analyzer.Language()] = analyzer
 }
 
+// Unregister removes an analyzer by language
+func (r *Registry) Unregister(language string) {
+	delete(r.analyzers, language)
+}
+
 // GetByLanguage gets an analyzer by language
 func (r *Registry) GetByLanguage(language string) (core.Analyzer, bool) {
 	analyzer, exists := r.analyzers[language]
 	return analyzer, exists
+}
+
+// GetAnalyzer gets an analyzer by language (core.AnalyzerRegistry interface)
+func (r *Registry) GetAnalyzer(language string) (core.Analyzer, error) {
+	analyzer, exists := r.analyzers[language]
+	if !exists {
+		return nil, fmt.Errorf("analyzer not found for language: %s", language)
+	}
+	return analyzer, nil
+}
+
+// GetAnalyzers returns all registered analyzers (core.AnalyzerRegistry interface)
+func (r *Registry) GetAnalyzers() []core.Analyzer {
+	var analyzers []core.Analyzer
+	for _, analyzer := range r.analyzers {
+		analyzers = append(analyzers, analyzer)
+	}
+	return analyzers
 }
 
 // GetByFileExtension gets an analyzer by file extension
@@ -65,6 +89,15 @@ func (r *Registry) GetAllAnalyzers() []core.Analyzer {
 		analyzers = append(analyzers, analyzer)
 	}
 	return analyzers
+}
+
+// GetSupportedLanguages returns all supported languages
+func (r *Registry) GetSupportedLanguages() []string {
+	var languages []string
+	for language := range r.analyzers {
+		languages = append(languages, language)
+	}
+	return languages
 }
 
 // BaseAnalyzer provides common functionality for analyzers

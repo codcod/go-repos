@@ -168,6 +168,11 @@ func (e *Engine) executeRepositoryCheck(ctx context.Context, repo core.Repositor
 
 // runAnalysis executes language-specific analysis
 func (e *Engine) runAnalysis(ctx context.Context, repoCtx core.RepositoryContext) (*core.AnalysisResult, error) {
+	// Skip analysis if no analyzer registry available
+	if e.analyzerRegistry == nil {
+		return nil, fmt.Errorf("analyzer registry not available")
+	}
+
 	analyzer, err := e.analyzerRegistry.GetAnalyzer(repoCtx.Repository.Language)
 	if err != nil {
 		return nil, fmt.Errorf("analyzer not found for language %s: %w", repoCtx.Repository.Language, err)
