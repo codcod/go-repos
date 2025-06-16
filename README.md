@@ -205,6 +205,79 @@ The health dashboard provides comprehensive checks including:
 - **Compliance**: License files and legal requirements
 - **Automation**: CI/CD configuration
 
+#### Cyclomatic Complexity Analysis
+
+Generate detailed function-level cyclomatic complexity reports to identify complex code that may need refactoring:
+
+```sh
+# Generate ONLY detailed complexity report (no other health checks)
+repos health --complexity-report
+
+# Generate flake8-style detailed complexity report (similar to flake8 --max-complexity)
+repos health --complexity-detailed --max-complexity 10
+
+# Set custom complexity threshold (complexity report only)
+repos health --complexity-report --max-complexity 15
+
+# Combine complexity report with specific health checks
+repos health --categories quality --complexity-report
+
+# Generate complexity report for specific repositories
+repos health --complexity-report -t backend
+
+# Output complexity report in HTML format
+repos health --complexity-report --format html --output-file complexity-report.html
+```
+
+#### Complexity Report Formats
+
+**Standard Format** (`--complexity-report`):
+- Organized by repository and file
+- Shows function names with line ranges
+- Includes summary statistics
+
+**Flake8-style Format** (`--complexity-detailed`):
+- One violation per line (similar to flake8 output)
+- Format: `file:line:column: C901 'function_name' is too complex (complexity)`
+- Easy to integrate with CI/CD pipelines and linters
+
+**Note**: When `--complexity-report` or `--complexity-detailed` is used alone (without `--categories`), it generates **only** the complexity analysis and skips all other health checks for faster execution. To combine complexity reporting with other health checks, specify the desired categories using `--categories`.
+
+The complexity report provides:
+- **Function-level analysis**: Individual function complexity scores
+- **Threshold filtering**: Only shows functions exceeding the specified complexity limit
+- **Grouped output**: Functions organized by repository and file
+- **Multi-language support**: Currently supports Go (more languages coming soon)
+- **Actionable insights**: Identifies specific functions that may benefit from refactoring
+
+**Example output:**
+```
+=== Cyclomatic Complexity Report (Threshold: 10) ===
+
+Repository: loan-pricing
+  internal/calculator/complex_pricing.go:
+    CalculateLoanTerms: 12
+    ProcessRiskAssessment: 15
+    
+  pkg/validation/validator.go:
+    ValidateCompoundRules: 11
+
+Repository: web-ui
+  No functions exceed complexity threshold of 10
+
+Total functions analyzed: 87
+Functions above threshold: 3
+```
+
+**Flake8-style output example:**
+```
+src/timeline/timeline.py:77:1: C901 'calculate_epic_timeline' is too complex (12)
+src/timeline/timeline.py:144:1: C901 'display_results' is too complex (13)
+src/calculator/pricing.py:25:1: C901 'calculate_complex_pricing' is too complex (15)
+
+📊 Total violations: 3 (threshold: 10)
+```
+
 For detailed information, see the [Health Dashboard Guide](docs/06_health_dashboard.md).
 
 ### Documentation
