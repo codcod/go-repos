@@ -23,7 +23,6 @@ type AdvancedConfig struct {
 	Overrides    []OverrideConfig               `yaml:"overrides"`
 	Extensions   ExtensionsConfig               `yaml:"extensions"`
 	Integrations IntegrationsConfig             `yaml:"integrations"`
-	FeatureFlags []FeatureFlag                  `yaml:"feature_flags,omitempty"`
 }
 
 // PipelineConfig represents a pipeline configuration
@@ -161,13 +160,6 @@ type JIRAConfig struct {
 	Username string `yaml:"username"`
 	APIToken string `yaml:"api_token"`
 	Project  string `yaml:"project"`
-}
-
-// FeatureFlag defines a feature flag configuration
-type FeatureFlag struct {
-	Name        string `yaml:"name" json:"name"`
-	Enabled     bool   `yaml:"enabled" json:"enabled"`
-	Description string `yaml:"description,omitempty" json:"description,omitempty"`
 }
 
 // LoadAdvancedConfig loads configuration from a YAML file with advanced features

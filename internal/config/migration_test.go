@@ -64,13 +64,9 @@ complexity:
 	// Test migration manager
 	logger := &mockLogger{}
 	manager := NewMigrationManager(logger)
-	manager.InitializeFeatureFlags()
-
-	// Enable migration flag
-	manager.SetFlag(FlagConfigMigration, true)
 
 	// Load config with migration
-	config, err := manager.LoadConfigWithMigration(legacyPath)
+	config, err := manager.LoadConfig(legacyPath)
 	if err != nil {
 		t.Fatalf("Failed to load config with migration: %v", err)
 	}
@@ -90,33 +86,6 @@ complexity:
 	advancedPath := filepath.Join(tempDir, "legacy-config-advanced.yaml")
 	if _, err := os.Stat(advancedPath); os.IsNotExist(err) {
 		t.Errorf("Expected migrated config file to be created at %s", advancedPath)
-	}
-}
-
-func TestMigrationManager_FeatureFlags(t *testing.T) {
-	logger := &mockLogger{}
-	manager := NewMigrationManager(logger)
-	manager.InitializeFeatureFlags()
-
-	// Test default flags
-	if !manager.IsParallelExecutionEnabled() {
-		t.Error("Expected parallel execution to be enabled by default")
-	}
-
-	if manager.IsModularEngineEnabled() {
-		t.Error("Expected modular engine to be disabled by default")
-	}
-
-	// Test flag updates
-	manager.SetFlag(FlagModularEngine, true)
-	if !manager.IsModularEngineEnabled() {
-		t.Error("Expected modular engine to be enabled after SetFlag")
-	}
-
-	// Test gradual cutover
-	manager.EnableGradualCutover()
-	if len(logger.messages) == 0 {
-		t.Error("Expected logging messages from EnableGradualCutover")
 	}
 }
 
@@ -171,41 +140,6 @@ profiles:
 	}
 	if format != "advanced" {
 		t.Errorf("Expected 'advanced', got '%s'", format)
-	}
-}
-
-func TestFeatureFlags_Management(t *testing.T) {
-	flags := NewFeatureFlags()
-
-	// Test initial state
-	if flags.IsEnabled("nonexistent") {
-		t.Error("Expected nonexistent flag to be false")
-	}
-
-	// Test flag setting
-	flags.SetFlag("test_flag", true)
-	if !flags.IsEnabled("test_flag") {
-		t.Error("Expected test_flag to be enabled")
-	}
-
-	// Test flag loading
-	flagConfigs := []FeatureFlag{
-		{Name: "flag1", Enabled: true},
-		{Name: "flag2", Enabled: false},
-	}
-	flags.LoadFlags(flagConfigs)
-
-	if !flags.IsEnabled("flag1") {
-		t.Error("Expected flag1 to be enabled")
-	}
-	if flags.IsEnabled("flag2") {
-		t.Error("Expected flag2 to be disabled")
-	}
-
-	// Test getting all flags
-	allFlags := flags.GetAllFlags()
-	if len(allFlags) < 2 {
-		t.Errorf("Expected at least 2 flags, got %d", len(allFlags))
 	}
 }
 

@@ -114,7 +114,6 @@ func (m *ConfigMigrator) DetectConfigFormat(configPath string) (string, error) {
 		if advancedTest.Version != "" ||
 			len(advancedTest.Profiles) > 0 ||
 			len(advancedTest.Pipelines) > 0 ||
-			len(advancedTest.FeatureFlags) > 0 ||
 			len(advancedTest.Checkers) > 0 ||
 			len(advancedTest.Analyzers) > 0 ||
 			len(advancedTest.Categories) > 0 {

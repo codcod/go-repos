@@ -1,32 +1,8 @@
 # Advanced Configuration Sample
-# This file demonstrates the advanced configuration format with feature flags,
-# profiles, and comprehensive health checking options.
+# This file demonstrates the advanced configuration format with profiles,
+# pipelines, and comprehensive health checking options.
 
 version: "1.0"
-
-# Feature flags for system control
-feature_flags:
-  - name: "modular_engine"
-    enabled: true
-    description: "Enable the modular execution engine"
-  - name: "modular_checkers"
-    enabled: true
-    description: "Enable the modular checkers system"
-  - name: "modular_analyzers"
-    enabled: true
-    description: "Enable the modular analyzers system"
-  - name: "parallel_execution"
-    enabled: true
-    description: "Enable parallel execution of checks and analysis"
-  - name: "advanced_config"
-    enabled: true
-    description: "Enable advanced configuration format support"
-  - name: "legacy_compatibility"
-    enabled: true
-    description: "Enable legacy compatibility mode"
-  - name: "config_migration"
-    enabled: true
-    description: "Enable automatic configuration migration"
 
 # Engine configuration with parallel execution support
 engine:

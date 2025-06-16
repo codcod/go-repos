@@ -246,9 +246,18 @@ func (e *Engine) getEnabledCheckers(repo core.Repository, checkerConfigs map[str
 
 // getCheckerConfigs retrieves checker configurations
 func (e *Engine) getCheckerConfigs() map[string]core.CheckerConfig {
-	// This would be implemented based on the actual config interface
-	// For now, return a default configuration
-	return make(map[string]core.CheckerConfig)
+	// Get all registered checkers and enable them with default config
+	allCheckers := e.checkerRegistry.GetCheckers()
+	configs := make(map[string]core.CheckerConfig)
+
+	for _, checker := range allCheckers {
+		// Get the checker's default config and enable it
+		defaultConfig := checker.Config()
+		defaultConfig.Enabled = true
+		configs[checker.ID()] = defaultConfig
+	}
+
+	return configs
 }
 
 // calculateOverallStatus determines the overall status based on check results

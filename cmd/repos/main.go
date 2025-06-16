@@ -579,12 +579,11 @@ var orchestrateCmd = &cobra.Command{
 		// Create simple logger
 		logger := &simpleLogger{}
 
-		// Create migration manager for feature flags and config migration
+		// Create migration manager for config migration
 		migrationManager := config.NewMigrationManager(logger)
-		migrationManager.InitializeFeatureFlags()
 
 		// Load configuration with migration support
-		advancedConfig, err := migrationManager.LoadConfigWithMigration(orchestrationConfig)
+		advancedConfig, err := migrationManager.LoadConfig(orchestrationConfig)
 		if err != nil {
 			color.Red("Error loading orchestration config: %v", err)
 			os.Exit(1)
@@ -596,9 +595,6 @@ var orchestrateCmd = &cobra.Command{
 			color.Red("Error: configuration is not in advanced format")
 			os.Exit(1)
 		}
-
-		// Enable gradual cutover based on feature flags
-		migrationManager.EnableGradualCutover()
 
 		// Apply profile if specified
 		if orchestrationProfile != "" {
@@ -698,34 +694,32 @@ type simpleLogger struct{}
 
 func (l *simpleLogger) Debug(msg string, fields ...core.Field) {
 	if orchestrationVerbose {
-		fmt.Printf("[DEBUG] "+msg, l.formatFields(fields)...)
+		fmt.Print("[DEBUG] " + msg + l.formatFieldsAsString(fields))
 	}
 }
 
 func (l *simpleLogger) Info(msg string, fields ...core.Field) {
-	fmt.Printf("[INFO] "+msg, l.formatFields(fields)...)
+	fmt.Print("[INFO] " + msg + l.formatFieldsAsString(fields))
 }
 
 func (l *simpleLogger) Warn(msg string, fields ...core.Field) {
-	args := l.formatFields(fields)
-	color.Yellow("[WARN] "+msg, args...)
+	color.Yellow("[WARN] " + msg + l.formatFieldsAsString(fields))
 }
 
 func (l *simpleLogger) Error(msg string, fields ...core.Field) {
-	args := l.formatFields(fields)
-	color.Red("[ERROR] "+msg, args...)
+	color.Red("[ERROR] " + msg + l.formatFieldsAsString(fields))
 }
 
-func (l *simpleLogger) formatFields(fields []core.Field) []interface{} {
+func (l *simpleLogger) formatFieldsAsString(fields []core.Field) string {
 	if len(fields) == 0 {
-		return []interface{}{}
+		return "\n"
 	}
 
-	var args []interface{}
+	var result string
 	for _, field := range fields {
-		args = append(args, field.Value)
+		result += fmt.Sprintf(" [%s=%v]", field.Key, field.Value)
 	}
-	return args
+	return result + "\n"
 }
 
 // displayOrchestrationResults displays the results from orchestration
