@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/codcod/repos/compare/v1.3.0...v1.4.0) (2025-06-16)
+
+
+### Features
+
+* more acurate cyclomatic complexity calculation ([4fe34d0](https://github.com/codcod/repos/commit/4fe34d078c2694cfac89ac801e190d94ba5417c6))
+
 # [1.3.0](https://github.com/codcod/repos/compare/v1.2.2...v1.3.0) (2025-06-15)
 
 
