@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/codcod/repos/internal/analyzers/registry"
-	"github.com/codcod/repos/internal/checkers/quality/complexity"
 	"github.com/codcod/repos/internal/config"
 	"github.com/codcod/repos/internal/core"
 	"github.com/codcod/repos/internal/platform/filesystem"

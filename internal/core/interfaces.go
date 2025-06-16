@@ -10,6 +10,7 @@ type Checker interface {
 	ID() string
 	Name() string
 	Category() string
+	Config() CheckerConfig
 	Check(ctx context.Context, repoCtx RepositoryContext) (CheckResult, error)
 	SupportsRepository(repo Repository) bool
 }
