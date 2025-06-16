@@ -54,8 +54,8 @@ func (js *JavaScriptAnalyzer) CanAnalyze(repo core.Repository) bool {
 }
 
 // Analyze performs language-specific analysis on the repository
-func (js *JavaScriptAnalyzer) Analyze(ctx context.Context, repo core.Repository) (*core.AnalysisResult, error) {
-	js.logger.Info("Starting JavaScript/TypeScript analysis", core.Field{Key: "repo", Value: repo.Name})
+func (js *JavaScriptAnalyzer) Analyze(ctx context.Context, repoPath string, config core.AnalyzerConfig) (*core.AnalysisResult, error) {
+	js.logger.Info("Starting JavaScript/TypeScript analysis", core.Field{Key: "repo", Value: repoPath})
 
 	result := &core.AnalysisResult{
 		Language:  js.language,
@@ -65,7 +65,7 @@ func (js *JavaScriptAnalyzer) Analyze(ctx context.Context, repo core.Repository)
 	}
 
 	// Find JavaScript/TypeScript files
-	files, err := js.findJavaScriptFiles(repo.Path)
+	files, err := js.findJavaScriptFiles(repoPath)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func (js *JavaScriptAnalyzer) findJavaScriptFiles(repoPath string) ([]string, er
 
 // analyzeFile analyzes a single JavaScript/TypeScript file
 func (js *JavaScriptAnalyzer) analyzeFile(filePath string) (*core.FileAnalysis, error) {
-	content, err := os.ReadFile(filePath)
+	content, err := os.ReadFile(filePath) //nolint:gosec // File path is from repository analysis
 	if err != nil {
 		return nil, err
 	}
@@ -222,6 +222,8 @@ func (js *JavaScriptAnalyzer) analyzeFile(filePath string) (*core.FileAnalysis, 
 }
 
 // parseFile parses a JavaScript/TypeScript file to extract functions and imports
+//
+//nolint:gocyclo // Complex parsing logic for JavaScript/TypeScript requires high cyclomatic complexity
 func (js *JavaScriptAnalyzer) parseFile(content, filePath, language string) ([]core.FunctionInfo, []core.ImportInfo) {
 	var functions []core.FunctionInfo
 	var imports []core.ImportInfo
@@ -405,6 +407,8 @@ func (js *JavaScriptAnalyzer) isLocalImport(path string) bool {
 }
 
 // calculateLineComplexity calculates complexity contribution of a single line
+//
+//nolint:gocyclo // Complex line-by-line analysis requires high cyclomatic complexity
 func (js *JavaScriptAnalyzer) calculateLineComplexity(line string) int {
 	complexity := 0
 	line = strings.TrimSpace(line)

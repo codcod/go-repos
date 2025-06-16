@@ -1,20 +1,20 @@
-# Sample Migration Configuration
-# This file demonstrates Phase 5 migration features including feature flags,
-# gradual cutover, and advanced configuration options.
+# Advanced Configuration Sample
+# This file demonstrates the advanced configuration format with feature flags,
+# profiles, and comprehensive health checking options.
 
 version: "1.0"
 
-# Feature flags for gradual migration control
+# Feature flags for system control
 feature_flags:
   - name: "modular_engine"
-    enabled: false
-    description: "Enable the new modular execution engine"
+    enabled: true
+    description: "Enable the modular execution engine"
   - name: "modular_checkers"
-    enabled: false
-    description: "Enable the new modular checkers system"
+    enabled: true
+    description: "Enable the modular checkers system"
   - name: "modular_analyzers"
     enabled: true
-    description: "Enable the new modular analyzers system"
+    description: "Enable the modular analyzers system"
   - name: "parallel_execution"
     enabled: true
     description: "Enable parallel execution of checks and analysis"
@@ -182,9 +182,9 @@ categories:
 
 # Execution profiles for different use cases
 profiles:
-  migration-phase1:
-    name: "Migration Phase 1 - Basic"
-    description: "Basic checks with legacy compatibility"
+  basic:
+    name: "Basic Profile"
+    description: "Essential checks for quick validation"
     checkers:
       git-status:
         enabled: true
@@ -205,9 +205,9 @@ profiles:
     categories: ["git"]
     exclusions: []
 
-  migration-phase2:
-    name: "Migration Phase 2 - Analyzers" 
-    description: "Enable modular analyzers"
+  comprehensive:
+    name: "Comprehensive Profile"
+    description: "Enable all analyzers and advanced checks"
     checkers:
       git-status:
         enabled: true
@@ -249,9 +249,9 @@ profiles:
     categories: ["git", "quality"]
     exclusions: []
 
-  migration-phase3:
-    name: "Migration Phase 3 - Full Modular"
-    description: "Full modular system with all components"
+  full-stack:
+    name: "Full Stack Profile"
+    description: "Complete health check suite with all components"
     checkers:
       git-status:
         enabled: true
@@ -452,9 +452,9 @@ profiles:
 
 # Pipeline configurations for orchestrated execution
 pipelines:
-  migration-demo:
-    name: "Migration Demonstration Pipeline"
-    description: "Demonstrates gradual migration capabilities"
+  standard:
+    name: "Standard Health Check Pipeline"
+    description: "Standard orchestrated health check workflow"
     steps:
       - name: "analysis"
         type: "analysis"

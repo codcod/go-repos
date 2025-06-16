@@ -142,6 +142,8 @@ func (c *GitStatusChecker) parseGitStatus(lines []string) []GitFile {
 }
 
 // getStatusDescription converts git status codes to descriptions
+//
+//nolint:gocyclo // Switch statement for git status codes requires multiple branches
 func (c *GitStatusChecker) getStatusDescription(code string) string {
 	switch code {
 	case "??":

@@ -80,7 +80,7 @@ const (
 	StatusCompleted ExecutionStatus = "completed"
 	StatusFailed    ExecutionStatus = "failed"
 	StatusSkipped   ExecutionStatus = "skipped"
-	StatusCancelled ExecutionStatus = "cancelled"
+	StatusCanceled  ExecutionStatus = "canceled"
 )
 
 // PipelineResult represents the result of pipeline execution

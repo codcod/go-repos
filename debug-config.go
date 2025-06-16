@@ -40,7 +40,7 @@ func main() {
 	migrator := config.NewConfigMigrator(logger)
 
 	// Read file manually
-	data, err := os.ReadFile(configFile)
+	data, err := os.ReadFile(configFile) //nolint:gosec // Config file path is from command line argument
 	if err != nil {
 		fmt.Printf("Error reading file: %v\n", err)
 		os.Exit(1)

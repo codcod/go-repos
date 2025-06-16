@@ -247,7 +247,7 @@ func (c *VulnerabilityChecker) checkPythonVulnerabilities(ctx context.Context, r
 }
 
 // checkJavaVulnerabilities checks for Java vulnerabilities
-func (c *VulnerabilityChecker) checkJavaVulnerabilities(ctx context.Context, repoCtx core.RepositoryContext, builder *base.ResultBuilder) (core.CheckResult, error) {
+func (c *VulnerabilityChecker) checkJavaVulnerabilities(_ context.Context, _ core.RepositoryContext, builder *base.ResultBuilder) (core.CheckResult, error) {
 	// For Java, we'll check for OWASP dependency check or similar tools
 	builder.WithStatus(core.StatusWarning)
 	builder.AddIssue(base.NewIssueWithSuggestion(

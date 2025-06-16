@@ -43,11 +43,11 @@ func (f *OSFileSystem) WriteFile(path string, data []byte) error {
 
 	// Ensure directory exists
 	dir := filepath.Dir(cleanPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return err
 	}
 
-	return os.WriteFile(cleanPath, data, 0644)
+	return os.WriteFile(cleanPath, data, 0600)
 }
 
 // Exists checks if a file or directory exists

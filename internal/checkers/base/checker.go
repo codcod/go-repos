@@ -49,12 +49,8 @@ func (c *BaseChecker) Config() core.CheckerConfig {
 func (c *BaseChecker) Execute(ctx context.Context, repoCtx core.RepositoryContext, checkFn func() (core.CheckResult, error)) (core.CheckResult, error) {
 	start := time.Now()
 
-	// Create timeout context if configured
-	if c.config.Timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, c.config.Timeout)
-		defer cancel()
-	}
+	// Note: Timeout is not currently supported as checkFn doesn't accept context
+	// TODO: Update checkFn signature to accept context for timeout support
 
 	result, err := checkFn()
 	if err != nil {

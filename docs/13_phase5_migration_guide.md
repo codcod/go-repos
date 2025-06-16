@@ -1,10 +1,12 @@
-# Phase 5 Migration Guide
+# Migration Reference Guide
 
 ## Overview
 
-Phase 5 "Migration" implements the final step of the modular architecture migration, providing tools and processes for gradual cutover from legacy to modular systems while maintaining backward compatibility.
+This reference guide documents the migration features implemented in the modular architecture. These features provide tools and processes for configuration migration, feature flag control, and backward compatibility.
 
-## Key Features Implemented
+**Note**: The migration is complete and the system is production-ready. This guide serves as reference documentation for the migration features that remain available for ongoing configuration management.
+
+## Key Features Available
 
 ### 1. Feature Flags System
 
@@ -78,64 +80,32 @@ Maintains full backward compatibility through:
 - Feature flags to control transition pace
 - CLI interface remains unchanged
 
-## Migration Process
+## Configuration Management
 
-### Step 1: Initialize Migration Manager
+The system supports both legacy and advanced configuration formats with automatic migration:
 
-```bash
-# The CLI automatically initializes migration manager
-./repos orchestrate --config config.yaml
-```
+### Current Recommendation
 
-### Step 2: Automatic Configuration Detection
-
-The system automatically:
-1. Detects if your config is legacy or advanced format
-2. Migrates legacy configs to advanced format if needed
-3. Loads appropriate configuration
-4. Applies feature flags from config
-
-### Step 3: Gradual Component Activation
-
-Enable components gradually by updating feature flags:
+Use the advanced configuration format for new deployments:
 
 ```yaml
-# Start with basic migration
+# examples/advanced-config-sample.yaml
+version: "1.0"
+
 feature_flags:
-  - name: "config_migration"
-    enabled: true
-  - name: "parallel_execution" 
-    enabled: true
-  - name: "modular_engine"
-    enabled: false  # Keep disabled initially
-
-# Later, enable more components
-feature_flags:
-  - name: "modular_engine"
-    enabled: true
-  - name: "modular_checkers"
-    enabled: true
-```
-
-### Step 4: Full Migration
-
-Once comfortable with all components:
-
-```yaml
-feature_flags:
-  - name: "modular_engine"
-    enabled: true
-  - name: "modular_checkers"
-    enabled: true
-  - name: "modular_analyzers"
-    enabled: true
   - name: "parallel_execution"
     enabled: true
+  - name: "modular_engine"
+    enabled: true
+
+# ... rest of configuration
 ```
 
 ## Configuration Examples
 
 ### Legacy Configuration (Automatically Migrated)
+
+Legacy configurations are automatically detected and migrated:
 
 ```yaml
 # legacy-config.yaml
@@ -155,7 +125,9 @@ complexity:
     java: 12
 ```
 
-### Advanced Configuration (Target Format)
+### Advanced Configuration (Recommended)
+
+Use the advanced format for new configurations:
 
 ```yaml
 # advanced-config.yaml
@@ -187,16 +159,24 @@ analyzers:
 profiles:
   default:
     name: "Default Profile"
-    checkers: ["git-status", "dependencies"]
-    analyzers: ["python", "go"]
+    checkers: 
+      git-status:
+        enabled: true
+        severity: medium
+        timeout: 30s
+    analyzers:
+      python:
+        enabled: true
+        file_extensions: [".py"]
+        complexity_enabled: true
 ```
 
 ## CLI Usage
 
-### Orchestration with Migration
+### Standard Orchestration
 
 ```bash
-# Basic usage - automatic migration
+# Basic usage - automatic config handling
 ./repos orchestrate --config config.yaml
 
 # With specific profile
@@ -244,7 +224,7 @@ INFO  Enabling gradual cutover with current feature flags flags=map[...]
 
 ### Health Checks
 
-Monitor migration health through:
+Monitor system health through:
 - Configuration validation
 - Feature flag status
 - Component activation logging
@@ -254,15 +234,15 @@ Monitor migration health through:
 
 ### Common Issues
 
-1. **Migration Fails**
+1. **Configuration Issues**
    - Check configuration syntax
    - Verify file permissions
-   - Review migration logs
+   - Review system logs
 
 2. **Feature Flags Not Working**
    - Ensure flags are properly defined in config
    - Check flag names match constants
-   - Verify migration manager initialization
+   - Verify system initialization
 
 3. **Performance Issues**
    - Monitor parallel execution settings
@@ -271,21 +251,21 @@ Monitor migration health through:
 
 ### Support
 
-- Review migration logs for detailed error information
+- Review system logs for detailed error information
 - Check feature flag status via logging output
-- Validate configuration format after migration
+- Validate configuration format
 
 ## Best Practices
 
-1. **Start Conservative**: Enable one component at a time
-2. **Monitor Performance**: Watch for any performance degradation
-3. **Test Thoroughly**: Test in non-production first
-4. **Backup Configs**: Keep original configurations safe
-5. **Monitor Logs**: Watch migration manager logs for issues
+1. **Use Advanced Config**: Prefer advanced configuration format for new setups
+2. **Monitor Performance**: Watch for any performance issues
+3. **Test Thoroughly**: Test configurations in non-production first
+4. **Backup Configs**: Keep configuration backups
+5. **Monitor Logs**: Watch system logs for issues
 
 ## Future Enhancements
 
-Phase 5 sets the foundation for:
+The current system sets the foundation for:
 - Environment-based feature flag control
 - Web-based configuration management
 - Advanced monitoring dashboards

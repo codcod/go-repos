@@ -100,6 +100,8 @@ type CIConfig struct {
 }
 
 // findCIConfigs finds CI configuration files in the repository
+//
+//nolint:gocyclo // Complex CI detection logic requires high cyclomatic complexity
 func (c *CIConfigChecker) findCIConfigs(repoPath string) []CIConfig {
 	var configs []CIConfig
 
@@ -227,7 +229,7 @@ func (c *CIConfigChecker) analyzeIndividualConfig(repoPath string, config CIConf
 	score := 0
 
 	configPath := filepath.Join(repoPath, config.Path)
-	content, err := os.ReadFile(configPath)
+	content, err := os.ReadFile(configPath) //nolint:gosec // Config path is from repository analysis
 	if err != nil {
 		issues = append(issues, base.NewIssueWithSuggestion(
 			"ci_config_read_error",
@@ -343,6 +345,8 @@ func (c *CIConfigChecker) hasDeploymentConfig(content string) bool {
 }
 
 // checkCIBestPractices checks for CI/CD best practices
+//
+//nolint:unparam // issues slice kept for future extensibility
 func (c *CIConfigChecker) checkCIBestPractices(repoPath string, configs []CIConfig) (int, []core.Issue, []core.Warning) {
 	var issues []core.Issue
 	var warnings []core.Warning
@@ -383,7 +387,7 @@ func (c *CIConfigChecker) checkCIBestPractices(repoPath string, configs []CIConf
 func (c *CIConfigChecker) hasMainBranchCI(repoPath string, configs []CIConfig) bool {
 	for _, config := range configs {
 		configPath := filepath.Join(repoPath, config.Path)
-		if content, err := os.ReadFile(configPath); err == nil {
+		if content, err := os.ReadFile(configPath); err == nil { //nolint:gosec // Config path is from repository analysis
 			contentStr := strings.ToLower(string(content))
 			if strings.Contains(contentStr, "main") || strings.Contains(contentStr, "master") {
 				return true
@@ -397,7 +401,7 @@ func (c *CIConfigChecker) hasMainBranchCI(repoPath string, configs []CIConfig) b
 func (c *CIConfigChecker) hasPRChecks(repoPath string, configs []CIConfig) bool {
 	for _, config := range configs {
 		configPath := filepath.Join(repoPath, config.Path)
-		if content, err := os.ReadFile(configPath); err == nil {
+		if content, err := os.ReadFile(configPath); err == nil { //nolint:gosec // Config path is from repository analysis
 			contentStr := strings.ToLower(string(content))
 			prKeywords := []string{"pull_request", "merge_request", "pr:", "mr:"}
 			for _, keyword := range prKeywords {
@@ -414,7 +418,7 @@ func (c *CIConfigChecker) hasPRChecks(repoPath string, configs []CIConfig) bool 
 func (c *CIConfigChecker) hasStatusChecks(repoPath string, configs []CIConfig) bool {
 	for _, config := range configs {
 		configPath := filepath.Join(repoPath, config.Path)
-		if content, err := os.ReadFile(configPath); err == nil {
+		if content, err := os.ReadFile(configPath); err == nil { //nolint:gosec // Config path is from repository analysis
 			contentStr := strings.ToLower(string(content))
 			statusKeywords := []string{"status", "check", "badge"}
 			for _, keyword := range statusKeywords {

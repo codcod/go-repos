@@ -84,10 +84,7 @@ func (m *ConfigMigrator) MigrateConfig(legacyPath, advancedPath string) error {
 	}
 
 	// Convert to advanced configuration
-	advancedConfig, err := m.convertToAdvanced(legacyConfig)
-	if err != nil {
-		return fmt.Errorf("failed to convert configuration: %w", err)
-	}
+	advancedConfig := m.convertToAdvanced(legacyConfig)
 
 	// Save advanced configuration
 	err = m.saveAdvancedConfig(advancedConfig, advancedPath)
@@ -102,8 +99,10 @@ func (m *ConfigMigrator) MigrateConfig(legacyPath, advancedPath string) error {
 }
 
 // DetectConfigFormat determines if a config file is legacy or advanced format
+//
+//nolint:gocyclo // Complex config format detection requires high cyclomatic complexity
 func (m *ConfigMigrator) DetectConfigFormat(configPath string) (string, error) {
-	data, err := os.ReadFile(configPath)
+	data, err := os.ReadFile(configPath) //nolint:gosec // Config path is from user input
 	if err != nil {
 		return "", fmt.Errorf("failed to read config file: %w", err)
 	}
@@ -137,7 +136,7 @@ func (m *ConfigMigrator) DetectConfigFormat(configPath string) (string, error) {
 
 // loadLegacyConfig loads configuration from legacy format
 func (m *ConfigMigrator) loadLegacyConfig(path string) (*LegacyConfig, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // Config path is from user input
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
@@ -151,7 +150,7 @@ func (m *ConfigMigrator) loadLegacyConfig(path string) (*LegacyConfig, error) {
 }
 
 // convertToAdvanced converts legacy configuration to advanced format
-func (m *ConfigMigrator) convertToAdvanced(legacy *LegacyConfig) (*AdvancedConfig, error) {
+func (m *ConfigMigrator) convertToAdvanced(legacy *LegacyConfig) *AdvancedConfig {
 	advanced := &AdvancedConfig{
 		Version:      "1.0",
 		Engine:       m.convertEngineConfig(legacy),
@@ -166,7 +165,7 @@ func (m *ConfigMigrator) convertToAdvanced(legacy *LegacyConfig) (*AdvancedConfi
 		Integrations: IntegrationsConfig{},
 	}
 
-	return advanced, nil
+	return advanced
 }
 
 // convertEngineConfig converts engine configuration
@@ -185,6 +184,8 @@ func (m *ConfigMigrator) convertEngineConfig(legacy *LegacyConfig) core.EngineCo
 }
 
 // convertCheckers converts checker configuration
+//
+//nolint:gocyclo // Complex checker conversion logic requires high cyclomatic complexity
 func (m *ConfigMigrator) convertCheckers(legacy *LegacyConfig) map[string]core.CheckerConfig {
 	checkers := make(map[string]core.CheckerConfig)
 
@@ -333,7 +334,7 @@ func (m *ConfigMigrator) convertReporters(legacy *LegacyConfig) map[string]core.
 }
 
 // convertCategories creates category configuration
-func (m *ConfigMigrator) convertCategories(legacy *LegacyConfig) map[string]CategoryConfig {
+func (m *ConfigMigrator) convertCategories(_ *LegacyConfig) map[string]CategoryConfig {
 	categories := make(map[string]CategoryConfig)
 
 	categories["git"] = CategoryConfig{
@@ -446,7 +447,7 @@ func (m *ConfigMigrator) saveAdvancedConfig(config *AdvancedConfig, path string)
 		return fmt.Errorf("failed to marshal YAML: %w", err)
 	}
 
-	err = os.WriteFile(path, data, 0644)
+	err = os.WriteFile(path, data, 0600)
 	if err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}

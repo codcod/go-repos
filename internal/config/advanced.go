@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -172,7 +172,7 @@ type FeatureFlag struct {
 
 // LoadAdvancedConfig loads configuration from a YAML file with advanced features
 func LoadAdvancedConfig(configPath string) (*AdvancedConfig, error) {
-	data, err := ioutil.ReadFile(configPath)
+	data, err := os.ReadFile(configPath) //nolint:gosec // Config path is from user input
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
@@ -183,9 +183,7 @@ func LoadAdvancedConfig(configPath string) (*AdvancedConfig, error) {
 	}
 
 	// Set defaults
-	if err := config.setDefaults(); err != nil {
-		return nil, fmt.Errorf("failed to set defaults: %w", err)
-	}
+	config.setDefaults()
 
 	// Validate configuration
 	if err := config.validate(); err != nil {
@@ -196,7 +194,7 @@ func LoadAdvancedConfig(configPath string) (*AdvancedConfig, error) {
 }
 
 // setDefaults sets default values for configuration
-func (c *AdvancedConfig) setDefaults() error {
+func (c *AdvancedConfig) setDefaults() {
 	if c.Version == "" {
 		c.Version = "1.0"
 	}
@@ -228,8 +226,6 @@ func (c *AdvancedConfig) setDefaults() error {
 	if c.Profiles == nil {
 		c.Profiles = make(map[string]ProfileConfig)
 	}
-
-	return nil
 }
 
 // validate validates the configuration
@@ -433,6 +429,8 @@ func (c *AdvancedConfig) matchesCondition(condition ConditionConfig, repo core.R
 }
 
 // matchesTagCondition checks if tags match the condition
+//
+//nolint:gocyclo // Complex condition matching logic requires high cyclomatic complexity
 func (c *AdvancedConfig) matchesTagCondition(condition ConditionConfig, tags []string) bool {
 	switch condition.Operator {
 	case "equals":
@@ -492,7 +490,7 @@ func (c *AdvancedConfig) SaveConfig(configPath string) error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := ioutil.WriteFile(configPath, data, 0644); err != nil {
+	if err := os.WriteFile(configPath, data, 0600); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 

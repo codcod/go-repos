@@ -54,8 +54,8 @@ func (p *PythonAnalyzer) CanAnalyze(repo core.Repository) bool {
 }
 
 // Analyze performs language-specific analysis on the repository
-func (p *PythonAnalyzer) Analyze(ctx context.Context, repo core.Repository) (*core.AnalysisResult, error) {
-	p.logger.Info("Starting Python analysis", core.Field{Key: "repo", Value: repo.Name})
+func (p *PythonAnalyzer) Analyze(ctx context.Context, repoPath string, config core.AnalyzerConfig) (*core.AnalysisResult, error) {
+	p.logger.Info("Starting Python analysis", core.Field{Key: "repo", Value: repoPath})
 
 	result := &core.AnalysisResult{
 		Language:  p.language,
@@ -65,7 +65,7 @@ func (p *PythonAnalyzer) Analyze(ctx context.Context, repo core.Repository) (*co
 	}
 
 	// Find Python files
-	files, err := p.findPythonFiles(repo.Path)
+	files, err := p.findPythonFiles(repoPath)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (p *PythonAnalyzer) findPythonFiles(repoPath string) ([]string, error) {
 
 // analyzeFile analyzes a single Python file
 func (p *PythonAnalyzer) analyzeFile(filePath string) (*core.FileAnalysis, error) {
-	content, err := os.ReadFile(filePath)
+	content, err := os.ReadFile(filePath) //nolint:gosec // File path is from repository analysis
 	if err != nil {
 		return nil, err
 	}
@@ -196,6 +196,8 @@ func (p *PythonAnalyzer) analyzeFile(filePath string) (*core.FileAnalysis, error
 }
 
 // parseFile parses a Python file to extract functions and imports
+//
+//nolint:gocyclo // Complex parsing logic for Python language requires high cyclomatic complexity
 func (p *PythonAnalyzer) parseFile(content, filePath string) ([]core.FunctionInfo, []core.ImportInfo) {
 	var functions []core.FunctionInfo
 	var imports []core.ImportInfo
@@ -300,6 +302,8 @@ func (p *PythonAnalyzer) parseFile(content, filePath string) ([]core.FunctionInf
 }
 
 // calculateLineComplexity calculates complexity contribution of a single line
+//
+//nolint:gocyclo // Complex line-by-line analysis requires high cyclomatic complexity
 func (p *PythonAnalyzer) calculateLineComplexity(line string) int {
 	complexity := 0
 	line = strings.TrimSpace(line)

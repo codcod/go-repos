@@ -2,9 +2,6 @@ package registry
 
 import (
 	"context"
-	"os"
-	"path/filepath"
-	"strings"
 
 	golang "github.com/codcod/repos/internal/analyzers/go"
 	java_analyzer "github.com/codcod/repos/internal/analyzers/java"
@@ -68,51 +65,6 @@ func (r *Registry) GetAllAnalyzers() []core.Analyzer {
 		analyzers = append(analyzers, analyzer)
 	}
 	return analyzers
-}
-
-// detectLanguages detects programming languages in a repository
-func (r *Registry) detectLanguages(repoPath string) []string {
-	languageMap := make(map[string]bool)
-
-	// Walk through files and detect languages based on extensions
-	filepath.Walk(repoPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Continue walking
-		}
-
-		if info.IsDir() {
-			// Skip common directories that shouldn't be analyzed
-			name := filepath.Base(path)
-			skipDirs := []string{
-				".git", ".svn", ".hg",
-				"node_modules", "vendor", "target", "build", "dist",
-				".venv", "venv", "env", "__pycache__",
-				".gradle", ".next", ".nuxt",
-			}
-
-			for _, skipDir := range skipDirs {
-				if name == skipDir {
-					return filepath.SkipDir
-				}
-			}
-			return nil
-		}
-
-		ext := strings.ToLower(filepath.Ext(path))
-		if analyzer, exists := r.GetByFileExtension(ext); exists {
-			languageMap[analyzer.Language()] = true
-		}
-
-		return nil
-	})
-
-	// Convert map to slice
-	var languages []string
-	for lang := range languageMap {
-		languages = append(languages, lang)
-	}
-
-	return languages
 }
 
 // BaseAnalyzer provides common functionality for analyzers

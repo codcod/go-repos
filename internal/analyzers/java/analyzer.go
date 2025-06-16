@@ -54,8 +54,8 @@ func (j *JavaAnalyzer) CanAnalyze(repo core.Repository) bool {
 }
 
 // Analyze performs language-specific analysis on the repository
-func (j *JavaAnalyzer) Analyze(ctx context.Context, repo core.Repository) (*core.AnalysisResult, error) {
-	j.logger.Info("Starting Java analysis", core.Field{Key: "repo", Value: repo.Name})
+func (j *JavaAnalyzer) Analyze(ctx context.Context, repoPath string, config core.AnalyzerConfig) (*core.AnalysisResult, error) {
+	j.logger.Info("Starting Java analysis", core.Field{Key: "repo", Value: repoPath})
 
 	result := &core.AnalysisResult{
 		Language:  j.language,
@@ -65,7 +65,7 @@ func (j *JavaAnalyzer) Analyze(ctx context.Context, repo core.Repository) (*core
 	}
 
 	// Find Java files
-	files, err := j.findJavaFiles(repo.Path)
+	files, err := j.findJavaFiles(repoPath)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func (j *JavaAnalyzer) findJavaFiles(repoPath string) ([]string, error) {
 
 // analyzeFile analyzes a single Java file
 func (j *JavaAnalyzer) analyzeFile(filePath string) (*core.FileAnalysis, error) {
-	content, err := os.ReadFile(filePath)
+	content, err := os.ReadFile(filePath) //nolint:gosec // File path is from repository analysis
 	if err != nil {
 		return nil, err
 	}
@@ -204,6 +204,8 @@ func (j *JavaAnalyzer) analyzeFile(filePath string) (*core.FileAnalysis, error) 
 }
 
 // parseFile parses a Java file to extract classes, methods, and imports
+//
+//nolint:gocyclo // Complex parsing logic for Java language requires high cyclomatic complexity
 func (j *JavaAnalyzer) parseFile(content, filePath string) ([]core.FunctionInfo, []core.ClassInfo, []core.ImportInfo) {
 	var functions []core.FunctionInfo
 	var classes []core.ClassInfo
@@ -346,6 +348,8 @@ func (j *JavaAnalyzer) parseFile(content, filePath string) ([]core.FunctionInfo,
 }
 
 // calculateLineComplexity calculates complexity contribution of a single line
+//
+//nolint:gocyclo // Complex line-by-line analysis requires high cyclomatic complexity
 func (j *JavaAnalyzer) calculateLineComplexity(line string) int {
 	complexity := 0
 	line = strings.TrimSpace(line)

@@ -56,8 +56,8 @@ func (g *GoAnalyzer) CanAnalyze(repo core.Repository) bool {
 }
 
 // Analyze performs language-specific analysis on the repository
-func (g *GoAnalyzer) Analyze(ctx context.Context, repo core.Repository) (*core.AnalysisResult, error) {
-	g.logger.Info("Starting Go analysis", core.Field{Key: "repo", Value: repo.Name})
+func (g *GoAnalyzer) Analyze(ctx context.Context, repoPath string, config core.AnalyzerConfig) (*core.AnalysisResult, error) {
+	g.logger.Info("Starting Go analysis", core.Field{Key: "path", Value: repoPath})
 
 	result := &core.AnalysisResult{
 		Language:  g.language,
@@ -67,7 +67,7 @@ func (g *GoAnalyzer) Analyze(ctx context.Context, repo core.Repository) (*core.A
 	}
 
 	// Find Go files
-	files, err := g.findGoFiles(repo.Path)
+	files, err := g.findGoFiles(repoPath)
 	if err != nil {
 		return nil, err
 	}
@@ -224,11 +224,13 @@ func (g *GoAnalyzer) analyzeFunctionDecl(fn *ast.FuncDecl, fset *token.FileSet) 
 }
 
 // calculateComplexity calculates cyclomatic complexity for a function body
+//
+//nolint:gocyclo // Complex parsing logic requires high cyclomatic complexity
 func (g *GoAnalyzer) calculateComplexity(body *ast.BlockStmt) int {
 	complexity := 1 // Base complexity
 
 	ast.Inspect(body, func(n ast.Node) bool {
-		switch n.(type) {
+		switch n := n.(type) {
 		case *ast.IfStmt:
 			complexity++
 		case *ast.ForStmt:
@@ -243,15 +245,13 @@ func (g *GoAnalyzer) calculateComplexity(body *ast.BlockStmt) int {
 			complexity++
 		case *ast.CaseClause:
 			// Don't count default case
-			if caseClause, ok := n.(*ast.CaseClause); ok && caseClause.List != nil {
+			if n.List != nil {
 				complexity++
 			}
 		case *ast.BinaryExpr:
 			// Count logical operators in conditions
-			if binExpr, ok := n.(*ast.BinaryExpr); ok {
-				if binExpr.Op == token.LAND || binExpr.Op == token.LOR {
-					complexity++
-				}
+			if n.Op == token.LAND || n.Op == token.LOR {
+				complexity++
 			}
 		}
 		return true

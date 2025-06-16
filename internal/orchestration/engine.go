@@ -75,6 +75,8 @@ func (e *Engine) ExecuteHealthCheck(ctx context.Context, repos []core.Repository
 }
 
 // executeRepositoryChecks runs checks for all repositories with concurrency control
+//
+//nolint:unparam // error return kept for future extensibility
 func (e *Engine) executeRepositoryChecks(ctx context.Context, repos []core.Repository) ([]core.RepositoryResult, error) {
 	// Create semaphore for concurrency control
 	semaphore := make(chan struct{}, e.maxConcurrency)
@@ -104,7 +106,7 @@ func (e *Engine) executeRepositoryChecks(ctx context.Context, repos []core.Repos
 
 	wg.Wait()
 
-	return results, nil
+	return results, nil // No errors in current implementation
 }
 
 // executeRepositoryCheck runs all checks for a single repository
@@ -179,6 +181,8 @@ func (e *Engine) runAnalysis(ctx context.Context, repoCtx core.RepositoryContext
 }
 
 // runCheckers executes all enabled checkers for a repository
+//
+//nolint:unparam // error return kept for future extensibility
 func (e *Engine) runCheckers(ctx context.Context, repoCtx core.RepositoryContext, checkerConfigs map[string]core.CheckerConfig) ([]core.CheckResult, error) {
 	// This would use the registry's RunAllEnabledCheckers method
 	// For now, we'll implement a simple version
@@ -213,7 +217,7 @@ func (e *Engine) runCheckers(ctx context.Context, repoCtx core.RepositoryContext
 		results = append(results, result)
 	}
 
-	return results, nil
+	return results, nil // No errors in current implementation
 }
 
 // getEnabledCheckers returns checkers that are enabled and support the repository
@@ -299,7 +303,8 @@ func (e *Engine) calculateScore(results []core.CheckResult) int {
 // generateSummary creates a summary of workflow results
 func (e *Engine) generateSummary(results []core.RepositoryResult) core.WorkflowSummary {
 	summary := core.WorkflowSummary{
-		StatusCounts: make(map[core.HealthStatus]int),
+		StatusCounts:   make(map[core.HealthStatus]int),
+		SeverityCounts: make(map[core.Severity]int),
 	}
 
 	totalScore := 0
@@ -311,8 +316,7 @@ func (e *Engine) generateSummary(results []core.RepositoryResult) core.WorkflowS
 
 		if result.Status == core.StatusHealthy || result.Status == core.StatusWarning {
 			summary.SuccessfulRepos++
-		}
-		if result.Error != "" {
+		} else {
 			summary.FailedRepos++
 		}
 

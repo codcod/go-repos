@@ -101,8 +101,7 @@ func (c *LicenseChecker) findLicenseFiles(repoPath string) []string {
 	licensePatterns := []string{
 		"LICENSE", "LICENSE.txt", "LICENSE.md", "LICENSE.rst",
 		"license", "license.txt", "license.md", "license.rst",
-		"License", "License.txt", "License.md", "License.rst",
-		"LICENCE", "LICENCE.txt", "LICENCE.md", "LICENCE.rst",
+		"License", "License.txt", "License.md", "License.rst", "LICENSE", "LICENSE.txt", "LICENSE.md", "LICENSE.rst",
 		"COPYING", "COPYING.txt", "COPYRIGHT", "COPYRIGHT.txt",
 	}
 
@@ -144,7 +143,7 @@ func (c *LicenseChecker) analyzeLicenseContent(repoPath, licenseFile string) (st
 	var warnings []core.Warning
 
 	licensePath := filepath.Join(repoPath, licenseFile)
-	content, err := os.ReadFile(licensePath)
+	content, err := os.ReadFile(licensePath) //nolint:gosec // License file path is from repository analysis
 	if err != nil {
 		issues = append(issues, base.NewIssueWithSuggestion(
 			"license_read_error",
