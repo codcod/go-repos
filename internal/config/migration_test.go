@@ -29,7 +29,7 @@ func (l *mockLogger) Error(msg string, fields ...core.Field) {
 	l.messages = append(l.messages, msg)
 }
 
-func TestMigrationManager_LoadConfigWithMigration(t *testing.T) {
+func TestMigrationManager_LoadConfig(t *testing.T) {
 	// Create temporary directory for test configs
 	tempDir, err := os.MkdirTemp("", "migration_test")
 	if err != nil {

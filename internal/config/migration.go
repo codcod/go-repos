@@ -454,50 +454,6 @@ func (m *ConfigMigrator) saveAdvancedConfig(config *AdvancedConfig, path string)
 	return nil
 }
 
-// LoadConfigWithMigration loads configuration with automatic migration support
-func LoadConfigWithMigration(configPath string, logger core.Logger) (*AdvancedConfig, error) {
-	migrator := NewConfigMigrator(logger)
-
-	// Detect configuration format
-	format, err := migrator.DetectConfigFormat(configPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to detect config format: %w", err)
-	}
-
-	switch format {
-	case "advanced":
-		// Load advanced configuration directly
-		return LoadAdvancedConfig(configPath)
-
-	case "legacy":
-		// Migrate legacy configuration
-		migratedPath := configPath + ".migrated.yaml"
-
-		logger.Info("Legacy configuration detected, performing automatic migration",
-			core.String("original", configPath),
-			core.String("migrated", migratedPath))
-
-		err := migrator.MigrateConfig(configPath, migratedPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to migrate configuration: %w", err)
-		}
-
-		// Load the migrated configuration
-		config, err := LoadAdvancedConfig(migratedPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load migrated configuration: %w", err)
-		}
-
-		logger.Info("Configuration migration completed successfully",
-			core.String("migrated_config", migratedPath))
-
-		return config, nil
-
-	default:
-		return nil, fmt.Errorf("unknown configuration format")
-	}
-}
-
 // getExtensionsForLanguage returns file extensions for a given language
 func getExtensionsForLanguage(language string) []string {
 	extensions := map[string][]string{
