@@ -102,7 +102,9 @@ type HealthOptions struct {
 	Format            string   `json:"format,omitempty"`    // Output format: table, json, html
 	OutputFile        string   `json:"output_file,omitempty"`
 	Parallel          bool     `json:"parallel,omitempty"`
-	Timeout           int      `json:"timeout,omitempty"` // Timeout in seconds for individual health checks
+	Timeout           int      `json:"timeout,omitempty"`           // Timeout in seconds for individual health checks
+	ComplexityReport  bool     `json:"complexity_report,omitempty"` // Generate detailed complexity report
+	MaxComplexity     int      `json:"max_complexity,omitempty"`    // Maximum allowed cyclomatic complexity
 }
 
 // CheckRepositoryHealth performs all health checks on a single repository
@@ -315,6 +317,107 @@ func generateHealthSummary(repoHealths []RepositoryHealth) HealthSummary {
 	}
 
 	return summary
+}
+
+// PrintComplexityReport generates and displays a detailed cyclomatic complexity report
+func PrintComplexityReport(repositories []config.Repository, maxComplexity int) {
+	analyzer := NewComplexityAnalyzer()
+
+	for _, repo := range repositories {
+		repoPath := GetRepoPath(repo)
+
+		fmt.Printf("\n=== Complexity Report for %s ===\n", repo.Name)
+
+		report := analyzer.AnalyzeRepositoryDetailed(repoPath, maxComplexity)
+
+		if len(report.HighComplexityFunctions) == 0 {
+			fmt.Printf("✅ No functions exceed the complexity threshold of %d\n", maxComplexity)
+			fmt.Printf("   %s\n", report.Metrics.FormatSummary())
+		} else {
+			fmt.Printf("⚠️  Found %d functions exceeding complexity threshold of %d:\n\n",
+				len(report.HighComplexityFunctions), maxComplexity)
+
+			// Group functions by file for better organization
+			functionsByFile := make(map[string][]FunctionComplexity)
+			for _, function := range report.HighComplexityFunctions {
+				functionsByFile[function.File] = append(functionsByFile[function.File], function)
+			}
+
+			for file, functions := range functionsByFile {
+				// Make path relative to repo for cleaner display
+				relPath := strings.TrimPrefix(file, repoPath)
+				relPath = strings.TrimPrefix(relPath, "/")
+
+				fmt.Printf("📁 %s:\n", relPath)
+				for _, function := range functions {
+					if function.EndLine == -1 {
+						// File-level analysis
+						fmt.Printf("   🔴 %s (file-level analysis) - Complexity: %d\n",
+							function.Name, function.Complexity)
+					} else {
+						// Function-level analysis
+						fmt.Printf("   🔴 %s() - Complexity: %d (Lines: %d-%d)\n",
+							function.Name, function.Complexity, function.StartLine, function.EndLine)
+					}
+				}
+				fmt.Println()
+			}
+
+			fmt.Printf("📊 Summary: %s\n", report.Metrics.FormatSummary())
+		}
+
+		fmt.Println(strings.Repeat("-", 60))
+	}
+}
+
+// PrintDetailedComplexityReport generates and displays a detailed flake8-style complexity report
+func PrintDetailedComplexityReport(repositories []config.Repository, maxComplexity int) {
+	analyzer := NewComplexityAnalyzer()
+
+	fmt.Printf("=== Detailed Cyclomatic Complexity Report (flake8-style) ===\n")
+	fmt.Printf("Threshold: %d\n\n", maxComplexity)
+
+	totalViolations := 0
+
+	for _, repo := range repositories {
+		repoPath := GetRepoPath(repo)
+		report := analyzer.AnalyzeRepositoryDetailed(repoPath, maxComplexity)
+
+		repoViolations := 0
+
+		// Sort functions by file and line number for consistent output
+		for _, result := range report.Results {
+			if len(result.Functions) == 0 {
+				// Handle file-level analysis
+				if result.Complexity > maxComplexity {
+					relPath := strings.TrimPrefix(result.File, repoPath)
+					relPath = strings.TrimPrefix(relPath, "/")
+					fmt.Printf("%s:1:1: C901 'file-level' is too complex (%d)\n",
+						relPath, result.Complexity)
+					repoViolations++
+				}
+			} else {
+				// Handle function-level analysis
+				for _, function := range result.Functions {
+					if function.Complexity > maxComplexity {
+						relPath := strings.TrimPrefix(function.File, repoPath)
+						relPath = strings.TrimPrefix(relPath, "/")
+						fmt.Printf("%s:%d:1: C901 '%s' is too complex (%d)\n",
+							relPath, function.StartLine, function.Name, function.Complexity)
+						repoViolations++
+					}
+				}
+			}
+		}
+
+		totalViolations += repoViolations
+	}
+
+	if totalViolations == 0 {
+		fmt.Printf("✅ No complexity violations found (threshold: %d)\n", maxComplexity)
+	} else {
+		fmt.Printf("\n📊 Total violations: %d (threshold: %d)\n", totalViolations, maxComplexity)
+	}
 }
 
 // Helper functions

@@ -1,0 +1,104 @@
+# Health Checker Configuration
+# This file defines configuration for all health checkers
+
+# Cyclomatic Complexity Configuration
+cyclomatic_complexity:
+  default_threshold: 10
+  detailed_report: true
+  language_specific:
+    python: 8
+    java: 12
+    javascript: 10
+    typescript: 10
+    go: 10
+  exclusions:
+    - "*_test.go"
+    - "test_*.py"
+    - "*.spec.js"
+    - "*.test.js"
+
+# Deprecated Components Configuration
+deprecated_components:
+  severity_levels:
+    high:
+      - "security"
+      - "breaking_change"
+    medium:
+      - "performance"
+      - "deprecated_api"
+    low:
+      - "style"
+      - "legacy"
+  custom_patterns:
+    - name: "deprecated_functions"
+      patterns:
+        - "deprecated_function_*"
+        - "legacy_*"
+      severity: "medium"
+      message: "Deprecated function usage detected"
+      suggestion: "Replace with modern equivalent"
+
+# General Configuration
+general:
+  timeout: "30s"
+  max_concurrency: 4
+  cache_results: true
+  cache_ttl: "5m"
+
+# Language-Specific Configuration
+languages:
+  python:
+    patterns:
+      - "*.py"
+    exclusions:
+      - ".venv/"
+      - "__pycache__/"
+      - ".pytest_cache/"
+      - "venv/"
+      - "env/"
+      - "site-packages/"
+    complexity_threshold: 8
+    enable_function_level: true
+
+  java:
+    patterns:
+      - "*.java"
+    exclusions:
+      - "target/"
+      - "build/"
+      - ".gradle/"
+    complexity_threshold: 12
+    enable_function_level: true
+
+  javascript:
+    patterns:
+      - "*.js"
+      - "*.jsx"
+    exclusions:
+      - "node_modules/"
+      - "dist/"
+      - "build/"
+      - ".next/"
+    complexity_threshold: 10
+    enable_function_level: true
+
+  typescript:
+    patterns:
+      - "*.ts"
+      - "*.tsx"
+    exclusions:
+      - "node_modules/"
+      - "dist/"
+      - "build/"
+      - ".next/"
+    complexity_threshold: 10
+    enable_function_level: true
+
+  go:
+    patterns:
+      - "*.go"
+    exclusions:
+      - "vendor/"
+      - "*_test.go"
+    complexity_threshold: 10
+    enable_function_level: true

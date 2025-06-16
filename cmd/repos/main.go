@@ -54,6 +54,9 @@ var (
 	healthThreshold      int
 	healthSummary        bool
 	healthListCategories bool
+	complexityReport     bool
+	complexityDetailed   bool
+	maxComplexity        int
 )
 
 // getEnvOrDefault returns the environment variable value or default if empty
@@ -311,10 +314,35 @@ var healthCmd = &cobra.Command{
 			OutputFile:        healthOutputFile,
 			Parallel:          parallel,
 			Timeout:           healthTimeout,
+			ComplexityReport:  complexityReport,
+			MaxComplexity:     maxComplexity,
+		}
+
+		// If only complexity report is requested (no categories specified), just generate that
+		if (complexityReport || complexityDetailed) && len(healthCategories) == 0 && len(healthExclude) == 0 {
+			if complexityDetailed {
+				color.Green("Generating flake8-style detailed complexity report...")
+				health.PrintDetailedComplexityReport(repositories, maxComplexity)
+			} else {
+				color.Green("Generating detailed cyclomatic complexity report...")
+				health.PrintComplexityReport(repositories, maxComplexity)
+			}
+			return
 		}
 
 		// Perform health checks
 		report := health.CheckAllRepositories(repositories, options)
+
+		// Handle complexity report if requested along with other checks
+		if complexityReport || complexityDetailed {
+			if complexityDetailed {
+				color.Green("Generating flake8-style detailed complexity report...")
+				health.PrintDetailedComplexityReport(repositories, maxComplexity)
+			} else {
+				color.Green("Generating detailed cyclomatic complexity report...")
+				health.PrintComplexityReport(repositories, maxComplexity)
+			}
+		}
 
 		// Display results
 		if healthSummary {
@@ -488,6 +516,9 @@ func init() {
 	healthCmd.Flags().BoolVar(&healthSummary, "summary", false, "Show summary of health check results")
 	healthCmd.Flags().IntVar(&healthTimeout, "timeout", 30, "Timeout in seconds for individual health checks (default: 30)")
 	healthCmd.Flags().BoolVar(&healthListCategories, "list-categories", false, "List all available health check categories")
+	healthCmd.Flags().BoolVar(&complexityReport, "complexity-report", false, "Generate detailed cyclomatic complexity report")
+	healthCmd.Flags().BoolVar(&complexityDetailed, "complexity-detailed", false, "Generate flake8-style detailed complexity report")
+	healthCmd.Flags().IntVar(&maxComplexity, "max-complexity", 10, "Maximum allowed cyclomatic complexity for functions (default: 10)")
 
 	rootCmd.AddCommand(cloneCmd)
 	rootCmd.AddCommand(runCmd)

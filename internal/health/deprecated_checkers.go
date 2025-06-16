@@ -55,6 +55,7 @@ func (c *DeprecatedComponentsChecker) Check(repo config.Repository) HealthCheck 
 	)
 }
 
+//nolint:gocyclo // Pattern matching function - inherently complex due to multiple pattern types
 func (c *DeprecatedComponentsChecker) checkDeprecatedPatterns(repoPath string, issues *[]string) error {
 	return filepath.Walk(repoPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -64,7 +65,10 @@ func (c *DeprecatedComponentsChecker) checkDeprecatedPatterns(repoPath string, i
 		// Skip certain directories and binary files
 		if info.IsDir() {
 			name := info.Name()
-			if name == ".git" || name == "node_modules" || name == "vendor" || name == "target" || name == ".vscode" {
+			if name == ".git" || name == "node_modules" || name == "vendor" || name == "target" || name == ".vscode" ||
+				name == "venv" || name == ".venv" || name == "env" || name == ".env" || name == "__pycache__" ||
+				name == "dist" || name == "build" || name == "site-packages" || name == ".pytest_cache" ||
+				name == ".mypy_cache" || name == ".tox" {
 				return filepath.SkipDir
 			}
 			return nil

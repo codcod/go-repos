@@ -37,12 +37,14 @@ func (s Severity) String() string {
 type ErrorCode string
 
 const (
-	ErrorCodeToolNotFound ErrorCode = "TOOL_NOT_FOUND"
-	ErrorCodeFileNotFound ErrorCode = "FILE_NOT_FOUND"
-	ErrorCodeTimeout      ErrorCode = "TIMEOUT"
-	ErrorCodePermission   ErrorCode = "PERMISSION_DENIED"
-	ErrorCodeInvalidInput ErrorCode = "INVALID_INPUT"
-	ErrorCodeNetworkError ErrorCode = "NETWORK_ERROR"
+	ErrorCodeToolNotFound     ErrorCode = "TOOL_NOT_FOUND"
+	ErrorCodeFileNotFound     ErrorCode = "FILE_NOT_FOUND"
+	ErrorCodeTimeout          ErrorCode = "TIMEOUT"
+	ErrorCodePermission       ErrorCode = "PERMISSION_DENIED"
+	ErrorCodeInvalidInput     ErrorCode = "INVALID_INPUT"
+	ErrorCodeNetworkError     ErrorCode = "NETWORK_ERROR"
+	ErrorCodeParsingFailed    ErrorCode = "PARSING_FAILED"
+	ErrorCodeProcessingFailed ErrorCode = "PROCESSING_FAILED"
 )
 
 // CheckerError represents an error that occurred during health checking
@@ -51,10 +53,56 @@ type CheckerError struct {
 	Operation string
 	Err       error
 	Code      ErrorCode
+	Context   map[string]interface{}
 }
 
 func (c *CheckerError) Error() string {
-	return fmt.Sprintf("[%s] %s: %s (%s)", c.Checker, c.Operation, c.Err.Error(), c.Code)
+	var parts []string
+	parts = append(parts, fmt.Sprintf("[%s] %s:", c.Checker, c.Operation))
+
+	if len(c.Context) > 0 {
+		var contextParts []string
+		for k, v := range c.Context {
+			contextParts = append(contextParts, fmt.Sprintf("%s=%v", k, v))
+		}
+		parts = append(parts, fmt.Sprintf("(%s)", strings.Join(contextParts, ", ")))
+	}
+
+	parts = append(parts, c.Err.Error())
+	parts = append(parts, fmt.Sprintf("(%s)", c.Code))
+
+	return strings.Join(parts, " ")
+}
+
+// WithContext adds contextual information to the error
+func (c *CheckerError) WithContext(key string, value interface{}) *CheckerError {
+	if c.Context == nil {
+		c.Context = make(map[string]interface{})
+	}
+	c.Context[key] = value
+	return c
+}
+
+// WithFile adds file context to the error
+func (c *CheckerError) WithFile(filePath string) *CheckerError {
+	return c.WithContext("file", filePath)
+}
+
+// WithRepository adds repository context to the error
+func (c *CheckerError) WithRepository(repoPath string) *CheckerError {
+	return c.WithContext("repository", repoPath)
+}
+
+// IsRetriable determines if an error might be retriable
+func (c *CheckerError) IsRetriable() bool {
+	switch c.Code {
+	case ErrorCodeTimeout, ErrorCodeNetworkError:
+		return true
+	case ErrorCodeToolNotFound, ErrorCodeFileNotFound, ErrorCodePermission, ErrorCodeInvalidInput:
+		return false
+	default:
+		return false
+	}
 }
 
 // NewCheckerError creates a new checker error
@@ -64,6 +112,46 @@ func NewCheckerError(checker, operation string, err error, code ErrorCode) *Chec
 		Operation: operation,
 		Err:       err,
 		Code:      code,
+		Context:   make(map[string]interface{}),
+	}
+}
+
+// NewCheckerErrorWithAutoCategorize creates a new checker error with automatic error categorization
+func NewCheckerErrorWithAutoCategorize(checker, operation string, err error) *CheckerError {
+	return &CheckerError{
+		Checker:   checker,
+		Operation: operation,
+		Err:       err,
+		Code:      categorizeError(err),
+		Context:   make(map[string]interface{}),
+	}
+}
+
+// categorizeError attempts to categorize the error based on its type/message
+//
+//nolint:gocyclo // Error categorization function - multiple error types to check
+func categorizeError(err error) ErrorCode {
+	if err == nil {
+		return ""
+	}
+
+	errMsg := strings.ToLower(err.Error())
+
+	switch {
+	case strings.Contains(errMsg, "not found") || strings.Contains(errMsg, "no such file"):
+		return ErrorCodeFileNotFound
+	case strings.Contains(errMsg, "command not found") || strings.Contains(errMsg, "executable file not found"):
+		return ErrorCodeToolNotFound
+	case strings.Contains(errMsg, "permission denied") || strings.Contains(errMsg, "access denied"):
+		return ErrorCodePermission
+	case strings.Contains(errMsg, "timeout") || strings.Contains(errMsg, "deadline exceeded"):
+		return ErrorCodeTimeout
+	case strings.Contains(errMsg, "parse") || strings.Contains(errMsg, "syntax"):
+		return ErrorCodeParsingFailed
+	case strings.Contains(errMsg, "invalid") || strings.Contains(errMsg, "malformed"):
+		return ErrorCodeInvalidInput
+	default:
+		return ErrorCodeProcessingFailed
 	}
 }
 
@@ -78,27 +166,27 @@ type FilePattern struct {
 var (
 	GoFilePattern = FilePattern{
 		Extensions: []string{".go"},
-		Exclude:    []string{"vendor/", ".git/", "*_test.go"},
+		Exclude:    []string{"vendor/", ".git/", "*_test.go", "venv/", ".venv/", "env/", ".env/"},
 	}
 
 	JavaFilePattern = FilePattern{
 		Extensions: []string{".java"},
-		Exclude:    []string{"target/", ".git/", "build/"},
+		Exclude:    []string{"target/", ".git/", "build/", "venv/", ".venv/", "env/", ".env/"},
 	}
 
 	JavaScriptFilePattern = FilePattern{
 		Extensions: []string{".js", ".ts", ".jsx", ".tsx"},
-		Exclude:    []string{"node_modules/", ".git/", "dist/", "build/"},
+		Exclude:    []string{"node_modules/", ".git/", "dist/", "build/", "venv/", ".venv/", "env/", ".env/"},
 	}
 
 	PythonFilePattern = FilePattern{
 		Extensions: []string{".py"},
-		Exclude:    []string{"__pycache__/", ".git/", "venv/", ".venv/"},
+		Exclude:    []string{"__pycache__/", ".git/", "venv/", ".venv/", "env/", ".env/", "site-packages/", "dist/", "build/", ".pytest_cache/", ".mypy_cache/", ".tox/"},
 	}
 
 	CFilePattern = FilePattern{
 		Extensions: []string{".c", ".cpp", ".h", ".hpp"},
-		Exclude:    []string{".git/"},
+		Exclude:    []string{".git/", "venv/", ".venv/", "env/", ".env/", "__pycache__/", "site-packages/", "dist/", "build/", ".pytest_cache/", ".mypy_cache/", ".tox/", "node_modules/", "vendor/", "target/"},
 	}
 )
 
@@ -171,6 +259,8 @@ func (f *FileSystemHelper) ReadFile(path string) ([]byte, error) {
 }
 
 // FindFiles finds files matching a pattern, respecting exclude patterns
+//
+//nolint:gocyclo // File pattern matching function - multiple patterns to handle
 func (f *FileSystemHelper) FindFiles(repoPath string, pattern FilePattern) ([]string, error) {
 	var files []string
 
@@ -182,11 +272,23 @@ func (f *FileSystemHelper) FindFiles(repoPath string, pattern FilePattern) ([]st
 		// Skip excluded paths
 		relPath, _ := filepath.Rel(repoPath, path)
 		for _, exclude := range pattern.Exclude {
-			if matched, _ := filepath.Match(exclude, relPath); matched {
-				if info.IsDir() {
-					return filepath.SkipDir
+			// Handle directory exclusions (ending with /)
+			if strings.HasSuffix(exclude, "/") {
+				dirPattern := strings.TrimSuffix(exclude, "/")
+				if strings.HasPrefix(relPath, dirPattern+"/") || relPath == dirPattern {
+					if info.IsDir() {
+						return filepath.SkipDir
+					}
+					return nil
 				}
-				return nil
+			} else {
+				// Handle file pattern exclusions
+				if matched, _ := filepath.Match(exclude, relPath); matched {
+					if info.IsDir() {
+						return filepath.SkipDir
+					}
+					return nil
+				}
 			}
 		}
 
