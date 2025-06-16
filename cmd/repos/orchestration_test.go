@@ -129,7 +129,7 @@ func TestOrchestrationEndToEnd(t *testing.T) {
 
 // TestOrchestrationConfigLoading tests loading of advanced configuration
 func TestOrchestrationConfigLoading(t *testing.T) {
-	configPath := "../orchestration-sample.yaml"
+	configPath := "../../examples/advanced-config-sample.yaml"
 
 	// Check if sample config exists
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
