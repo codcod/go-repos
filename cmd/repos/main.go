@@ -576,17 +576,34 @@ var orchestrateCmd = &cobra.Command{
 	Short: "Run orchestrated health checks using pipelines",
 	Long:  `Execute modular health checks using the orchestration engine with configurable pipelines and advanced reporting.`,
 	Run: func(_ *cobra.Command, _ []string) {
-		// Load advanced configuration
-		advancedConfig, err := config.LoadAdvancedConfig(orchestrationConfig)
+		// Create simple logger
+		logger := &simpleLogger{}
+
+		// Create migration manager for feature flags and config migration
+		migrationManager := config.NewMigrationManager(logger)
+		migrationManager.InitializeFeatureFlags()
+
+		// Load configuration with migration support
+		advancedConfig, err := migrationManager.LoadConfigWithMigration(orchestrationConfig)
 		if err != nil {
 			color.Red("Error loading orchestration config: %v", err)
 			os.Exit(1)
 		}
 
+		// Cast to advanced config (migration manager returns core.Config interface)
+		advConfig, ok := advancedConfig.(*config.AdvancedConfig)
+		if !ok {
+			color.Red("Error: configuration is not in advanced format")
+			os.Exit(1)
+		}
+
+		// Enable gradual cutover based on feature flags
+		migrationManager.EnableGradualCutover()
+
 		// Apply profile if specified
 		if orchestrationProfile != "" {
-			if profile, exists := advancedConfig.Profiles[orchestrationProfile]; exists {
-				err := advancedConfig.ApplyProfile(orchestrationProfile, profile)
+			if profile, exists := advConfig.Profiles[orchestrationProfile]; exists {
+				err := advConfig.ApplyProfile(orchestrationProfile, profile)
 				if err != nil {
 					color.Red("Error applying profile '%s': %v", orchestrationProfile, err)
 					os.Exit(1)
@@ -629,11 +646,8 @@ var orchestrateCmd = &cobra.Command{
 		executor := commands.NewOSCommandExecutor(time.Duration(orchestrationTimeout) * time.Second)
 		checkerRegistry := registry.NewCheckerRegistry(executor)
 
-		// Create simple logger
-		logger := &simpleLogger{}
-
 		// Create orchestration engine
-		engine := orchestration.NewEngine(checkerRegistry, nil, advancedConfig, logger)
+		engine := orchestration.NewEngine(checkerRegistry, nil, advConfig, logger)
 
 		// Determine pipeline to use
 		pipelineName := orchestrationPipeline

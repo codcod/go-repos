@@ -184,6 +184,14 @@ func Duration(key string, value time.Duration) Field {
 	return Field{Key: key, Value: value}
 }
 
+func Bool(key string, value bool) Field {
+	return Field{Key: key, Value: value}
+}
+
+func Any(key string, value interface{}) Field {
+	return Field{Key: key, Value: value}
+}
+
 func Error(key string, err error) Field {
 	return Field{Key: key, Value: err}
 }
