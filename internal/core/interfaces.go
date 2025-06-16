@@ -16,6 +16,15 @@ type Checker interface {
 
 // Analyzer represents a language-specific analyzer interface
 type Analyzer interface {
+	Name() string
+	Language() string
+	SupportedExtensions() []string
+	CanAnalyze(repo Repository) bool
+	Analyze(ctx context.Context, repo Repository) (*AnalysisResult, error)
+}
+
+// LegacyAnalyzer represents the legacy analyzer interface for backward compatibility
+type LegacyAnalyzer interface {
 	Language() string
 	FileExtensions() []string
 	SupportsComplexity() bool

@@ -6,6 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	golang "github.com/codcod/repos/internal/analyzers/go"
+	java_analyzer "github.com/codcod/repos/internal/analyzers/java"
+	javascript_analyzer "github.com/codcod/repos/internal/analyzers/javascript"
+	python_analyzer "github.com/codcod/repos/internal/analyzers/python"
 	"github.com/codcod/repos/internal/core"
 )
 
@@ -35,7 +39,7 @@ func (r *Registry) GetByLanguage(language string) (core.Analyzer, bool) {
 // GetByFileExtension gets an analyzer by file extension
 func (r *Registry) GetByFileExtension(ext string) (core.Analyzer, bool) {
 	for _, analyzer := range r.analyzers {
-		for _, supportedExt := range analyzer.FileExtensions() {
+		for _, supportedExt := range analyzer.SupportedExtensions() {
 			if ext == supportedExt {
 				return analyzer, true
 			}
@@ -48,11 +52,8 @@ func (r *Registry) GetByFileExtension(ext string) (core.Analyzer, bool) {
 func (r *Registry) GetSupportedAnalyzers(repo core.Repository) []core.Analyzer {
 	var supported []core.Analyzer
 
-	// Walk repository and determine which analyzers are needed
-	languages := r.detectLanguages(repo.Path)
-
-	for _, lang := range languages {
-		if analyzer, exists := r.GetByLanguage(lang); exists {
+	for _, analyzer := range r.analyzers {
+		if analyzer.CanAnalyze(repo) {
 			supported = append(supported, analyzer)
 		}
 	}
@@ -165,4 +166,25 @@ func (a *BaseAnalyzer) AnalyzeFunctions(ctx context.Context, repoPath string) ([
 // DetectPatterns provides a default implementation (should be overridden)
 func (a *BaseAnalyzer) DetectPatterns(ctx context.Context, content string, patterns []core.Pattern) ([]core.PatternMatch, error) {
 	return nil, nil
+}
+
+// NewRegistryWithStandardAnalyzers creates a registry with all standard language analyzers
+func NewRegistryWithStandardAnalyzers(fs core.FileSystem, logger core.Logger) *Registry {
+	registry := NewRegistry()
+
+	// Register all standard language analyzers
+	registry.Register(golang.NewGoAnalyzer(fs, logger))
+	registry.Register(python_analyzer.NewPythonAnalyzer(fs, logger))
+	registry.Register(java_analyzer.NewJavaAnalyzer(fs, logger))
+	registry.Register(javascript_analyzer.NewJavaScriptAnalyzer(fs, logger))
+
+	return registry
+}
+
+// RegisterStandardAnalyzers registers all standard analyzers to an existing registry
+func (r *Registry) RegisterStandardAnalyzers(fs core.FileSystem, logger core.Logger) {
+	r.Register(golang.NewGoAnalyzer(fs, logger))
+	r.Register(python_analyzer.NewPythonAnalyzer(fs, logger))
+	r.Register(java_analyzer.NewJavaAnalyzer(fs, logger))
+	r.Register(javascript_analyzer.NewJavaScriptAnalyzer(fs, logger))
 }

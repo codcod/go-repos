@@ -187,3 +187,74 @@ func Duration(key string, value time.Duration) Field {
 func Error(key string, err error) Field {
 	return Field{Key: key, Value: err}
 }
+
+// Analysis types for language analyzers
+
+// AnalysisResult represents the result of language-specific analysis
+type AnalysisResult struct {
+	Language  string                   `json:"language"`
+	Files     map[string]*FileAnalysis `json:"files"`
+	Functions []FunctionInfo           `json:"functions"`
+	Metrics   map[string]interface{}   `json:"metrics"`
+	Timestamp time.Time                `json:"timestamp"`
+	Duration  time.Duration            `json:"duration"`
+}
+
+// FileAnalysis represents analysis results for a single file
+type FileAnalysis struct {
+	Path      string                 `json:"path"`
+	Language  string                 `json:"language"`
+	Functions []FunctionInfo         `json:"functions"`
+	Classes   []ClassInfo            `json:"classes,omitempty"`
+	Imports   []ImportInfo           `json:"imports,omitempty"`
+	Metrics   map[string]interface{} `json:"metrics"`
+	Issues    []Issue                `json:"issues,omitempty"`
+}
+
+// FunctionInfo represents information about a function
+type FunctionInfo struct {
+	Name       string                 `json:"name"`
+	File       string                 `json:"file"`
+	Line       int                    `json:"line"`
+	EndLine    int                    `json:"end_line,omitempty"`
+	Complexity int                    `json:"complexity"`
+	Language   string                 `json:"language"`
+	Parameters []ParameterInfo        `json:"parameters,omitempty"`
+	ReturnType string                 `json:"return_type,omitempty"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// ClassInfo represents information about a class
+type ClassInfo struct {
+	Name      string         `json:"name"`
+	File      string         `json:"file"`
+	Line      int            `json:"line"`
+	EndLine   int            `json:"end_line,omitempty"`
+	Language  string         `json:"language"`
+	Methods   []FunctionInfo `json:"methods"`
+	Fields    []FieldInfo    `json:"fields,omitempty"`
+	SuperType string         `json:"super_type,omitempty"`
+}
+
+// FieldInfo represents information about a class field
+type FieldInfo struct {
+	Name       string `json:"name"`
+	Type       string `json:"type"`
+	Line       int    `json:"line"`
+	Visibility string `json:"visibility,omitempty"`
+}
+
+// ParameterInfo represents information about a function parameter
+type ParameterInfo struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
+// ImportInfo represents information about imports/includes
+type ImportInfo struct {
+	Name    string `json:"name"`
+	Path    string `json:"path"`
+	Alias   string `json:"alias,omitempty"`
+	Line    int    `json:"line"`
+	IsLocal bool   `json:"is_local"`
+}
