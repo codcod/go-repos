@@ -22,11 +22,11 @@ func TestHealthConfig_Validation(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "missing config path",
+			name: "missing config path gets default",
 			config: &HealthConfig{
 				ConfigPath: "",
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "timeout too high",
@@ -59,6 +59,13 @@ func TestHealthConfig_Validation(t *testing.T) {
 			if tt.config.Timeout == 0 && err == nil {
 				if cmd.config.Timeout != 5*time.Minute {
 					t.Errorf("Expected default timeout 5m, got %v", cmd.config.Timeout)
+				}
+			}
+
+			// Check that empty config path gets default
+			if tt.name == "missing config path gets default" && err == nil {
+				if cmd.config.ConfigPath != "orchestration.yaml" {
+					t.Errorf("Expected default config path 'orchestration.yaml', got %v", cmd.config.ConfigPath)
 				}
 			}
 		})

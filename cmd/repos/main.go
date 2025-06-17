@@ -401,8 +401,8 @@ func init() {
 	initCmd.Flags().BoolVar(&overwrite, "overwrite", false, "Overwrite existing file if it exists")
 
 	// Health command flags
-	healthCmd.Flags().StringVar(&healthConfig, "config", "orchestration.yaml", "health config file path")
-	healthCmd.Flags().StringVar(&healthProfile, "profile", "", "Profile name to apply from health config")
+	healthCmd.Flags().StringVar(&healthConfig, "config", "", "health config file path (optional, uses built-in defaults if not provided)")
+	healthCmd.Flags().StringVar(&healthProfile, "profile", "default", "Profile name to apply from health config (default: 'default')")
 	healthCmd.Flags().StringVar(&healthPipeline, "pipeline", "", "Pipeline name to execute")
 	healthCmd.Flags().BoolVar(&healthParallel, "parallel", false, "Execute pipeline steps in parallel")
 	healthCmd.Flags().IntVar(&healthTimeout, "timeout", 30, "Timeout in seconds for health checks (default: 30)")
@@ -436,13 +436,28 @@ func main() {
 var healthCmd = &cobra.Command{
 	Use:   "health",
 	Short: "Run comprehensive health checks using pipelines",
-	Long:  `Execute modular health checks using the health engine with configurable pipelines and advanced reporting.`,
+	Long: `Execute modular health checks using the health engine with configurable pipelines and advanced reporting.
+
+The health command works out-of-the-box with sensible defaults. No configuration file is required.
+If you want to customize the checks, you can provide an optional orchestration.yaml file.
+
+Examples:
+  repos health                           # Run with built-in defaults
+  repos health --config custom.yaml     # Use custom configuration
+  repos health --profile minimal        # Use minimal profile
+  repos health --verbose                # Show detailed output`,
 	Run: func(_ *cobra.Command, _ []string) {
 		// Create simple logger
 		logger := &simpleLogger{}
 
-		// Load advanced configuration directly
-		advConfig, err := config.LoadAdvancedConfig(healthConfig)
+		// If no config file is specified, use default name or empty for built-in defaults
+		configPath := healthConfig
+		if configPath == "" {
+			configPath = "orchestration.yaml" // Try default file, will use built-in defaults if not found
+		}
+
+		// Load advanced configuration or use defaults if file doesn't exist
+		advConfig, err := config.LoadAdvancedConfigOrDefault(configPath)
 		if err != nil {
 			color.Red("Error loading health config: %v", err)
 			os.Exit(1)

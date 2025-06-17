@@ -55,9 +55,10 @@ func NewHealthCommand(healthConfig *HealthConfig) *HealthCommand {
 func (hc *HealthCommand) Validate() error {
 	hc.logger.Debug("validating health command configuration")
 
+	// Config path is optional - if empty, we'll use default config
 	if hc.config.ConfigPath == "" {
-		return errors.NewContextualError("validate_config", fmt.Errorf("config path is required")).
-			WithContext("field", "config_path")
+		hc.config.ConfigPath = "orchestration.yaml" // Default config file name
+		hc.logger.Debug("using default config path", core.String("path", hc.config.ConfigPath))
 	}
 
 	if hc.config.Timeout <= 0 {
@@ -287,9 +288,9 @@ func (he *HealthExecutor) executeHealthChecks(ctx context.Context, repos []core.
 	return result, nil
 }
 
-// loadAdvancedConfig loads the advanced configuration file
+// loadAdvancedConfig loads the advanced configuration file or returns default config
 func (he *HealthExecutor) loadAdvancedConfig(configPath string) (*config.AdvancedConfig, error) {
-	advConfig, err := config.LoadAdvancedConfig(configPath)
+	advConfig, err := config.LoadAdvancedConfigOrDefault(configPath)
 	if err != nil {
 		return nil, err
 	}
