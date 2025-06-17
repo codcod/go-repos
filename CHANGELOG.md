@@ -1,3 +1,16 @@
+# [2.0.0](https://github.com/codcod/repos/compare/v1.5.0...v2.0.0) (2025-06-17)
+
+
+### Features
+
+* remove health command ([febeb85](https://github.com/codcod/repos/commit/febeb85ebee81d748245aff5a64efbcacc7cb89e))
+* replace orchestrate command with health command ([a081578](https://github.com/codcod/repos/commit/a08157816c0bc62c21573c7820ff1a86e3bb91d2))
+
+
+### BREAKING CHANGES
+
+* The orchestrate command has been replaced with health command.
+
 # [1.5.0](https://github.com/codcod/repos/compare/v1.4.0...v1.5.0) (2025-06-17)
 
 
