@@ -11,19 +11,13 @@ import (
 	"time"
 
 	"github.com/codcod/repos/internal/config"
+	"github.com/codcod/repos/internal/core"
 	"github.com/codcod/repos/internal/git"
 	"github.com/codcod/repos/internal/github"
 	"github.com/codcod/repos/internal/health"
 	"github.com/codcod/repos/internal/runner"
 	"github.com/codcod/repos/internal/util"
 
-	// Add orchestration imports
-	analyzer_registry "github.com/codcod/repos/internal/analyzers/registry"
-	"github.com/codcod/repos/internal/checkers/registry"
-	"github.com/codcod/repos/internal/core"
-	"github.com/codcod/repos/internal/orchestration"
-	"github.com/codcod/repos/internal/platform/commands"
-	"github.com/codcod/repos/internal/platform/filesystem"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v3"
@@ -54,19 +48,6 @@ var (
 	// Init command flags
 	outputFile string
 	overwrite  bool
-
-	// Health command flags
-	healthFormat         string
-	healthOutputFile     string
-	healthTimeout        int
-	healthCategories     []string
-	healthExclude        []string
-	healthThreshold      int
-	healthSummary        bool
-	healthListCategories bool
-	complexityReport     bool
-	complexityDetailed   bool
-	maxComplexity        int
 
 	// Orchestration command flags
 	orchestrationConfig   string
@@ -299,91 +280,6 @@ var rmCmd = &cobra.Command{
 	},
 }
 
-var healthCmd = &cobra.Command{
-	Use:   "health",
-	Short: "Check the health status of repositories",
-	Long:  `Analyze repositories for health indicators including git status, dependencies, security, and documentation.`,
-	Run: func(_ *cobra.Command, _ []string) {
-		// Handle list-categories flag
-		if healthListCategories {
-			listHealthCategories()
-			return
-		}
-
-		cfg, err := config.LoadConfig(configFile)
-		if err != nil {
-			color.Red("Error: %v", err)
-			os.Exit(1)
-		}
-
-		repositories := cfg.FilterRepositoriesByTag(tag)
-		if len(repositories) == 0 {
-			color.Yellow("No repositories found with tag: %s", tag)
-			return
-		}
-
-		color.Green("Checking health of %d repositories...", len(repositories))
-
-		// Configure health options
-		options := health.HealthOptions{
-			IncludeCategories: healthCategories,
-			ExcludeCategories: healthExclude,
-			Threshold:         healthThreshold,
-			Format:            healthFormat,
-			OutputFile:        healthOutputFile,
-			Parallel:          parallel,
-			Timeout:           healthTimeout,
-			ComplexityReport:  complexityReport,
-			MaxComplexity:     maxComplexity,
-		}
-
-		// If only complexity report is requested (no categories specified), just generate that
-		if (complexityReport || complexityDetailed) && len(healthCategories) == 0 && len(healthExclude) == 0 {
-			if complexityDetailed {
-				color.Green("Generating flake8-style detailed complexity report...")
-				health.PrintDetailedComplexityReport(repositories, maxComplexity)
-			} else {
-				color.Green("Generating detailed cyclomatic complexity report...")
-				health.PrintComplexityReport(repositories, maxComplexity)
-			}
-			return
-		}
-
-		// Perform health checks
-		report := health.CheckAllRepositories(repositories, options)
-
-		// Handle complexity report if requested along with other checks
-		if complexityReport || complexityDetailed {
-			if complexityDetailed {
-				color.Green("Generating flake8-style detailed complexity report...")
-				health.PrintDetailedComplexityReport(repositories, maxComplexity)
-			} else {
-				color.Green("Generating detailed cyclomatic complexity report...")
-				health.PrintComplexityReport(repositories, maxComplexity)
-			}
-		}
-
-		// Display results
-		if healthSummary {
-			health.PrintSummaryTable(report)
-		} else {
-			err := health.PrintHealthReport(report, options)
-			if err != nil {
-				color.Red("Error displaying health report: %v", err)
-				os.Exit(1)
-			}
-		}
-
-		// Exit with appropriate code based on results
-		if report.Summary.Critical > 0 {
-			os.Exit(2) // Critical issues found
-		} else if report.Summary.Warning > 0 {
-			os.Exit(1) // Warnings found
-		}
-		// Success: exit 0
-	},
-}
-
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Create a config.yaml file from discovered Git repositories",
@@ -445,28 +341,6 @@ var initCmd = &cobra.Command{
 	},
 }
 
-// listHealthCategories displays all available health check categories
-func listHealthCategories() {
-	factory := health.NewCheckerFactory()
-	categories := factory.GetCategoryInfo()
-
-	fmt.Println("Available Health Check Categories:")
-	fmt.Println("==================================")
-	fmt.Println()
-
-	for _, category := range categories {
-		color.Cyan("📂 %s", category.Name)
-		fmt.Printf("   %s\n", category.Description)
-		fmt.Printf("   Checkers: %s\n", strings.Join(category.Checkers, ", "))
-		fmt.Println()
-	}
-
-	fmt.Println("Usage examples:")
-	fmt.Printf("  %s health --categories git,security\n", os.Args[0])
-	fmt.Printf("  %s health --exclude documentation\n", os.Args[0])
-	fmt.Printf("  %s health --categories code-quality\n", os.Args[0])
-}
-
 // Process repositories with clean error handling
 func processRepos(repositories []config.Repository, parallel bool, processor func(config.Repository) error) error {
 	logger := util.NewLogger()
@@ -526,19 +400,6 @@ func init() {
 	initCmd.Flags().StringVarP(&outputFile, "output", "o", "config.yaml", "Output file name")
 	initCmd.Flags().BoolVar(&overwrite, "overwrite", false, "Overwrite existing file if it exists")
 
-	// Health command flags
-	healthCmd.Flags().StringVar(&healthFormat, "format", "table", "Output format for health check (table, json, yaml)")
-	healthCmd.Flags().StringVar(&healthOutputFile, "output-file", "", "File to write health check output")
-	healthCmd.Flags().StringSliceVar(&healthCategories, "categories", nil, "Comma-separated list of categories to check")
-	healthCmd.Flags().StringSliceVar(&healthExclude, "exclude", nil, "Comma-separated list of checks to exclude")
-	healthCmd.Flags().IntVar(&healthThreshold, "threshold", 0, "Threshold for failing checks")
-	healthCmd.Flags().BoolVar(&healthSummary, "summary", false, "Show summary of health check results")
-	healthCmd.Flags().IntVar(&healthTimeout, "timeout", 30, "Timeout in seconds for individual health checks (default: 30)")
-	healthCmd.Flags().BoolVar(&healthListCategories, "list-categories", false, "List all available health check categories")
-	healthCmd.Flags().BoolVar(&complexityReport, "complexity-report", false, "Generate detailed cyclomatic complexity report")
-	healthCmd.Flags().BoolVar(&complexityDetailed, "complexity-detailed", false, "Generate flake8-style detailed complexity report")
-	healthCmd.Flags().IntVar(&maxComplexity, "max-complexity", 10, "Maximum allowed cyclomatic complexity for functions (default: 10)")
-
 	// Orchestration command flags
 	orchestrateCmd.Flags().StringVar(&orchestrationConfig, "config", "orchestration.yaml", "orchestration config file path")
 	orchestrateCmd.Flags().StringVar(&orchestrationProfile, "profile", "", "Profile name to apply from orchestration config")
@@ -553,7 +414,6 @@ func init() {
 	rootCmd.AddCommand(prCmd)
 	rootCmd.AddCommand(rmCmd)
 	rootCmd.AddCommand(initCmd)        // Add the init command
-	rootCmd.AddCommand(healthCmd)      // Add the health command
 	rootCmd.AddCommand(orchestrateCmd) // Add the orchestration command
 
 	// Add version command
@@ -575,26 +435,16 @@ func main() {
 
 var orchestrateCmd = &cobra.Command{
 	Use:   "orchestrate",
-	Short: "Run orchestrated health checks using pipelines",
-	Long:  `Execute modular health checks using the orchestration engine with configurable pipelines and advanced reporting.`,
+	Short: "Run orchestrated code analysis using pipelines",
+	Long:  `Execute modular code analysis using the orchestration engine with configurable pipelines and advanced reporting.`,
 	Run: func(_ *cobra.Command, _ []string) {
 		// Create simple logger
 		logger := &simpleLogger{}
 
-		// Create migration manager for config migration
-		migrationManager := config.NewMigrationManager(logger)
-
-		// Load configuration with migration support
-		advancedConfig, err := migrationManager.LoadConfig(orchestrationConfig)
+		// Load advanced configuration directly
+		advConfig, err := config.LoadAdvancedConfig(orchestrationConfig)
 		if err != nil {
 			color.Red("Error loading orchestration config: %v", err)
-			os.Exit(1)
-		}
-
-		// Cast to advanced config (migration manager returns core.Config interface)
-		advConfig, ok := advancedConfig.(*config.AdvancedConfig)
-		if !ok {
-			color.Red("Error: configuration is not in advanced format")
 			os.Exit(1)
 		}
 
@@ -648,18 +498,18 @@ var orchestrateCmd = &cobra.Command{
 			}
 		}
 
-		color.Green("Running orchestrated health checks on %d repositories...", len(repositories))
+		color.Green("Running orchestrated code analysis on %d repositories...", len(repositories))
 
 		// Create command executor and registries
-		executor := commands.NewOSCommandExecutor(time.Duration(orchestrationTimeout) * time.Second)
-		checkerRegistry := registry.NewCheckerRegistry(executor)
+		executor := health.NewCommandExecutor(time.Duration(orchestrationTimeout) * time.Second)
+		checkerRegistry := health.NewCheckerRegistry(executor)
 
 		// Create filesystem and analyzer registry
-		fs := filesystem.NewOSFileSystem()
-		analyzerReg := analyzer_registry.NewRegistryWithStandardAnalyzers(fs, logger)
+		fs := health.NewFileSystem()
+		analyzerReg := health.NewAnalyzerRegistry(fs, logger)
 
 		// Create orchestration engine
-		engine := orchestration.NewEngine(checkerRegistry, analyzerReg, advConfig, logger)
+		engine := health.NewOrchestrationEngine(checkerRegistry, analyzerReg, advConfig, logger)
 
 		// Determine pipeline to use
 		pipelineName := orchestrationPipeline
@@ -690,18 +540,16 @@ var orchestrateCmd = &cobra.Command{
 
 		result, err := engine.ExecuteHealthCheck(ctx, coreRepos)
 		if err != nil {
-			color.Red("Error executing health checks: %v", err)
+			color.Red("Error executing code analysis: %v", err)
 			os.Exit(1)
 		}
 
-		// Display results
-		displayOrchestrationResults(result, orchestrationVerbose)
+		// Display results using the formatter
+		formatter := health.NewFormatter(orchestrationVerbose)
+		formatter.DisplayResults(*result)
 
 		// Exit with appropriate code based on results
-		if result.Summary.FailedRepos > 0 {
-			os.Exit(2) // Critical issues found
-		}
-		// No warnings field in summary, so just exit successfully
+		os.Exit(health.GetExitCode(*result))
 	},
 }
 
@@ -736,55 +584,6 @@ func (l *simpleLogger) formatFieldsAsString(fields []core.Field) string {
 		result += fmt.Sprintf(" [%s=%v]", field.Key, field.Value)
 	}
 	return result + "\n"
-}
-
-// displayOrchestrationResults displays the results from orchestration
-func displayOrchestrationResults(result *core.WorkflowResult, verbose bool) {
-	color.Green("\n=== Orchestration Results ===")
-
-	fmt.Printf("Duration: %v\n", result.Duration)
-	fmt.Printf("Total Repositories: %d\n", result.TotalRepos)
-	fmt.Printf("Start Time: %v\n", result.StartTime.Format("2006-01-02 15:04:05"))
-	fmt.Printf("End Time: %v\n", result.EndTime.Format("2006-01-02 15:04:05"))
-
-	color.Cyan("\n=== Summary ===")
-	fmt.Printf("Successful: %d\n", result.Summary.SuccessfulRepos)
-	fmt.Printf("Failed: %d\n", result.Summary.FailedRepos)
-	fmt.Printf("Average Score: %d\n", result.Summary.AverageScore)
-	fmt.Printf("Total Issues: %d\n", result.Summary.TotalIssues)
-
-	if verbose {
-		color.Cyan("\n=== Repository Details ===")
-		for _, repoResult := range result.RepositoryResults {
-			status := "✓"
-			statusColor := color.GreenString
-			if repoResult.Error != "" {
-				status = "✗"
-				statusColor = color.RedString
-			} else if repoResult.Status == core.StatusWarning {
-				status = "⚠"
-				statusColor = color.YellowString
-			}
-
-			fmt.Printf("%s %s (Duration: %v, Score: %d/%d)\n",
-				statusColor(status), repoResult.Repository.Name,
-				repoResult.Duration, repoResult.Score, repoResult.MaxScore)
-
-			if repoResult.Error != "" {
-				fmt.Printf("   Error: %s\n", repoResult.Error)
-			}
-
-			if len(repoResult.CheckResults) > 0 {
-				fmt.Printf("   Checks completed: %d\n", len(repoResult.CheckResults))
-				for _, checkResult := range repoResult.CheckResults {
-					if checkResult.Status != core.StatusHealthy {
-						fmt.Printf("     - %s: %s (%d issues)\n",
-							checkResult.Name, checkResult.Status, len(checkResult.Issues))
-					}
-				}
-			}
-		}
-	}
 }
 
 // detectRepositoryLanguage attempts to detect the primary language of a repository

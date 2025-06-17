@@ -178,26 +178,9 @@ Analyze the health and maintenance status of your repositories using two availab
 
 #### Simple Health Checks (Legacy)
 
-```sh
-# Check health of all repositories
-repos health
+#### Advanced Orchestrated Analysis (Recommended)
 
-# Check specific categories
-repos health --categories git,security
-
-# Check only repositories with specific tags
-repos health -t backend
-
-# Generate HTML report
-repos health --format html --output-file health-report.html
-
-# Generate detailed complexity report
-repos health --complexity-report --max-complexity 10
-```
-
-#### Advanced Orchestrated Health Checks (Recommended)
-
-Use the new orchestration engine for comprehensive, configurable health analysis:
+Use the orchestration engine for comprehensive, configurable code analysis:
 
 ```sh
 # Run with advanced configuration
@@ -231,34 +214,23 @@ The orchestrated approach offers additional benefits:
 
 #### Cyclomatic Complexity Analysis
 
-Generate detailed function-level cyclomatic complexity reports to identify complex code that may need refactoring:
+Generate detailed function-level cyclomatic complexity reports and comprehensive code analysis using the orchestration engine:
 
 ```sh
-# Generate ONLY detailed complexity report (no other health checks)
-repos health --complexity-report
+# Use orchestration for comprehensive analysis including complexity
+repos orchestrate --config examples/advanced-config-sample.yaml --timeout 60
 
-# Generate flake8-style detailed complexity report (similar to flake8 --max-complexity)
-repos health --complexity-detailed --max-complexity 10
-
-# Set custom complexity threshold (complexity report only)
-repos health --complexity-report --max-complexity 15
-
-# Combine complexity report with specific health checks
-repos health --categories quality --complexity-report
-
-# Generate complexity report for specific repositories
-repos health --complexity-report -t backend
-
-# Output complexity report in HTML format
-repos health --complexity-report --format html --output-file complexity-report.html
+# Run with verbose output for detailed analysis results
+repos orchestrate --config examples/advanced-config-sample.yaml --verbose
 ```
 
-#### Complexity Report Formats
+#### Analysis Features
 
-**Standard Format** (`--complexity-report`):
-- Organized by repository and file
-- Shows function names with line ranges
-- Includes summary statistics
+The orchestration engine provides:
+- **Multi-language support**: Go, Python, Java, JavaScript analysis
+- **Security scanning**: Vulnerability detection and dependency analysis
+- **Quality metrics**: Code quality and maintainability assessment
+- **Configurable pipelines**: Customizable analysis workflows
 
 **Flake8-style Format** (`--complexity-detailed`):
 - One violation per line (similar to flake8 output)
@@ -302,13 +274,10 @@ src/calculator/pricing.py:25:1: C901 'calculate_complex_pricing' is too complex 
 📊 Total violations: 3 (threshold: 10)
 ```
 
-For detailed information, see the [Health Dashboard Guide](docs/06_health_dashboard.md).
-
 ### Documentation
 
 - [Development Guide](docs/01_development.md) - Setup, building, and commit conventions
 - [Testing Guide](docs/04_testing.md) - Comprehensive testing strategy and best practices
-- [Health Dashboard Guide](docs/06_health_dashboard.md) - Repository health analysis and code quality checks
 - [Scripts Documentation](scripts/README.md) - Utility scripts for development
 
 ## Alternatives

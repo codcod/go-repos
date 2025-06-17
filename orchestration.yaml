@@ -1,0 +1,56 @@
+version: "1.0"
+metadata:
+  name: "Test Health Analysis"
+  description: "Test configuration for repository health analysis"
+
+categories:
+  git:
+    name: "Git Management"
+    description: "Git repository management and hygiene"
+    weight: 1.0
+  
+  security:
+    name: "Security"  
+    description: "Security and vulnerability assessment"
+    weight: 1.5
+
+checkers:
+  git-status:
+    category: "git"
+    enabled: true
+    severity: "medium"
+    timeout: "5s"
+  
+  readme-checker:
+    category: "documentation"
+    enabled: true
+    severity: "low"
+    timeout: "2s"
+
+profiles:
+  default:
+    name: "Default Profile"
+    description: "Standard health analysis"
+    enabled_categories: ["git", "security"]
+    
+pipelines:
+  default:
+    name: "Default Pipeline"
+    description: "Standard analysis pipeline"
+    steps:
+      - name: "analysis"
+        enabled: true
+      - name: "checking" 
+        enabled: true
+      - name: "reporting"
+        enabled: true
+    config:
+      max_concurrency: 2
+      timeout: "30s"
+      fail_fast: false
+
+execution:
+  max_concurrency: 4
+  timeout: "60s"
+  cache_enabled: true
+  cache_ttl: "1h"

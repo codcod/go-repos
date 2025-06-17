@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codcod/repos/internal/checkers/registry"
 	"github.com/codcod/repos/internal/config"
 	"github.com/codcod/repos/internal/core"
-	"github.com/codcod/repos/internal/orchestration"
+	"github.com/codcod/repos/internal/health/checkers/registry"
+	"github.com/codcod/repos/internal/health/orchestration"
 	"github.com/codcod/repos/internal/platform/commands"
 )
 
