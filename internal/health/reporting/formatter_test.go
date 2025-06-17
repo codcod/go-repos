@@ -1,6 +1,7 @@
 package reporting
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -304,4 +305,66 @@ func TestDisplayResults_EnhancedDetails(t *testing.T) {
 	t.Log("=== Enhanced Health Check Output ===")
 	formatter.DisplayResults(result)
 	t.Log("DisplayResults completed successfully with enhanced details")
+}
+
+// TestComplexityFunctions tests the complexity-related helper functions
+func TestComplexityFunctions(t *testing.T) {
+	formatter := NewFormatter(true)
+
+	// Test getComplexityLevel
+	testCases := []struct {
+		complexity int
+		expected   string
+	}{
+		{3, "Low"},
+		{8, "Moderate"},
+		{15, "High"},
+		{25, "Very High"},
+	}
+
+	for _, tc := range testCases {
+		result := formatter.getComplexityLevel(tc.complexity)
+		// Check that the result contains the expected level (ignoring color codes)
+		if !strings.Contains(result, tc.expected) {
+			t.Errorf("Expected complexity level for %d to contain '%s', got '%s'",
+				tc.complexity, tc.expected, result)
+		}
+	}
+
+	// Test sortFunctionsByComplexity
+	functions := []core.FunctionInfo{
+		{Name: "low", Complexity: 2},
+		{Name: "high", Complexity: 20},
+		{Name: "medium", Complexity: 8},
+		{Name: "very_high", Complexity: 30},
+	}
+
+	formatter.sortFunctionsByComplexity(functions)
+
+	// Verify sorted order (highest first)
+	expectedOrder := []string{"very_high", "high", "medium", "low"}
+	for i, fn := range functions {
+		if fn.Name != expectedOrder[i] {
+			t.Errorf("Expected function at position %d to be '%s', got '%s'",
+				i, expectedOrder[i], fn.Name)
+		}
+	}
+
+	// Test getShortFileName
+	testFiles := []struct {
+		input    string
+		expected string
+	}{
+		{"short.go", "short.go"},
+		{"/very/long/path/to/some/file/with/long/name.go", "long/name.go"},
+		{"a_very_long_filename_that_exceeds_the_limit.py", "a_very_long_filenam..."},
+	}
+
+	for _, tc := range testFiles {
+		result := formatter.getShortFileName(tc.input)
+		if len(result) > 20 && !strings.HasSuffix(result, "...") {
+			t.Errorf("Expected short filename for '%s' to be <= 20 chars or end with '...', got '%s' (len=%d)",
+				tc.input, result, len(result))
+		}
+	}
 }
