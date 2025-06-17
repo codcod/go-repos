@@ -1,3 +1,11 @@
+# [1.5.0](https://github.com/codcod/repos/compare/v1.4.0...v1.5.0) (2025-06-17)
+
+
+### Features
+
+* clean up migration files ([494a629](https://github.com/codcod/repos/commit/494a6293e3b42230d86859102b1b80403c94044a))
+* remove feature flags entirely ([52e3202](https://github.com/codcod/repos/commit/52e32026f5abb413b4347dcc8b6bd8b57ec29efd))
+
 # [1.4.0](https://github.com/codcod/repos/compare/v1.3.0...v1.4.0) (2025-06-16)
 
 
