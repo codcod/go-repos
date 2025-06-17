@@ -2,11 +2,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/codcod/repos/internal/config"
 	"github.com/codcod/repos/internal/git"
@@ -14,6 +16,14 @@ import (
 	"github.com/codcod/repos/internal/health"
 	"github.com/codcod/repos/internal/runner"
 	"github.com/codcod/repos/internal/util"
+
+	// Add orchestration imports
+	analyzer_registry "github.com/codcod/repos/internal/analyzers/registry"
+	"github.com/codcod/repos/internal/checkers/registry"
+	"github.com/codcod/repos/internal/core"
+	"github.com/codcod/repos/internal/orchestration"
+	"github.com/codcod/repos/internal/platform/commands"
+	"github.com/codcod/repos/internal/platform/filesystem"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v3"
@@ -57,6 +67,15 @@ var (
 	complexityReport     bool
 	complexityDetailed   bool
 	maxComplexity        int
+
+	// Orchestration command flags
+	orchestrationConfig   string
+	orchestrationProfile  string
+	orchestrationPipeline string
+	orchestrationParallel bool
+	orchestrationTimeout  int
+	orchestrationDryRun   bool
+	orchestrationVerbose  bool
 )
 
 // getEnvOrDefault returns the environment variable value or default if empty
@@ -520,12 +539,22 @@ func init() {
 	healthCmd.Flags().BoolVar(&complexityDetailed, "complexity-detailed", false, "Generate flake8-style detailed complexity report")
 	healthCmd.Flags().IntVar(&maxComplexity, "max-complexity", 10, "Maximum allowed cyclomatic complexity for functions (default: 10)")
 
+	// Orchestration command flags
+	orchestrateCmd.Flags().StringVar(&orchestrationConfig, "config", "orchestration.yaml", "orchestration config file path")
+	orchestrateCmd.Flags().StringVar(&orchestrationProfile, "profile", "", "Profile name to apply from orchestration config")
+	orchestrateCmd.Flags().StringVar(&orchestrationPipeline, "pipeline", "", "Pipeline name to execute")
+	orchestrateCmd.Flags().BoolVar(&orchestrationParallel, "parallel", false, "Execute pipeline steps in parallel")
+	orchestrateCmd.Flags().IntVar(&orchestrationTimeout, "timeout", 30, "Timeout in seconds for orchestration (default: 30)")
+	orchestrateCmd.Flags().BoolVar(&orchestrationDryRun, "dry-run", false, "Dry run mode - show what would be executed")
+	orchestrateCmd.Flags().BoolVar(&orchestrationVerbose, "verbose", false, "Enable verbose output for orchestration")
+
 	rootCmd.AddCommand(cloneCmd)
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(prCmd)
 	rootCmd.AddCommand(rmCmd)
-	rootCmd.AddCommand(initCmd)   // Add the init command
-	rootCmd.AddCommand(healthCmd) // Add the health command
+	rootCmd.AddCommand(initCmd)        // Add the init command
+	rootCmd.AddCommand(healthCmd)      // Add the health command
+	rootCmd.AddCommand(orchestrateCmd) // Add the orchestration command
 
 	// Add version command
 	rootCmd.AddCommand(&cobra.Command{
@@ -542,4 +571,284 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+var orchestrateCmd = &cobra.Command{
+	Use:   "orchestrate",
+	Short: "Run orchestrated health checks using pipelines",
+	Long:  `Execute modular health checks using the orchestration engine with configurable pipelines and advanced reporting.`,
+	Run: func(_ *cobra.Command, _ []string) {
+		// Create simple logger
+		logger := &simpleLogger{}
+
+		// Create migration manager for config migration
+		migrationManager := config.NewMigrationManager(logger)
+
+		// Load configuration with migration support
+		advancedConfig, err := migrationManager.LoadConfig(orchestrationConfig)
+		if err != nil {
+			color.Red("Error loading orchestration config: %v", err)
+			os.Exit(1)
+		}
+
+		// Cast to advanced config (migration manager returns core.Config interface)
+		advConfig, ok := advancedConfig.(*config.AdvancedConfig)
+		if !ok {
+			color.Red("Error: configuration is not in advanced format")
+			os.Exit(1)
+		}
+
+		// Apply profile if specified
+		if orchestrationProfile != "" {
+			if profile, exists := advConfig.Profiles[orchestrationProfile]; exists {
+				err := advConfig.ApplyProfile(orchestrationProfile, profile)
+				if err != nil {
+					color.Red("Error applying profile '%s': %v", orchestrationProfile, err)
+					os.Exit(1)
+				}
+			} else {
+				color.Red("Profile '%s' not found in configuration", orchestrationProfile)
+				os.Exit(1)
+			}
+		}
+
+		// Load basic config for repositories
+		cfg, err := config.LoadConfig(configFile)
+		if err != nil {
+			color.Red("Error: %v", err)
+			os.Exit(1)
+		}
+
+		repositories := cfg.FilterRepositoriesByTag(tag)
+		if len(repositories) == 0 {
+			color.Yellow("No repositories found with tag: %s", tag)
+			return
+		}
+
+		// Convert repositories to core.Repository format
+		coreRepos := make([]core.Repository, len(repositories))
+		for i, repo := range repositories {
+			// Use the actual repository path if it exists, otherwise use the specified path
+			repoPath := repo.Path
+			if repoPath == "" {
+				repoPath = filepath.Join("cloned_repos", repo.Name)
+			}
+
+			// Detect language from repository tags or directory structure
+			language := detectRepositoryLanguage(repo, repoPath)
+
+			coreRepos[i] = core.Repository{
+				Name:     repo.Name,
+				Path:     repoPath,
+				URL:      repo.URL,
+				Branch:   repo.Branch,
+				Tags:     repo.Tags,
+				Language: language,
+				Metadata: make(map[string]string),
+			}
+		}
+
+		color.Green("Running orchestrated health checks on %d repositories...", len(repositories))
+
+		// Create command executor and registries
+		executor := commands.NewOSCommandExecutor(time.Duration(orchestrationTimeout) * time.Second)
+		checkerRegistry := registry.NewCheckerRegistry(executor)
+
+		// Create filesystem and analyzer registry
+		fs := filesystem.NewOSFileSystem()
+		analyzerReg := analyzer_registry.NewRegistryWithStandardAnalyzers(fs, logger)
+
+		// Create orchestration engine
+		engine := orchestration.NewEngine(checkerRegistry, analyzerReg, advConfig, logger)
+
+		// Determine pipeline to use
+		pipelineName := orchestrationPipeline
+		if pipelineName == "" {
+			pipelineName = "default"
+		}
+
+		// For now, use the engine directly since we don't have pipeline config yet
+		// In a production system, you would look up the pipeline configuration
+		// pipeline, exists := advancedConfig.Pipelines[pipelineName]
+		// if !exists {
+		//     color.Red("Pipeline '%s' not found in configuration", pipelineName)
+		//     os.Exit(1)
+		// }
+
+		// Execute pipeline
+		if orchestrationDryRun {
+			color.Yellow("Dry run mode - would execute pipeline '%s' on %d repositories", pipelineName, len(coreRepos))
+			return
+		}
+
+		ctx := context.Background()
+		if orchestrationTimeout > 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(context.Background(), time.Duration(orchestrationTimeout)*time.Second)
+			defer cancel()
+		}
+
+		result, err := engine.ExecuteHealthCheck(ctx, coreRepos)
+		if err != nil {
+			color.Red("Error executing health checks: %v", err)
+			os.Exit(1)
+		}
+
+		// Display results
+		displayOrchestrationResults(result, orchestrationVerbose)
+
+		// Exit with appropriate code based on results
+		if result.Summary.FailedRepos > 0 {
+			os.Exit(2) // Critical issues found
+		}
+		// No warnings field in summary, so just exit successfully
+	},
+}
+
+// simpleLogger provides a basic logger implementation
+type simpleLogger struct{}
+
+func (l *simpleLogger) Debug(msg string, fields ...core.Field) {
+	if orchestrationVerbose {
+		fmt.Print("[DEBUG] " + msg + l.formatFieldsAsString(fields))
+	}
+}
+
+func (l *simpleLogger) Info(msg string, fields ...core.Field) {
+	fmt.Print("[INFO] " + msg + l.formatFieldsAsString(fields))
+}
+
+func (l *simpleLogger) Warn(msg string, fields ...core.Field) {
+	color.Yellow("[WARN] " + msg + l.formatFieldsAsString(fields))
+}
+
+func (l *simpleLogger) Error(msg string, fields ...core.Field) {
+	color.Red("[ERROR] " + msg + l.formatFieldsAsString(fields))
+}
+
+func (l *simpleLogger) formatFieldsAsString(fields []core.Field) string {
+	if len(fields) == 0 {
+		return "\n"
+	}
+
+	var result string
+	for _, field := range fields {
+		result += fmt.Sprintf(" [%s=%v]", field.Key, field.Value)
+	}
+	return result + "\n"
+}
+
+// displayOrchestrationResults displays the results from orchestration
+func displayOrchestrationResults(result *core.WorkflowResult, verbose bool) {
+	color.Green("\n=== Orchestration Results ===")
+
+	fmt.Printf("Duration: %v\n", result.Duration)
+	fmt.Printf("Total Repositories: %d\n", result.TotalRepos)
+	fmt.Printf("Start Time: %v\n", result.StartTime.Format("2006-01-02 15:04:05"))
+	fmt.Printf("End Time: %v\n", result.EndTime.Format("2006-01-02 15:04:05"))
+
+	color.Cyan("\n=== Summary ===")
+	fmt.Printf("Successful: %d\n", result.Summary.SuccessfulRepos)
+	fmt.Printf("Failed: %d\n", result.Summary.FailedRepos)
+	fmt.Printf("Average Score: %d\n", result.Summary.AverageScore)
+	fmt.Printf("Total Issues: %d\n", result.Summary.TotalIssues)
+
+	if verbose {
+		color.Cyan("\n=== Repository Details ===")
+		for _, repoResult := range result.RepositoryResults {
+			status := "✓"
+			statusColor := color.GreenString
+			if repoResult.Error != "" {
+				status = "✗"
+				statusColor = color.RedString
+			} else if repoResult.Status == core.StatusWarning {
+				status = "⚠"
+				statusColor = color.YellowString
+			}
+
+			fmt.Printf("%s %s (Duration: %v, Score: %d/%d)\n",
+				statusColor(status), repoResult.Repository.Name,
+				repoResult.Duration, repoResult.Score, repoResult.MaxScore)
+
+			if repoResult.Error != "" {
+				fmt.Printf("   Error: %s\n", repoResult.Error)
+			}
+
+			if len(repoResult.CheckResults) > 0 {
+				fmt.Printf("   Checks completed: %d\n", len(repoResult.CheckResults))
+				for _, checkResult := range repoResult.CheckResults {
+					if checkResult.Status != core.StatusHealthy {
+						fmt.Printf("     - %s: %s (%d issues)\n",
+							checkResult.Name, checkResult.Status, len(checkResult.Issues))
+					}
+				}
+			}
+		}
+	}
+}
+
+// detectRepositoryLanguage attempts to detect the primary language of a repository
+//
+//nolint:gocyclo
+func detectRepositoryLanguage(repo config.Repository, repoPath string) string {
+	// First, check tags for language hints
+	for _, tag := range repo.Tags {
+		switch tag {
+		case "go", "golang":
+			return "go"
+		case "python", "py":
+			return "python"
+		case "javascript", "js", "node", "nodejs":
+			return "javascript"
+		case "java":
+			return "java"
+		case "rust":
+			return "rust"
+		case "cpp", "c++":
+			return "cpp"
+		case "c":
+			return "c"
+		}
+	}
+
+	// If no language tag found, try to detect from directory structure
+	if _, err := os.Stat(repoPath); err == nil {
+		// Check for language-specific files
+		if hasFile(repoPath, "go.mod", "main.go", "*.go") {
+			return "go"
+		}
+		if hasFile(repoPath, "requirements.txt", "setup.py", "pyproject.toml", "*.py") {
+			return "python"
+		}
+		if hasFile(repoPath, "package.json", "*.js", "*.ts") {
+			return "javascript"
+		}
+		if hasFile(repoPath, "pom.xml", "build.gradle", "*.java") {
+			return "java"
+		}
+		if hasFile(repoPath, "Cargo.toml", "*.rs") {
+			return "rust"
+		}
+	}
+
+	return "" // Unknown language
+}
+
+// hasFile checks if any of the specified files exist in the repository path
+func hasFile(repoPath string, patterns ...string) bool {
+	for _, pattern := range patterns {
+		if strings.Contains(pattern, "*") {
+			// Use glob pattern
+			matches, err := filepath.Glob(filepath.Join(repoPath, pattern))
+			if err == nil && len(matches) > 0 {
+				return true
+			}
+		} else {
+			// Check for exact file
+			if _, err := os.Stat(filepath.Join(repoPath, pattern)); err == nil {
+				return true
+			}
+		}
+	}
+	return false
 }

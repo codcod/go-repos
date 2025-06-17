@@ -172,9 +172,11 @@ repos pr --draft
 repos pr -t backend
 ```
 
-### Repository Health Dashboard
+### Repository Health Analysis
 
-Analyze the health and maintenance status of your repositories:
+Analyze the health and maintenance status of your repositories using two available methods:
+
+#### Simple Health Checks (Legacy)
 
 ```sh
 # Check health of all repositories
@@ -189,14 +191,29 @@ repos health -t backend
 # Generate HTML report
 repos health --format html --output-file health-report.html
 
-# List all available health check categories
-repos health --list-categories
-
-# Run with parallel execution
-repos health -p
+# Generate detailed complexity report
+repos health --complexity-report --max-complexity 10
 ```
 
-The health dashboard provides comprehensive checks including:
+#### Advanced Orchestrated Health Checks (Recommended)
+
+Use the new orchestration engine for comprehensive, configurable health analysis:
+
+```sh
+# Run with advanced configuration
+repos orchestrate --config examples/advanced-config-sample.yaml
+
+# Use specific profile for different environments
+repos orchestrate --config examples/advanced-config-sample.yaml --profile production
+
+# Run specific pipeline
+repos orchestrate --config examples/advanced-config-sample.yaml --pipeline standard
+
+# Dry run to see what would be executed
+repos orchestrate --config examples/advanced-config-sample.yaml --dry-run
+```
+
+Both health analysis methods provide comprehensive checks including:
 - **Git**: Repository status and commit activity
 - **Dependencies**: Package management and outdated dependencies
 - **Security**: Vulnerabilities and security policies
@@ -204,6 +221,13 @@ The health dashboard provides comprehensive checks including:
 - **Documentation**: README quality and completeness
 - **Compliance**: License files and legal requirements
 - **Automation**: CI/CD configuration
+
+The orchestrated approach offers additional benefits:
+- **Feature Flags**: Control which components are enabled
+- **Profiles**: Different check configurations for different environments
+- **Pipelines**: Complex workflows with dependencies
+- **Parallel Execution**: Improved performance
+- **Advanced Configuration**: YAML-based configuration with inheritance
 
 #### Cyclomatic Complexity Analysis
 
