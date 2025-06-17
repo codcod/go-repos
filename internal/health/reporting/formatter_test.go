@@ -221,3 +221,87 @@ func TestFormatter_DisplayResults_EmptyResults(t *testing.T) {
 
 	t.Log("DisplayResults completed successfully with empty results")
 }
+
+func TestDisplayResults_EnhancedDetails(t *testing.T) {
+	formatter := NewFormatter(false) // compact mode
+
+	// Create a sample result with detailed check information
+	result := core.WorkflowResult{
+		StartTime: time.Now().Add(-5 * time.Second),
+		EndTime:   time.Now(),
+		Duration:  5 * time.Second,
+		Summary: core.WorkflowSummary{
+			SuccessfulRepos: 1,
+			FailedRepos:     0,
+			AverageScore:    85,
+			TotalIssues:     2,
+			StatusCounts: map[core.HealthStatus]int{
+				core.StatusHealthy: 1,
+			},
+		},
+		RepositoryResults: []core.RepositoryResult{
+			{
+				Repository: core.Repository{
+					Name:     "test-repo",
+					Path:     "/path/to/test-repo",
+					Language: "python",
+				},
+				Status:   core.StatusHealthy,
+				Score:    85,
+				MaxScore: 100,
+				CheckResults: []core.CheckResult{
+					{
+						ID:       "security-scan",
+						Name:     "Security Scanner",
+						Category: "security",
+						Status:   core.StatusHealthy,
+						Score:    90,
+						MaxScore: 100,
+						Duration: 250 * time.Millisecond,
+						Issues: []core.Issue{
+							{
+								Type:     "potential_vulnerability",
+								Severity: core.SeverityMedium,
+								Message:  "Potential SQL injection vulnerability detected",
+								Location: &core.Location{
+									File: "app.py",
+									Line: 42,
+								},
+								Suggestion: "Use parameterized queries to prevent SQL injection",
+							},
+						},
+						Metrics: map[string]interface{}{
+							"files_scanned":         15,
+							"vulnerabilities_found": 1,
+						},
+					},
+					{
+						ID:       "license-check",
+						Name:     "License Compliance",
+						Category: "compliance",
+						Status:   core.StatusWarning,
+						Score:    80,
+						MaxScore: 100,
+						Duration: 100 * time.Millisecond,
+						Issues: []core.Issue{
+							{
+								Type:       "missing_license",
+								Severity:   core.SeverityLow,
+								Message:    "No license file found in repository",
+								Suggestion: "Add a LICENSE file to clarify usage rights",
+							},
+						},
+						Metrics: map[string]interface{}{
+							"license_files_found": 0,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Test that enhanced formatting doesn't panic and produces output
+	t.Log("=== Enhanced Health Check Output ===")
+	formatter.DisplayResults(result)
+	t.Log("DisplayResults completed successfully with enhanced details")
+}
