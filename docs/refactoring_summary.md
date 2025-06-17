@@ -89,7 +89,7 @@ os.Exit(health.GetExitCode(result))
 - ✅ All import paths resolve correctly
 
 ### Functional Verification
-- ✅ Orchestrate command works with new health package
+- ✅ Health command works with new health package
 - ✅ Dry-run mode functions correctly
 - ✅ Verbose output displays properly
 - ✅ Exit codes are handled appropriately

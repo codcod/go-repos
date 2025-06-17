@@ -274,7 +274,7 @@ go vet ./...                             # ✅ NO ISSUES
 
 #### Functionality Verification ✅
 ```bash
-./bin/repos orchestrate --dry-run --verbose  # ✅ WORKS CORRECTLY
+./bin/repos health --dry-run --verbose  # ✅ WORKS CORRECTLY
 # Output: Successfully detected configuration and executed dry-run
 ```
 

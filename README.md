@@ -178,22 +178,22 @@ Analyze the health and maintenance status of your repositories using two availab
 
 #### Simple Health Checks (Legacy)
 
-#### Advanced Orchestrated Analysis (Recommended)
+#### Advanced Health Check Analysis (Recommended)
 
-Use the orchestration engine for comprehensive, configurable code analysis:
+Use the health engine for comprehensive, configurable code analysis:
 
 ```sh
 # Run with advanced configuration
-repos orchestrate --config examples/advanced-config-sample.yaml
+repos health --config examples/advanced-config-sample.yaml
 
 # Use specific profile for different environments
-repos orchestrate --config examples/advanced-config-sample.yaml --profile production
+repos health --config examples/advanced-config-sample.yaml --profile production
 
 # Run specific pipeline
-repos orchestrate --config examples/advanced-config-sample.yaml --pipeline standard
+repos health --config examples/advanced-config-sample.yaml --pipeline standard
 
 # Dry run to see what would be executed
-repos orchestrate --config examples/advanced-config-sample.yaml --dry-run
+repos health --config examples/advanced-config-sample.yaml --dry-run
 ```
 
 Both health analysis methods provide comprehensive checks including:
@@ -205,7 +205,7 @@ Both health analysis methods provide comprehensive checks including:
 - **Compliance**: License files and legal requirements
 - **Automation**: CI/CD configuration
 
-The orchestrated approach offers additional benefits:
+The health-based approach offers additional benefits:
 - **Feature Flags**: Control which components are enabled
 - **Profiles**: Different check configurations for different environments
 - **Pipelines**: Complex workflows with dependencies
@@ -214,19 +214,19 @@ The orchestrated approach offers additional benefits:
 
 #### Cyclomatic Complexity Analysis
 
-Generate detailed function-level cyclomatic complexity reports and comprehensive code analysis using the orchestration engine:
+Generate detailed function-level cyclomatic complexity reports and comprehensive code analysis using the health engine:
 
 ```sh
-# Use orchestration for comprehensive analysis including complexity
-repos orchestrate --config examples/advanced-config-sample.yaml --timeout 60
+# Use health checks for comprehensive analysis including complexity
+repos health --config examples/advanced-config-sample.yaml --timeout 60
 
 # Run with verbose output for detailed analysis results
-repos orchestrate --config examples/advanced-config-sample.yaml --verbose
+repos health --config examples/advanced-config-sample.yaml --verbose
 ```
 
 #### Analysis Features
 
-The orchestration engine provides:
+The health engine provides:
 - **Multi-language support**: Go, Python, Java, JavaScript analysis
 - **Security scanning**: Vulnerability detection and dependency analysis
 - **Quality metrics**: Code quality and maintainability assessment

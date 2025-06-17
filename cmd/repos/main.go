@@ -49,14 +49,14 @@ var (
 	outputFile string
 	overwrite  bool
 
-	// Orchestration command flags
-	orchestrationConfig   string
-	orchestrationProfile  string
-	orchestrationPipeline string
-	orchestrationParallel bool
-	orchestrationTimeout  int
-	orchestrationDryRun   bool
-	orchestrationVerbose  bool
+	// Health command flags
+	healthConfig   string
+	healthProfile  string
+	healthPipeline string
+	healthParallel bool
+	healthTimeout  int
+	healthDryRun   bool
+	healthVerbose  bool
 )
 
 // getEnvOrDefault returns the environment variable value or default if empty
@@ -400,21 +400,21 @@ func init() {
 	initCmd.Flags().StringVarP(&outputFile, "output", "o", "config.yaml", "Output file name")
 	initCmd.Flags().BoolVar(&overwrite, "overwrite", false, "Overwrite existing file if it exists")
 
-	// Orchestration command flags
-	orchestrateCmd.Flags().StringVar(&orchestrationConfig, "config", "orchestration.yaml", "orchestration config file path")
-	orchestrateCmd.Flags().StringVar(&orchestrationProfile, "profile", "", "Profile name to apply from orchestration config")
-	orchestrateCmd.Flags().StringVar(&orchestrationPipeline, "pipeline", "", "Pipeline name to execute")
-	orchestrateCmd.Flags().BoolVar(&orchestrationParallel, "parallel", false, "Execute pipeline steps in parallel")
-	orchestrateCmd.Flags().IntVar(&orchestrationTimeout, "timeout", 30, "Timeout in seconds for orchestration (default: 30)")
-	orchestrateCmd.Flags().BoolVar(&orchestrationDryRun, "dry-run", false, "Dry run mode - show what would be executed")
-	orchestrateCmd.Flags().BoolVar(&orchestrationVerbose, "verbose", false, "Enable verbose output for orchestration")
+	// Health command flags
+	healthCmd.Flags().StringVar(&healthConfig, "config", "orchestration.yaml", "health config file path")
+	healthCmd.Flags().StringVar(&healthProfile, "profile", "", "Profile name to apply from health config")
+	healthCmd.Flags().StringVar(&healthPipeline, "pipeline", "", "Pipeline name to execute")
+	healthCmd.Flags().BoolVar(&healthParallel, "parallel", false, "Execute pipeline steps in parallel")
+	healthCmd.Flags().IntVar(&healthTimeout, "timeout", 30, "Timeout in seconds for health checks (default: 30)")
+	healthCmd.Flags().BoolVar(&healthDryRun, "dry-run", false, "Dry run mode - show what would be executed")
+	healthCmd.Flags().BoolVar(&healthVerbose, "verbose", false, "Enable verbose output for health checks")
 
 	rootCmd.AddCommand(cloneCmd)
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(prCmd)
 	rootCmd.AddCommand(rmCmd)
-	rootCmd.AddCommand(initCmd)        // Add the init command
-	rootCmd.AddCommand(orchestrateCmd) // Add the orchestration command
+	rootCmd.AddCommand(initCmd)   // Add the init command
+	rootCmd.AddCommand(healthCmd) // Add the health command
 
 	// Add version command
 	rootCmd.AddCommand(&cobra.Command{
@@ -433,31 +433,31 @@ func main() {
 	}
 }
 
-var orchestrateCmd = &cobra.Command{
-	Use:   "orchestrate",
-	Short: "Run orchestrated code analysis using pipelines",
-	Long:  `Execute modular code analysis using the orchestration engine with configurable pipelines and advanced reporting.`,
+var healthCmd = &cobra.Command{
+	Use:   "health",
+	Short: "Run comprehensive health checks using pipelines",
+	Long:  `Execute modular health checks using the health engine with configurable pipelines and advanced reporting.`,
 	Run: func(_ *cobra.Command, _ []string) {
 		// Create simple logger
 		logger := &simpleLogger{}
 
 		// Load advanced configuration directly
-		advConfig, err := config.LoadAdvancedConfig(orchestrationConfig)
+		advConfig, err := config.LoadAdvancedConfig(healthConfig)
 		if err != nil {
-			color.Red("Error loading orchestration config: %v", err)
+			color.Red("Error loading health config: %v", err)
 			os.Exit(1)
 		}
 
 		// Apply profile if specified
-		if orchestrationProfile != "" {
-			if profile, exists := advConfig.Profiles[orchestrationProfile]; exists {
-				err := advConfig.ApplyProfile(orchestrationProfile, profile)
+		if healthProfile != "" {
+			if profile, exists := advConfig.Profiles[healthProfile]; exists {
+				err := advConfig.ApplyProfile(healthProfile, profile)
 				if err != nil {
-					color.Red("Error applying profile '%s': %v", orchestrationProfile, err)
+					color.Red("Error applying profile '%s': %v", healthProfile, err)
 					os.Exit(1)
 				}
 			} else {
-				color.Red("Profile '%s' not found in configuration", orchestrationProfile)
+				color.Red("Profile '%s' not found in configuration", healthProfile)
 				os.Exit(1)
 			}
 		}
@@ -498,10 +498,10 @@ var orchestrateCmd = &cobra.Command{
 			}
 		}
 
-		color.Green("Running orchestrated code analysis on %d repositories...", len(repositories))
+		color.Green("Running comprehensive health checks on %d repositories...", len(repositories))
 
 		// Create command executor and registries
-		executor := health.NewCommandExecutor(time.Duration(orchestrationTimeout) * time.Second)
+		executor := health.NewCommandExecutor(time.Duration(healthTimeout) * time.Second)
 		checkerRegistry := health.NewCheckerRegistry(executor)
 
 		// Create filesystem and analyzer registry
@@ -512,7 +512,7 @@ var orchestrateCmd = &cobra.Command{
 		engine := health.NewOrchestrationEngine(checkerRegistry, analyzerReg, advConfig, logger)
 
 		// Determine pipeline to use
-		pipelineName := orchestrationPipeline
+		pipelineName := healthPipeline
 		if pipelineName == "" {
 			pipelineName = "default"
 		}
@@ -526,15 +526,15 @@ var orchestrateCmd = &cobra.Command{
 		// }
 
 		// Execute pipeline
-		if orchestrationDryRun {
+		if healthDryRun {
 			color.Yellow("Dry run mode - would execute pipeline '%s' on %d repositories", pipelineName, len(coreRepos))
 			return
 		}
 
 		ctx := context.Background()
-		if orchestrationTimeout > 0 {
+		if healthTimeout > 0 {
 			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(context.Background(), time.Duration(orchestrationTimeout)*time.Second)
+			ctx, cancel = context.WithTimeout(context.Background(), time.Duration(healthTimeout)*time.Second)
 			defer cancel()
 		}
 
@@ -545,7 +545,7 @@ var orchestrateCmd = &cobra.Command{
 		}
 
 		// Display results using the formatter
-		formatter := health.NewFormatter(orchestrationVerbose)
+		formatter := health.NewFormatter(healthVerbose)
 		formatter.DisplayResults(*result)
 
 		// Exit with appropriate code based on results
@@ -557,7 +557,7 @@ var orchestrateCmd = &cobra.Command{
 type simpleLogger struct{}
 
 func (l *simpleLogger) Debug(msg string, fields ...core.Field) {
-	if orchestrationVerbose {
+	if healthVerbose {
 		fmt.Print("[DEBUG] " + msg + l.formatFieldsAsString(fields))
 	}
 }

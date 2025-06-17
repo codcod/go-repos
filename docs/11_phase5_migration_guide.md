@@ -173,17 +173,17 @@ profiles:
 
 ## CLI Usage
 
-### Standard Orchestration
+### Standard Health Checks
 
 ```bash
 # Basic usage - automatic config handling
-./repos orchestrate --config config.yaml
+./repos health --config config.yaml
 
 # With specific profile
-./repos orchestrate --config config.yaml --profile development
+./repos health --config config.yaml --profile development
 
 # With custom pipeline
-./repos orchestrate --config config.yaml --pipeline quality-checks
+./repos health --config config.yaml --pipeline quality-checks
 ```
 
 ### Feature Flag Management
