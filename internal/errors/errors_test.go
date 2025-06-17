@@ -3,6 +3,7 @@ package errors
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -338,4 +339,68 @@ func TestErrorChaining(t *testing.T) {
 	if !errors.As(wrappedErr, &targetConfigErr) {
 		t.Error("Expected errors.As to work through multiple wrapping layers")
 	}
+}
+
+// Test contextual error handling
+func TestContextualError(t *testing.T) {
+	t.Run("basic contextual error", func(t *testing.T) {
+		originalErr := fmt.Errorf("file not found")
+		contextErr := NewFileError("read_file", "/path/to/file.go", originalErr)
+
+		expected := "operation 'read_file' failed at '/path/to/file.go': file not found"
+		if contextErr.Error() != expected {
+			t.Errorf("Expected error message: %s, got: %s", expected, contextErr.Error())
+		}
+
+		// Test unwrapping
+		if contextErr.Unwrap() != originalErr {
+			t.Error("Expected Unwrap() to return original error")
+		}
+	})
+
+	t.Run("contextual error with context", func(t *testing.T) {
+		originalErr := fmt.Errorf("syntax error")
+		contextErr := NewAnalysisError("go-analyzer", "/path/to/file.go", originalErr)
+		contextErr.WithContext("line", 42).WithContext("column", 15)
+
+		errorMsg := contextErr.Error()
+		if !strings.Contains(errorMsg, "analyzer=go-analyzer") {
+			t.Error("Expected error to contain analyzer context")
+		}
+		if !strings.Contains(errorMsg, "line=42") {
+			t.Error("Expected error to contain line context")
+		}
+		if !strings.Contains(errorMsg, "column=15") {
+			t.Error("Expected error to contain column context")
+		}
+	})
+
+	t.Run("error severity", func(t *testing.T) {
+		contextErr := NewContextualError("test_op", fmt.Errorf("test error"))
+		contextErr.Severity = SeverityHigh
+
+		errorMsg := contextErr.Error()
+		if !strings.Contains(errorMsg, "[HIGH]") {
+			t.Error("Expected error message to contain severity prefix")
+		}
+	})
+
+	t.Run("error detection functions", func(t *testing.T) {
+		contextErr := NewContextualError("test", fmt.Errorf("test"))
+		regularErr := fmt.Errorf("regular error")
+
+		if !IsContextualError(contextErr) {
+			t.Error("Expected IsContextualError to return true for contextual error")
+		}
+		if IsContextualError(regularErr) {
+			t.Error("Expected IsContextualError to return false for regular error")
+		}
+
+		if GetContextualError(contextErr) == nil {
+			t.Error("Expected GetContextualError to return the contextual error")
+		}
+		if GetContextualError(regularErr) != nil {
+			t.Error("Expected GetContextualError to return nil for regular error")
+		}
+	})
 }
