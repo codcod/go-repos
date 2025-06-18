@@ -522,7 +522,7 @@ Examples:
 		// Apply category filtering if specified
 		if len(healthCategories) > 0 {
 			color.Blue("Filtering by categories: %v", healthCategories)
-			advConfig.FilterByCategories(healthCategories)
+			advConfig = advConfig.FilterByCategories(healthCategories)
 		}
 
 		// Create command executor and registries
@@ -538,7 +538,7 @@ Examples:
 
 		// Execute health checks
 		if healthDryRun {
-			color.Yellow("Dry run mode - would execute health checks on %d repositories", len(coreRepos))
+			showDryRunDetails(coreRepos, advConfig, analyzerReg, healthCategories)
 			return
 		}
 
@@ -972,4 +972,161 @@ func generateHealthConfig() {
 	fmt.Println("# 2. Customize the options according to your project needs")
 	fmt.Println("# 3. Use with: repos health --config health-config.yaml")
 	fmt.Println("# 4. Test with: repos health --config health-config.yaml --dry-run")
+}
+
+// showDryRunDetails displays comprehensive dry-run information based on actual configuration
+//
+//nolint:gocyclo
+func showDryRunDetails(repos []core.Repository, advConfig *healthconfig.AdvancedConfig, analyzerReg *health.AnalyzerRegistry, categories []string) {
+	fmt.Println()
+	color.Yellow("=== DRY RUN MODE - HEALTH CHECK EXECUTION PLAN ===")
+	fmt.Println()
+
+	// Repository information
+	color.Cyan("📁 REPOSITORIES TO ANALYZE:")
+	for i, repo := range repos {
+		fmt.Printf("  %d. %s", i+1, repo.Name)
+		if repo.Language != "" {
+			fmt.Printf(" (Language: %s)", repo.Language)
+		}
+		if len(repo.Tags) > 0 {
+			fmt.Printf(" [Tags: %v]", repo.Tags)
+		}
+		fmt.Printf("\n     Path: %s\n", repo.Path)
+	}
+	fmt.Printf("  Total repositories: %d\n", len(repos))
+	fmt.Println()
+
+	// Get checkers from the actual configuration (after filtering)
+	allAnalyzers := analyzerReg.GetAnalyzers()
+
+	// Show category filtering if applied
+	if len(categories) > 0 {
+		color.Blue("🔍 CATEGORY FILTERING APPLIED: %v", categories)
+		fmt.Println()
+	}
+
+	// Show checkers that would be executed (from actual configuration)
+	color.Cyan("🔧 CHECKERS TO EXECUTE:")
+	if len(advConfig.Checkers) == 0 {
+		color.Red("  No checkers configured")
+	} else {
+		// Group checkers by category from configuration
+		checkersByCategory := make(map[string][]string)
+		enabledCount := 0
+		disabledCount := 0
+
+		for checkerID, checkerConfig := range advConfig.Checkers {
+			// Get category from checker categories
+			category := "uncategorized"
+			if len(checkerConfig.Categories) > 0 {
+				category = checkerConfig.Categories[0] // Use first category
+			}
+			checkersByCategory[category] = append(checkersByCategory[category], checkerID)
+
+			if checkerConfig.Enabled {
+				enabledCount++
+			} else {
+				disabledCount++
+			}
+		}
+
+		for category, checkerIDs := range checkersByCategory {
+			fmt.Printf("  Category: %s\n", capitalizeFirst(category))
+			for _, checkerID := range checkerIDs {
+				checkerConfig := advConfig.Checkers[checkerID]
+				status := "enabled"
+				if !checkerConfig.Enabled {
+					status = "disabled"
+					color.Red("    ❌ %s - %s [%s] - DISABLED",
+						checkerID, status, checkerConfig.Severity)
+				} else {
+					color.Green("    ✓ %s - %s [%s]",
+						checkerID, status, checkerConfig.Severity)
+				}
+				if checkerConfig.Timeout > 0 {
+					fmt.Printf(" (timeout: %s)", checkerConfig.Timeout)
+				}
+				fmt.Println()
+			}
+			fmt.Println()
+		}
+	}
+
+	// Show analyzers that would be executed
+	color.Cyan("🔬 ANALYZERS TO EXECUTE:")
+	if len(allAnalyzers) == 0 {
+		color.Red("  No analyzers available")
+	} else {
+		// Group analyzers by language and show which repositories they'd analyze
+		analyzersByLang := make(map[string][]core.Analyzer)
+		for _, analyzer := range allAnalyzers {
+			lang := analyzer.Language()
+			analyzersByLang[lang] = append(analyzersByLang[lang], analyzer)
+		}
+
+		for language, langAnalyzers := range analyzersByLang {
+			fmt.Printf("  Language: %s\n", capitalizeFirst(language))
+
+			// Count repositories that match this language
+			repoCount := 0
+			var matchingRepos []string
+			for _, repo := range repos {
+				if repo.Language == language {
+					repoCount++
+					matchingRepos = append(matchingRepos, repo.Name)
+				}
+			}
+
+			for _, analyzer := range langAnalyzers {
+				color.Green("    ✓ %s", analyzer.Name())
+				fmt.Printf(" (Extensions: %v)", analyzer.SupportedExtensions())
+				if repoCount > 0 {
+					fmt.Printf(" - Would analyze %d repositories: %v", repoCount, matchingRepos)
+				} else {
+					color.Yellow(" - No matching repositories")
+				}
+				fmt.Println()
+			}
+			fmt.Println()
+		}
+	}
+
+	// Configuration summary
+	color.Cyan("⚙️  CONFIGURATION SUMMARY:")
+	if advConfig != nil {
+		fmt.Printf("  Engine max concurrency: %d\n", advConfig.Engine.MaxConcurrency)
+		if advConfig.Engine.Timeout > 0 {
+			fmt.Printf("  Engine timeout: %s\n", advConfig.Engine.Timeout)
+		}
+		fmt.Printf("  Cache enabled: %t\n", advConfig.Engine.CacheEnabled)
+		if advConfig.Engine.CacheTTL > 0 {
+			fmt.Printf("  Cache TTL: %s\n", advConfig.Engine.CacheTTL)
+		}
+	}
+	fmt.Println()
+
+	// Execution summary
+	color.Cyan("📊 EXECUTION SUMMARY:")
+	enabledCheckers := 0
+	totalCheckers := 0
+	for _, checkerConfig := range advConfig.Checkers {
+		totalCheckers++
+		if checkerConfig.Enabled {
+			enabledCheckers++
+		}
+	}
+
+	fmt.Printf("  Total repositories: %d\n", len(repos))
+	fmt.Printf("  Total checkers: %d (enabled: %d, disabled: %d)\n",
+		totalCheckers, enabledCheckers, totalCheckers-enabledCheckers)
+	fmt.Printf("  Total analyzers: %d\n", len(allAnalyzers))
+	if len(categories) > 0 {
+		fmt.Printf("  Category filter: %v\n", categories)
+	}
+	fmt.Println()
+
+	color.Yellow("=== This was a DRY RUN - no actual checks were performed ===")
+	color.Blue("To execute the checks, run the same command without --dry-run")
+	fmt.Println()
 }
