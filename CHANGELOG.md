@@ -1,3 +1,19 @@
+# [3.1.0](https://github.com/codcod/repos/compare/v3.0.0...v3.1.0) (2025-06-18)
+
+
+### Bug Fixes
+
+* add readme analysis to registry ([d848e28](https://github.com/codcod/repos/commit/d848e28f166ab40f2f51603ea96e8f6741f5bf22))
+* build issues ([6117426](https://github.com/codcod/repos/commit/61174260f02131df22571a5b8812ec4e6234b053))
+* dry-run option ([6daf56e](https://github.com/codcod/repos/commit/6daf56e9247cd18213f4296ecf7b0e9283bd683b))
+* remove basic configuration option for health command ([56c85a0](https://github.com/codcod/repos/commit/56c85a069237f10ef05affbdb269f1e93e2e2ea5))
+
+
+### Features
+
+* add gen-config option ([628d1ff](https://github.com/codcod/repos/commit/628d1ff2ad8a73d5e0cd11e97e8ff1a85c641e3d))
+* add list-categories option ([fbb7be0](https://github.com/codcod/repos/commit/fbb7be079a44128a87538a5b75e98740e3fbf8e4))
+
 # [3.0.0](https://github.com/codcod/repos/compare/v2.1.0...v3.0.0) (2025-06-18)
 
 
