@@ -38,21 +38,13 @@ New validation and enhanced configuration options:
 
 ```yaml
 # Enhanced with validation and better error reporting
-profiles:
-  development:
-    checkers:
-      security:
-        enabled: true
-        severity_threshold: medium
-      code_quality:
-        enabled: true
-        max_complexity: 15
-  
-  production:
-    checkers:
-      security:
-        enabled: true
-        severity_threshold: low  # Stricter for production
+checkers:
+  security:
+    enabled: true
+    severity_threshold: medium
+  code_quality:
+    enabled: true
+    max_complexity: 15
       code_quality:
         enabled: true
         max_complexity: 10
@@ -60,7 +52,7 @@ profiles:
 
 **Benefits:**
 - Automatic validation with helpful error messages
-- Profile support for different environments
+- Advanced configuration with validation
 - Better organization and documentation
 
 ## Command Line Changes
@@ -81,7 +73,7 @@ Done.
 [2025-06-17 10:30:15] [INFO] [health-cmd] loading advanced configuration config_path=/path/to/config.yaml
 [2025-06-17 10:30:15] [INFO] [health-cmd] loading repositories basic_config=/path/to/basic.yaml tag=backend
 [2025-06-17 10:30:15] [INFO] [health-cmd] converted repositories count=5
-[2025-06-17 10:30:15] [INFO] [health-cmd] executing comprehensive health checks repositories=5 pipeline=default
+[2025-06-17 10:30:15] [INFO] [health-cmd] executing comprehensive health checks repositories=5
 [2025-06-17 10:30:16] [INFO] [health-cmd] health checks completed successfully
 
 === Metrics Summary ===
@@ -108,7 +100,7 @@ Histograms:
 repos health --config config.yaml --verbose
 
 # All existing options continue to work
-repos health --config config.yaml --profile production --timeout 10m
+repos health --config config.yaml --timeout 10m
 ```
 
 ## Error Handling Improvements
@@ -214,26 +206,18 @@ Take advantage of new features:
 repos health --config config.yaml --dry-run --verbose
 ```
 
-#### Profile Usage
+#### Advanced Configuration
 ```yaml
 # In your advanced config
-profiles:
-  development:
-    checkers:
-      security:
-        enabled: true
-        severity_threshold: medium
-  
-  production:
-    checkers:
-      security:
-        enabled: true
-        severity_threshold: low
+checkers:
+  security:
+    enabled: true
+    severity_threshold: medium
 ```
 
 ```bash
-# Use specific profiles
-repos health --config config.yaml --profile production
+# Run health checks with configuration
+repos health --config config.yaml
 ```
 
 #### Custom Timeouts
@@ -253,7 +237,7 @@ repos health --config config.yaml --timeout 10m
 **Solution**: The new validation system provides specific guidance:
 ```
 [ERROR] Configuration validation failed: checker 'security' is missing required field 'enabled'
-  Context: checker=security, profile=default
+  Context: checker=security
   Suggestion: Add 'enabled: true/false' to the security checker configuration
 ```
 
@@ -293,7 +277,7 @@ Look for:
 - [ ] Identify performance bottlenecks using metrics
 
 ### ✅ **Phase 3: Optimization** (Optional)
-- [ ] Create environment-specific profiles
+- [ ] Create environment-specific configurations
 - [ ] Adjust timeouts based on metrics
 - [ ] Implement configuration validation in CI/CD
 
@@ -328,8 +312,8 @@ checkers:
 
 **After:**
 ```yaml
-# Enhanced with profiles and validation
-profiles:
+# Enhanced with validation
+checkers:
   default:
     checkers:
       security:

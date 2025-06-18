@@ -254,10 +254,6 @@ func (j *JavaAnalyzer) parseFile(content, filePath string) ([]core.FunctionInfo,
 		// Check for class definitions
 		if matches := classPattern.FindStringSubmatch(line); matches != nil {
 			className := matches[1]
-			superClass := ""
-			if len(matches) > 2 && matches[2] != "" {
-				superClass = matches[2]
-			}
 
 			// If we were already in a class, finalize the previous one
 			if inClass && currentClass != nil {
@@ -266,13 +262,12 @@ func (j *JavaAnalyzer) parseFile(content, filePath string) ([]core.FunctionInfo,
 
 			// Start new class
 			currentClass = &core.ClassInfo{
-				Name:      className,
-				File:      filePath,
-				Line:      lineNum,
-				Language:  j.language,
-				Methods:   []core.FunctionInfo{},
-				Fields:    []core.FieldInfo{},
-				SuperType: superClass,
+				Name:     className,
+				File:     filePath,
+				Line:     lineNum,
+				Language: j.language,
+				Methods:  []core.FunctionInfo{},
+				Fields:   []core.FieldInfo{},
 			}
 
 			inClass = true

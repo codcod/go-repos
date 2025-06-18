@@ -155,20 +155,6 @@ analyzers:
     enabled: true
     file_extensions: [".py"]
     complexity_enabled: true
-
-profiles:
-  default:
-    name: "Default Profile"
-    checkers: 
-      git-status:
-        enabled: true
-        severity: medium
-        timeout: 30s
-    analyzers:
-      python:
-        enabled: true
-        file_extensions: [".py"]
-        complexity_enabled: true
 ```
 
 ## CLI Usage
@@ -178,12 +164,6 @@ profiles:
 ```bash
 # Basic usage - automatic config handling
 ./repos health --config config.yaml
-
-# With specific profile
-./repos health --config config.yaml --profile development
-
-# With custom pipeline
-./repos health --config config.yaml --pipeline quality-checks
 ```
 
 ### Feature Flag Management

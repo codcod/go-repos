@@ -25,17 +25,7 @@ checkers:
       - "*.spec.js"
       - "*.test.js"
 
-  deprecated-components:
-    enabled: true
-    severity: medium
-    timeout: 30s
-    options:
-      severity_levels:
-        high: ["security", "breaking_change"]
-        medium: ["performance", "deprecated_api"]
-        low: ["style", "legacy"]
-    categories: ["quality", "security"]
-    exclusions: []
+
 
   # Git checkers
   git-status:
@@ -151,6 +141,7 @@ analyzers:
       - "site-packages/"
     complexity_enabled: true
     function_level: true
+    categories: ["quality", "analysis"]
 
   java:
     enabled: true
@@ -162,6 +153,7 @@ analyzers:
       - ".mvn/"
     complexity_enabled: true
     function_level: true
+    categories: ["quality", "analysis"]
 
   javascript:
     enabled: true
@@ -175,6 +167,7 @@ analyzers:
       - "coverage/"
     complexity_enabled: true
     function_level: true
+    categories: ["quality", "analysis"]
 
   typescript:
     enabled: true
@@ -188,6 +181,7 @@ analyzers:
       - "coverage/"
     complexity_enabled: true
     function_level: true
+    categories: ["quality", "analysis"]
 
   go:
     enabled: true
@@ -197,6 +191,7 @@ analyzers:
       - "*_test.go"
     complexity_enabled: true
     function_level: true
+    categories: ["quality", "analysis"]
 
   csharp:
     enabled: false
@@ -284,38 +279,3 @@ global:
   log_format: "json"
   progress_bar: true
   quiet_mode: false
-  
-# Profile configurations for different environments
-profiles:
-  development:
-    checkers:
-      cyclomatic-complexity:
-        options:
-          detailed_report: true
-    engine:
-      cache_enabled: false
-    global:
-      log_level: "debug"
-
-  ci:
-    checkers:
-      git-status:
-        enabled: false
-    reporters:
-      json:
-        enabled: true
-      console:
-        options:
-          color_output: false
-    global:
-      quiet_mode: true
-
-  production:
-    checkers:
-      deprecated-components:
-        severity: high
-      security-secrets:
-        severity: critical
-    engine:
-      max_concurrency: 8
-      timeout: 10m

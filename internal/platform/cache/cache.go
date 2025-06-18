@@ -104,31 +104,3 @@ func (c *MemoryCache) Size() int {
 
 	return len(c.items)
 }
-
-// NoOpCache implements core.Cache as a no-operation cache (for testing)
-type NoOpCache struct{}
-
-// NewNoOpCache creates a new no-operation cache
-func NewNoOpCache() *NoOpCache {
-	return &NoOpCache{}
-}
-
-// Get always returns false (cache miss)
-func (c *NoOpCache) Get(key string) (interface{}, bool) {
-	return nil, false
-}
-
-// Set does nothing
-func (c *NoOpCache) Set(key string, value interface{}, ttl time.Duration) {
-	// No-op
-}
-
-// Delete does nothing
-func (c *NoOpCache) Delete(key string) {
-	// No-op
-}
-
-// Clear does nothing
-func (c *NoOpCache) Clear() {
-	// No-op
-}

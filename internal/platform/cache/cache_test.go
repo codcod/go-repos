@@ -211,22 +211,3 @@ func TestMemoryCache_ConcurrentAccess(t *testing.T) {
 		<-done
 	}
 }
-
-func TestNoOpCache(t *testing.T) {
-	cache := NewNoOpCache()
-
-	// Test Get always returns false
-	_, exists := cache.Get("any-key")
-	if exists {
-		t.Error("NoOpCache.Get() should always return false")
-	}
-
-	// Test Set does nothing (no panic)
-	cache.Set("key", "value", 10*time.Second)
-
-	// Test Delete does nothing (no panic)
-	cache.Delete("key")
-
-	// Test Clear does nothing (no panic)
-	cache.Clear()
-}

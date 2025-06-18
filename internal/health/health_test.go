@@ -52,6 +52,16 @@ func (m *MockLogger) Warn(msg string, fields ...core.Field) {
 	m.WarnCalls = append(m.WarnCalls, args)
 }
 
+func (m *MockLogger) Fatal(msg string, fields ...core.Field) {
+	args := make([]interface{}, len(fields)+1)
+	args[0] = msg
+	for i, field := range fields {
+		args[i+1] = field
+	}
+	// For testing, we'll just record the call instead of exiting
+	m.ErrorCalls = append(m.ErrorCalls, args)
+}
+
 // MockFileSystem for testing
 type MockFileSystem struct {
 	files map[string][]byte
@@ -147,28 +157,6 @@ func TestNewAnalyzerRegistry(t *testing.T) {
 		if !found {
 			t.Errorf("Expected %s to be supported, but it wasn't found", expectedLang)
 		}
-	}
-}
-
-// Test NewFileSystem
-func TestNewFileSystem(t *testing.T) {
-	fs := NewFileSystem()
-
-	if fs == nil {
-		t.Error("Expected NewFileSystem to return non-nil filesystem")
-	}
-
-	// Test that it implements the FileSystem interface
-	var _ = fs
-}
-
-// Test NewCommandExecutor
-func TestNewCommandExecutor(t *testing.T) {
-	timeout := 30 * time.Second
-	executor := NewCommandExecutor(timeout)
-
-	if executor == nil {
-		t.Error("Expected NewCommandExecutor to return non-nil executor")
 	}
 }
 

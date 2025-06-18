@@ -14,7 +14,7 @@ import (
 	"github.com/codcod/repos/internal/platform/commands"
 )
 
-// TestOrchestrationEndToEnd tests the complete orchestration pipeline
+// TestOrchestrationEndToEnd tests the complete orchestration workflow
 func TestOrchestrationEndToEnd(t *testing.T) {
 	// Skip if running in CI without proper setup
 	if os.Getenv("CI") == "true" && os.Getenv("INTEGRATION_TESTS") != "true" {
@@ -155,12 +155,6 @@ func TestOrchestrationConfigLoading(t *testing.T) {
 	if len(config.Categories) == 0 {
 		t.Error("Should have categories configured")
 	}
-	if len(config.Profiles) == 0 {
-		t.Error("Should have profiles configured")
-	}
-	if len(config.Pipelines) == 0 {
-		t.Error("Should have pipelines configured")
-	}
 
 	// Verify engine config
 	engineConfig := config.GetEngineConfig()
@@ -168,16 +162,8 @@ func TestOrchestrationConfigLoading(t *testing.T) {
 		t.Error("MaxConcurrency should be greater than 0")
 	}
 
-	// Test profile application
-	if profile, exists := config.Profiles["development"]; exists {
-		err := config.ApplyProfile("development", profile)
-		if err != nil {
-			t.Errorf("Failed to apply profile: %v", err)
-		}
-	}
-
-	t.Logf("Configuration loaded successfully with %d checkers, %d profiles, %d pipelines",
-		len(config.Checkers), len(config.Profiles), len(config.Pipelines))
+	t.Logf("Configuration loaded successfully with %d checkers",
+		len(config.Checkers))
 }
 
 // TestOrchestrationDryRun tests dry run functionality
@@ -274,30 +260,6 @@ func createTestAdvancedConfig(t *testing.T) *config.AdvancedConfig {
 				Checkers:    []string{"git-status"},
 			},
 		},
-		Profiles: map[string]config.ProfileConfig{
-			"test": {
-				Name:        "Test Profile",
-				Description: "Profile for testing",
-				Categories:  []string{"git"},
-			},
-		},
-		Pipelines: map[string]config.PipelineConfig{
-			"test": {
-				Name:        "Test Pipeline",
-				Description: "Simple test pipeline",
-				Steps: []config.StepConfig{
-					{
-						Name:    "git-checks",
-						Type:    "checkers",
-						Enabled: true,
-						Timeout: "1m",
-						Config: map[string]interface{}{
-							"categories": []string{"git"},
-						},
-					},
-				},
-			},
-		},
 	}
 }
 
@@ -320,4 +282,8 @@ func (l *testLogger) Warn(msg string, fields ...core.Field) {
 
 func (l *testLogger) Error(msg string, fields ...core.Field) {
 	l.t.Logf("[ERROR] %s %v", msg, fields)
+}
+
+func (l *testLogger) Fatal(msg string, fields ...core.Field) {
+	l.t.Fatalf("[FATAL] %s %v", msg, fields)
 }

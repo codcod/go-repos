@@ -209,6 +209,10 @@ func (m *mockLogger) Error(msg string, fields ...core.Field) {
 	m.logs = append(m.logs, fmt.Sprintf("ERROR: %s", msg))
 }
 
+func (m *mockLogger) Fatal(msg string, fields ...core.Field) {
+	m.logs = append(m.logs, fmt.Sprintf("FATAL: %s", msg))
+}
+
 func TestNewEngine(t *testing.T) {
 	checkerRegistry := &mockCheckerRegistry{}
 	analyzerRegistry := &mockAnalyzerRegistry{}

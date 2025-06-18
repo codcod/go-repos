@@ -12,48 +12,16 @@ import (
 
 // AdvancedConfig implements the Config interface with advanced features
 type AdvancedConfig struct {
-	Version      string                         `yaml:"version"`
-	Engine       core.EngineConfig              `yaml:"engine"`
-	Checkers     map[string]core.CheckerConfig  `yaml:"checkers"`
-	Analyzers    map[string]core.AnalyzerConfig `yaml:"analyzers"`
-	Reporters    map[string]core.ReporterConfig `yaml:"reporters"`
-	Categories   map[string]CategoryConfig      `yaml:"categories"`
-	Profiles     map[string]ProfileConfig       `yaml:"profiles"`
-	Pipelines    map[string]PipelineConfig      `yaml:"pipelines"`
-	Overrides    []OverrideConfig               `yaml:"overrides"`
-	Extensions   ExtensionsConfig               `yaml:"extensions"`
-	Integrations IntegrationsConfig             `yaml:"integrations"`
-}
-
-// PipelineConfig represents a pipeline configuration
-type PipelineConfig struct {
-	Name        string            `yaml:"name"`
-	Description string            `yaml:"description"`
-	Steps       []StepConfig      `yaml:"steps"`
-	Config      ExecutionConfig   `yaml:"config"`
-	Metadata    map[string]string `yaml:"metadata,omitempty"`
-}
-
-// StepConfig represents a step configuration
-type StepConfig struct {
-	Name         string                 `yaml:"name"`
-	Type         string                 `yaml:"type"`
-	Config       map[string]interface{} `yaml:"config"`
-	Dependencies []string               `yaml:"dependencies,omitempty"`
-	Enabled      bool                   `yaml:"enabled"`
-	Timeout      string                 `yaml:"timeout,omitempty"`
-}
-
-// ExecutionConfig represents execution configuration
-type ExecutionConfig struct {
-	MaxConcurrency  int                    `yaml:"max_concurrency"`
-	Timeout         string                 `yaml:"timeout"`
-	FailFast        bool                   `yaml:"fail_fast"`
-	RetryCount      int                    `yaml:"retry_count"`
-	RetryDelay      string                 `yaml:"retry_delay"`
-	ContinueOnError bool                   `yaml:"continue_on_error"`
-	OutputFormats   []string               `yaml:"output_formats"`
-	ReportingConfig map[string]interface{} `yaml:"reporting_config"`
+	Version    string                         `yaml:"version"`
+	Engine     core.EngineConfig              `yaml:"engine"`
+	Checkers   map[string]core.CheckerConfig  `yaml:"checkers"`
+	Analyzers  map[string]core.AnalyzerConfig `yaml:"analyzers"`
+	Reporters  map[string]core.ReporterConfig `yaml:"reporters"`
+	Categories map[string]CategoryConfig      `yaml:"categories"`
+	Overrides  []OverrideConfig               `yaml:"overrides"`
+	// Future use - extension points not yet implemented
+	// Extensions   ExtensionsConfig               `yaml:"extensions"`
+	// Integrations IntegrationsConfig             `yaml:"integrations"`
 }
 
 // CategoryConfig defines configuration for a category of checks
@@ -65,17 +33,6 @@ type CategoryConfig struct {
 	Weight      float64                `yaml:"weight"`
 	Checkers    []string               `yaml:"checkers"`
 	Options     map[string]interface{} `yaml:"options"`
-}
-
-// ProfileConfig defines a configuration profile
-type ProfileConfig struct {
-	Name        string                         `yaml:"name"`
-	Description string                         `yaml:"description"`
-	Base        string                         `yaml:"base,omitempty"` // Inherit from another profile
-	Checkers    map[string]core.CheckerConfig  `yaml:"checkers"`
-	Analyzers   map[string]core.AnalyzerConfig `yaml:"analyzers"`
-	Categories  []string                       `yaml:"categories"`
-	Exclusions  []string                       `yaml:"exclusions"`
 }
 
 // OverrideConfig defines conditional configuration overrides
@@ -229,33 +186,8 @@ func NewDefaultAdvancedConfig() *AdvancedConfig {
 				Enabled:     true,
 			},
 		},
-		Profiles: map[string]ProfileConfig{
-			"default": {
-				Name:        "Default",
-				Description: "Default health check profile with basic checks",
-				Categories:  []string{"security", "quality", "compliance", "ci", "docs"},
-				Checkers:    make(map[string]core.CheckerConfig),
-				Analyzers:   make(map[string]core.AnalyzerConfig),
-			},
-			"minimal": {
-				Name:        "Minimal",
-				Description: "Minimal health checks for quick validation",
-				Categories:  []string{"security", "compliance"},
-				Checkers:    make(map[string]core.CheckerConfig),
-				Analyzers:   make(map[string]core.AnalyzerConfig),
-			},
-			"comprehensive": {
-				Name:        "Comprehensive",
-				Description: "Comprehensive health checks for detailed analysis",
-				Categories:  []string{"security", "quality", "compliance", "ci", "docs"},
-				Checkers:    make(map[string]core.CheckerConfig),
-				Analyzers:   make(map[string]core.AnalyzerConfig),
-			},
-		},
-		Pipelines:    make(map[string]PipelineConfig),
-		Overrides:    []OverrideConfig{},
-		Extensions:   ExtensionsConfig{},
-		Integrations: IntegrationsConfig{},
+		Overrides: []OverrideConfig{},
+		// Extensions and Integrations will be added when implemented
 	}
 
 	// Set defaults to ensure consistency
@@ -306,18 +238,10 @@ func (c *AdvancedConfig) setDefaults() {
 	if c.Categories == nil {
 		c.Categories = make(map[string]CategoryConfig)
 	}
-	if c.Profiles == nil {
-		c.Profiles = make(map[string]ProfileConfig)
-	}
 }
 
 // validate validates the configuration
 func (c *AdvancedConfig) validate() error {
-	// Validate profiles don't have circular dependencies
-	if err := c.validateProfileDependencies(); err != nil {
-		return err
-	}
-
 	// Validate override conditions
 	for _, override := range c.Overrides {
 		if err := c.validateOverrideConditions(override); err != nil {
@@ -325,48 +249,6 @@ func (c *AdvancedConfig) validate() error {
 		}
 	}
 
-	return nil
-}
-
-// validateProfileDependencies checks for circular profile dependencies
-func (c *AdvancedConfig) validateProfileDependencies() error {
-	visited := make(map[string]bool)
-	recursionStack := make(map[string]bool)
-
-	for profileName := range c.Profiles {
-		if err := c.checkProfileDependency(profileName, visited, recursionStack); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// checkProfileDependency performs DFS to detect circular dependencies
-func (c *AdvancedConfig) checkProfileDependency(profileName string, visited, recursionStack map[string]bool) error {
-	if recursionStack[profileName] {
-		return fmt.Errorf("circular dependency detected in profile '%s'", profileName)
-	}
-
-	if visited[profileName] {
-		return nil
-	}
-
-	profile, exists := c.Profiles[profileName]
-	if !exists {
-		return fmt.Errorf("profile '%s' not found", profileName)
-	}
-
-	visited[profileName] = true
-	recursionStack[profileName] = true
-
-	if profile.Base != "" {
-		if err := c.checkProfileDependency(profile.Base, visited, recursionStack); err != nil {
-			return err
-		}
-	}
-
-	recursionStack[profileName] = false
 	return nil
 }
 
@@ -424,31 +306,6 @@ func (c *AdvancedConfig) GetReporterConfig(reporterID string) (core.ReporterConf
 // GetEngineConfig implements core.Config
 func (c *AdvancedConfig) GetEngineConfig() core.EngineConfig {
 	return c.Engine
-}
-
-// ApplyProfile applies a configuration profile
-func (c *AdvancedConfig) ApplyProfile(profileName string, profile ProfileConfig) error {
-	// Apply base profile first if specified
-	if profile.Base != "" {
-		baseProfile, exists := c.Profiles[profile.Base]
-		if !exists {
-			return fmt.Errorf("base profile '%s' not found", profile.Base)
-		}
-		if err := c.ApplyProfile(profile.Base, baseProfile); err != nil {
-			return fmt.Errorf("failed to apply base profile '%s': %w", profile.Base, err)
-		}
-	}
-
-	// Apply profile configurations
-	for checkerID, checkerConfig := range profile.Checkers {
-		c.Checkers[checkerID] = checkerConfig
-	}
-
-	for language, analyzerConfig := range profile.Analyzers {
-		c.Analyzers[language] = analyzerConfig
-	}
-
-	return nil
 }
 
 // ApplyOverrides applies configuration overrides based on repository context
@@ -602,11 +459,54 @@ func (c *AdvancedConfig) MergeConfig(other *AdvancedConfig) {
 		c.Categories[name] = config
 	}
 
-	// Merge profiles
-	for name, config := range other.Profiles {
-		c.Profiles[name] = config
-	}
-
 	// Append overrides
 	c.Overrides = append(c.Overrides, other.Overrides...)
+}
+
+// FilterByCategories creates a new AdvancedConfig with only checkers and analyzers
+// that belong to the specified categories. If no categories are specified, returns
+// the original config unchanged.
+func (c *AdvancedConfig) FilterByCategories(categories []string) *AdvancedConfig {
+	if len(categories) == 0 {
+		return c
+	}
+
+	// Create a copy of the configuration
+	filtered := &AdvancedConfig{
+		Version:    c.Version,
+		Engine:     c.Engine,
+		Checkers:   make(map[string]core.CheckerConfig),
+		Analyzers:  make(map[string]core.AnalyzerConfig),
+		Reporters:  c.Reporters,  // Copy reporters as-is
+		Categories: c.Categories, // Copy categories as-is
+		Overrides:  c.Overrides,  // Copy overrides as-is
+	}
+
+	// Create a set of target categories for efficient lookup
+	categorySet := make(map[string]bool)
+	for _, cat := range categories {
+		categorySet[cat] = true
+	}
+
+	// Filter checkers by categories
+	for id, checker := range c.Checkers {
+		// Check if any of the checker's categories match our target categories
+		for _, checkerCategory := range checker.Categories {
+			if categorySet[checkerCategory] {
+				filtered.Checkers[id] = checker
+				break
+			}
+		}
+	}
+
+	// Filter analyzers by categories (analyzers need a different approach since they don't have explicit categories)
+	// For now, we'll include analyzers based on language categories or keep all analyzers
+	// This can be enhanced later if analyzers get explicit category support
+	for lang, analyzer := range c.Analyzers {
+		// For now, we include all analyzers if any category is specified
+		// This could be enhanced by adding category support to AnalyzerConfig
+		filtered.Analyzers[lang] = analyzer
+	}
+
+	return filtered
 }
