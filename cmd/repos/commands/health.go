@@ -25,7 +25,6 @@ type HealthCommand struct {
 // HealthConfig contains all configuration for health checks
 type HealthConfig struct {
 	ConfigPath  string
-	Profile     string
 	Pipeline    string
 	Parallel    bool
 	Timeout     time.Duration
@@ -159,7 +158,7 @@ func (he *HealthExecutor) setupContext(ctx context.Context, config *HealthConfig
 	return context.WithTimeout(ctx, config.Timeout)
 }
 
-// loadAndValidateConfig loads the advanced configuration and applies profile if specified
+// loadAndValidateConfig loads the advanced configuration
 func (he *HealthExecutor) loadAndValidateConfig(config *HealthConfig, logger *observability.StructuredLogger, metrics *observability.MetricsCollector) (*config.AdvancedConfig, error) {
 	// Load advanced configuration
 	logger.Info("loading advanced configuration", core.String("config_path", config.ConfigPath))
@@ -169,16 +168,6 @@ func (he *HealthExecutor) loadAndValidateConfig(config *HealthConfig, logger *ob
 		return nil, errors.NewFileError("load_config", config.ConfigPath, err)
 	}
 	metrics.IncrementCounter("config_load_success")
-
-	// Apply profile if specified
-	if config.Profile != "" {
-		logger.Info("applying profile", core.String("profile", config.Profile))
-		if err := he.applyProfile(advConfig, config.Profile); err != nil {
-			metrics.IncrementCounter("profile_apply_errors")
-			return nil, err
-		}
-		metrics.IncrementCounter("profile_apply_success")
-	}
 
 	return advConfig, nil
 }
@@ -305,25 +294,6 @@ func (he *HealthExecutor) loadAdvancedConfig(configPath string) (*config.Advance
 	return advConfig, nil
 }
 
-// applyProfile applies the specified profile to the configuration
-func (he *HealthExecutor) applyProfile(advConfig *config.AdvancedConfig, profileName string) error {
-	profile, exists := advConfig.Profiles[profileName]
-	if !exists {
-		return errors.NewContextualError("apply_profile",
-			fmt.Errorf("profile '%s' not found", profileName)).
-			WithContext("profile", profileName).
-			WithContext("available_profiles", getProfileNames(advConfig.Profiles))
-	}
-
-	if err := advConfig.ApplyProfile(profileName, profile); err != nil {
-		return errors.NewContextualError("apply_profile", err).
-			WithContext("profile", profileName)
-	}
-
-	he.logger.Info("Applied profile", core.String("profile", profileName))
-	return nil
-}
-
 // loadRepositories loads repositories from the basic configuration
 func (he *HealthExecutor) loadRepositories(configPath, tag string) ([]config.Repository, error) {
 	if configPath == "" {
@@ -367,15 +337,6 @@ func (he *HealthExecutor) convertRepositories(repos []config.Repository) []core.
 		}
 	}
 	return coreRepos
-}
-
-// getProfileNames returns a list of available profile names
-func getProfileNames(profiles map[string]config.ProfileConfig) []string {
-	names := make([]string, 0, len(profiles))
-	for name := range profiles {
-		names = append(names, name)
-	}
-	return names
 }
 
 // simpleLogger provides a basic logger implementation for health executor

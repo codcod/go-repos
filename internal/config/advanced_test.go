@@ -30,18 +30,6 @@ func TestNewDefaultAdvancedConfig(t *testing.T) {
 			t.Errorf("Expected category '%s' to exist", cat)
 		}
 	}
-
-	// Check that profiles are initialized
-	if len(config.Profiles) == 0 {
-		t.Error("Profiles should be initialized with default values")
-	}
-
-	expectedProfiles := []string{"default", "minimal", "comprehensive"}
-	for _, profile := range expectedProfiles {
-		if _, exists := config.Profiles[profile]; !exists {
-			t.Errorf("Expected profile '%s' to exist", profile)
-		}
-	}
 }
 
 func TestLoadAdvancedConfigOrDefault(t *testing.T) {

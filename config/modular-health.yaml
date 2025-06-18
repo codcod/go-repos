@@ -284,38 +284,3 @@ global:
   log_format: "json"
   progress_bar: true
   quiet_mode: false
-  
-# Profile configurations for different environments
-profiles:
-  development:
-    checkers:
-      cyclomatic-complexity:
-        options:
-          detailed_report: true
-    engine:
-      cache_enabled: false
-    global:
-      log_level: "debug"
-
-  ci:
-    checkers:
-      git-status:
-        enabled: false
-    reporters:
-      json:
-        enabled: true
-      console:
-        options:
-          color_output: false
-    global:
-      quiet_mode: true
-
-  production:
-    checkers:
-      deprecated-components:
-        severity: high
-      security-secrets:
-        severity: critical
-    engine:
-      max_concurrency: 8
-      timeout: 10m

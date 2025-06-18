@@ -91,7 +91,7 @@ The health analysis is driven by configuration that supports:
   - Checker-specific settings (enabled/disabled, severity, timeouts)
   - Analyzer configuration (file extensions, complexity thresholds)
   - Engine settings (concurrency, caching, timeouts)
-  - Profile-based configuration for different environments
+  - Configuration-based setup for different environments
 
 # Results and Reporting
 
@@ -132,7 +132,7 @@ When using the health package:
   - Configure appropriate timeouts for long-running operations
   - Implement proper logging for debugging and monitoring
   - Handle context cancellation for graceful shutdown
-  - Use profiles for environment-specific configuration
+  - Use configurations for environment-specific settings
   - Implement caching for improved performance
 */
 package health

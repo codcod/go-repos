@@ -39,15 +39,12 @@ Integration with the health package:
 
 Health checks can be configured through YAML:
 
-	profiles:
-	  production:
-	    categories: ["security", "quality", "compliance"]
-	    checkers:
-	      security-scan:
-	        enabled: true
-	        timeout: "30s"
-	      quality-check:
-	        enabled: true
+	checkers:
+	  security-scan:
+	    enabled: true
+	    timeout: "30s"
+	  quality-check:
+	    enabled: true
 	        parallel: true
 	        timeout: "60s"
 
@@ -60,7 +57,7 @@ The orchestration engine supports:
   - Resource pooling and management
   - Distributed execution capabilities
   - Custom checker types and handlers
-  - Profile composition and inheritance
+  - Configuration composition and inheritance
 
 # Error Handling
 

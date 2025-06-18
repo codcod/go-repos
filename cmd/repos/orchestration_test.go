@@ -155,9 +155,6 @@ func TestOrchestrationConfigLoading(t *testing.T) {
 	if len(config.Categories) == 0 {
 		t.Error("Should have categories configured")
 	}
-	if len(config.Profiles) == 0 {
-		t.Error("Should have profiles configured")
-	}
 
 	// Verify engine config
 	engineConfig := config.GetEngineConfig()
@@ -165,16 +162,8 @@ func TestOrchestrationConfigLoading(t *testing.T) {
 		t.Error("MaxConcurrency should be greater than 0")
 	}
 
-	// Test profile application
-	if profile, exists := config.Profiles["development"]; exists {
-		err := config.ApplyProfile("development", profile)
-		if err != nil {
-			t.Errorf("Failed to apply profile: %v", err)
-		}
-	}
-
-	t.Logf("Configuration loaded successfully with %d checkers, %d profiles",
-		len(config.Checkers), len(config.Profiles))
+	t.Logf("Configuration loaded successfully with %d checkers",
+		len(config.Checkers))
 }
 
 // TestOrchestrationDryRun tests dry run functionality
@@ -269,13 +258,6 @@ func createTestAdvancedConfig(t *testing.T) *config.AdvancedConfig {
 				Severity:    "low",
 				Weight:      1.0,
 				Checkers:    []string{"git-status"},
-			},
-		},
-		Profiles: map[string]config.ProfileConfig{
-			"test": {
-				Name:        "Test Profile",
-				Description: "Profile for testing",
-				Categories:  []string{"git"},
 			},
 		},
 	}

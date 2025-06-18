@@ -51,7 +51,6 @@ var (
 
 	// Health command flags
 	healthConfig   string
-	healthProfile  string
 	healthParallel bool
 	healthTimeout  int
 	healthDryRun   bool
@@ -401,7 +400,6 @@ func init() {
 
 	// Health command flags
 	healthCmd.Flags().StringVar(&healthConfig, "config", "", "health config file path (optional, uses built-in defaults if not provided)")
-	healthCmd.Flags().StringVar(&healthProfile, "profile", "default", "Profile name to apply from health config (default: 'default')")
 	healthCmd.Flags().BoolVar(&healthParallel, "parallel", false, "Execute health checks in parallel")
 	healthCmd.Flags().IntVar(&healthTimeout, "timeout", 30, "Timeout in seconds for health checks (default: 30)")
 	healthCmd.Flags().BoolVar(&healthDryRun, "dry-run", false, "Dry run mode - show what would be executed")
@@ -434,7 +432,7 @@ func main() {
 var healthCmd = &cobra.Command{
 	Use:   "health",
 	Short: "Run comprehensive health checks with advanced analysis",
-	Long: `Execute modular health checks using the health engine with configurable profiles and advanced reporting.
+	Long: `Execute modular health checks using the health engine with advanced reporting.
 
 The health command works out-of-the-box with sensible defaults. No configuration file is required.
 If you want to customize the checks, you can provide an optional configuration file.
@@ -442,7 +440,6 @@ If you want to customize the checks, you can provide an optional configuration f
 Examples:
   repos health                           # Run with built-in defaults
   repos health --config custom.yaml     # Use custom configuration
-  repos health --profile minimal        # Use minimal profile
   repos health --verbose                # Show detailed output`,
 	Run: func(_ *cobra.Command, _ []string) {
 		// Create simple logger
@@ -459,20 +456,6 @@ Examples:
 		if err != nil {
 			color.Red("Error loading health config: %v", err)
 			os.Exit(1)
-		}
-
-		// Apply profile if specified
-		if healthProfile != "" {
-			if profile, exists := advConfig.Profiles[healthProfile]; exists {
-				err := advConfig.ApplyProfile(healthProfile, profile)
-				if err != nil {
-					color.Red("Error applying profile '%s': %v", healthProfile, err)
-					os.Exit(1)
-				}
-			} else {
-				color.Red("Profile '%s' not found in configuration", healthProfile)
-				os.Exit(1)
-			}
 		}
 
 		// Load basic config for repositories

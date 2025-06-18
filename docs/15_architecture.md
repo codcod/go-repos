@@ -16,7 +16,7 @@ This document provides an overview of the repos tool architecture, its key compo
 
 The repos tool has been redesigned with a modular, maintainable architecture that follows industry best practices. The improvements focus on:
 
-- **Structured Configuration Management**: Validation, profiles, and extensible configuration
+- **Structured Configuration Management**: Validation and extensible configuration
 - **Comprehensive Error Handling**: Contextual errors with severity and recovery
 - **Advanced Observability**: Structured logging, metrics collection, and performance monitoring
 - **Modular Design**: Clear separation of concerns and dependency injection
@@ -217,16 +217,6 @@ repositories:
 
 ### Advanced Configuration (YAML)
 ```yaml
-profiles:
-  strict:
-    checkers:
-      security:
-        enabled: true
-        severity_threshold: low
-      code_quality:
-        enabled: true
-        max_complexity: 10
-
 checkers:
   security:
     enabled: true

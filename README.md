@@ -186,9 +186,6 @@ Use the health engine for comprehensive, configurable code analysis:
 # Run with advanced configuration
 repos health --config examples/advanced-config-sample.yaml
 
-# Use specific profile for different environments
-repos health --config examples/advanced-config-sample.yaml --profile production
-
 # Dry run to see what would be executed
 repos health --config examples/advanced-config-sample.yaml --dry-run
 ```
@@ -204,7 +201,6 @@ Both health analysis methods provide comprehensive checks including:
 
 The health-based approach offers additional benefits:
 - **Feature Flags**: Control which components are enabled
-- **Profiles**: Different check configurations for different environments
 - **Parallel Execution**: Improved performance
 - **Advanced Configuration**: YAML-based configuration with inheritance
 
