@@ -58,6 +58,7 @@ var (
 	healthDryRun         bool
 	healthVerbose        bool
 	healthListCategories bool
+	healthGenConfig      bool
 )
 
 // getEnvOrDefault returns the environment variable value or default if empty
@@ -409,6 +410,7 @@ func init() {
 	healthCmd.Flags().BoolVar(&healthDryRun, "dry-run", false, "Dry run mode - show what would be executed")
 	healthCmd.Flags().BoolVar(&healthVerbose, "verbose", false, "Enable verbose output for health checks")
 	healthCmd.Flags().BoolVar(&healthListCategories, "list-categories", false, "List all available categories, checkers, and analyzers")
+	healthCmd.Flags().BoolVar(&healthGenConfig, "gen-config", false, "Generate a comprehensive configuration template with all available options")
 
 	rootCmd.AddCommand(cloneCmd)
 	rootCmd.AddCommand(runCmd)
@@ -448,11 +450,18 @@ Examples:
   repos health --category git,security  # Run only git and security checks
   repos health --verbose                # Show detailed output
   repos health --list-categories        # List all available categories and checks
+  repos health --gen-config             # Generate comprehensive configuration template
   repos health --dry-run                # Preview what would be executed`,
 	Run: func(_ *cobra.Command, _ []string) {
 		// Handle list-categories option first
 		if healthListCategories {
 			listHealthCategories()
+			return
+		}
+
+		// Handle gen-config option
+		if healthGenConfig {
+			generateHealthConfig()
 			return
 		}
 
@@ -659,6 +668,14 @@ func hasFile(repoPath string, patterns ...string) bool {
 	return false
 }
 
+// capitalizeFirst capitalizes the first letter of a string
+func capitalizeFirst(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
+}
+
 // listHealthCategories lists all available categories, checkers, and analyzers
 func listHealthCategories() {
 	logger := &simpleLogger{}
@@ -721,4 +738,238 @@ func listHealthCategories() {
 	fmt.Println("  repos health --category git,security     # Run only git and security checkers")
 	fmt.Println("  repos health --verbose                   # Show detailed output")
 	fmt.Println("  repos health --dry-run                   # Preview what would be executed")
+}
+
+// generateHealthConfig generates a comprehensive configuration template with all available options
+//
+//nolint:gocyclo
+func generateHealthConfig() {
+	// Create simple logger for initialization
+	logger := &simpleLogger{}
+
+	// Create command executor and registries to get available checkers and analyzers
+	executor := health.NewCommandExecutor(30 * time.Second)
+	checkerRegistry := health.NewCheckerRegistry(executor)
+
+	// Create filesystem and analyzer registry
+	fs := health.NewFileSystem()
+	analyzerReg := health.NewAnalyzerRegistry(fs, logger)
+
+	fmt.Println("# Comprehensive Health Configuration Template")
+	fmt.Println("# This file demonstrates all available configuration options")
+	fmt.Println("# Customize as needed for your project requirements")
+	fmt.Println()
+	fmt.Println("version: \"1.0\"")
+	fmt.Println()
+
+	// Engine configuration
+	fmt.Println("# Engine configuration for parallel execution and performance")
+	fmt.Println("engine:")
+	fmt.Println("  max_concurrency: 4        # Maximum parallel checkers (default: 4)")
+	fmt.Println("  timeout: 5m                # Global timeout for all checks")
+	fmt.Println("  cache_enabled: true        # Enable result caching")
+	fmt.Println("  cache_ttl: 1h             # Cache time-to-live")
+	fmt.Println()
+
+	// Checkers configuration
+	fmt.Println("# Checker configurations - all available checkers with their options")
+	fmt.Println("checkers:")
+
+	checkers := checkerRegistry.GetCheckers()
+	checkersByCategory := make(map[string][]core.Checker)
+
+	// Group checkers by category
+	for _, checker := range checkers {
+		category := checker.Category()
+		checkersByCategory[category] = append(checkersByCategory[category], checker)
+	}
+
+	// Generate configuration for each category
+	for category, categoryCheckers := range checkersByCategory {
+		fmt.Printf("  # %s category checkers\n", capitalizeFirst(category))
+
+		for _, checker := range categoryCheckers {
+			config := checker.Config()
+			fmt.Printf("  %s:\n", checker.ID())
+			fmt.Printf("    enabled: %t             # Enable/disable this checker\n", config.Enabled)
+			fmt.Printf("    severity: %s           # Severity level: low, medium, high, critical\n", config.Severity)
+			fmt.Printf("    timeout: %s            # Timeout for this specific checker\n", config.Timeout)
+			fmt.Printf("    categories: [\"%s\"]      # Category classification\n", category)
+
+			// Add common options based on checker type
+			fmt.Println("    options:")
+			switch checker.ID() {
+			case "git-status":
+				fmt.Println("      check_uncommitted: true    # Check for uncommitted changes")
+				fmt.Println("      check_untracked: true      # Check for untracked files")
+				fmt.Println("      check_unpushed: true       # Check for unpushed commits")
+
+			case "git-last-commit":
+				fmt.Println("      max_days_since_commit: 30  # Alert if last commit is older than N days")
+				fmt.Println("      check_commit_messages: true # Validate commit message format")
+
+			case "dependencies-outdated":
+				fmt.Println("      package_managers: [\"npm\", \"pip\", \"go\", \"maven\"] # Supported package managers")
+				fmt.Println("      severity_threshold: \"minor\" # Minimum severity to report: patch, minor, major")
+				fmt.Println("      max_age_days: 180          # Consider packages outdated after N days")
+
+			case "vulnerability-scan":
+				fmt.Println("      scan_dependencies: true    # Scan dependencies for vulnerabilities")
+				fmt.Println("      scan_code: false          # Scan source code (requires additional tools)")
+				fmt.Println("      severity_threshold: \"medium\" # Minimum severity to report")
+
+			case "branch-protection":
+				fmt.Println("      require_reviews: true      # Require pull request reviews")
+				fmt.Println("      require_status_checks: true # Require status checks to pass")
+				fmt.Println("      enforce_admins: false      # Enforce restrictions for admins")
+
+			case "license-check":
+				fmt.Println("      allowed_licenses:          # List of allowed licenses")
+				fmt.Println("        - \"MIT\"")
+				fmt.Println("        - \"Apache-2.0\"")
+				fmt.Println("        - \"BSD-3-Clause\"")
+				fmt.Println("      check_compatibility: true  # Check license compatibility")
+
+			case "ci-config":
+				fmt.Println("      platforms: [\"github\", \"gitlab\", \"jenkins\"] # CI platforms to check")
+				fmt.Println("      require_tests: true        # Require test execution in CI")
+				fmt.Println("      require_linting: false     # Require linting in CI")
+
+			default:
+				fmt.Println("      # Checker-specific options would be documented here")
+			}
+
+			fmt.Printf("    exclusions:              # Files/patterns to exclude\n")
+			fmt.Printf("      - \"test/\"\n")
+			fmt.Printf("      - \"*.tmp\"\n")
+			fmt.Println()
+		}
+	}
+
+	// Analyzers configuration
+	fmt.Println("# Language analyzer configurations")
+	fmt.Println("analyzers:")
+
+	analyzers := analyzerReg.GetAnalyzers()
+	for _, analyzer := range analyzers {
+		language := analyzer.Language()
+		fmt.Printf("  %s:\n", language)
+		fmt.Printf("    enabled: true              # Enable analyzer for %s\n", language)
+		fmt.Printf("    file_extensions: %v # Supported file extensions\n", analyzer.SupportedExtensions())
+
+		// Add language-specific exclude patterns
+		switch language {
+		case "go":
+			fmt.Println("    exclude_patterns: [\"vendor\", \"_test.go\", \"*.pb.go\"]")
+		case "python":
+			fmt.Println("    exclude_patterns: [\"__pycache__\", \"*.pyc\", \".venv\", \"venv\"]")
+		case "javascript":
+			fmt.Println("    exclude_patterns: [\"node_modules\", \"dist\", \"build\", \"*.min.js\"]")
+		case "java":
+			fmt.Println("    exclude_patterns: [\"target\", \"*.class\", \"*.jar\"]")
+		default:
+			fmt.Println("    exclude_patterns: [\"build\", \"dist\", \"target\"]")
+		}
+
+		fmt.Println("    complexity_enabled: true   # Enable complexity analysis")
+		fmt.Println("    function_level: true       # Analyze at function level")
+		fmt.Println("    categories: [\"quality\", \"analysis\"]")
+		fmt.Println()
+	}
+
+	// Reporters configuration
+	fmt.Println("# Reporter configurations for output formatting")
+	fmt.Println("reporters:")
+	fmt.Println("  console:")
+	fmt.Println("    enabled: true              # Console output")
+	fmt.Println("    template: table            # Output format: table, list, summary")
+	fmt.Println("    options:")
+	fmt.Println("      show_summary: true       # Show summary statistics")
+	fmt.Println("      show_details: true       # Show detailed results")
+	fmt.Println("      color_output: true       # Use colored output")
+	fmt.Println()
+	fmt.Println("  json:")
+	fmt.Println("    enabled: false             # JSON file output")
+	fmt.Println("    output_file: \"health-report.json\"")
+	fmt.Println("    template: detailed         # JSON format: simple, detailed, structured")
+	fmt.Println("    options:")
+	fmt.Println("      pretty_print: true       # Format JSON for readability")
+	fmt.Println()
+	fmt.Println("  html:")
+	fmt.Println("    enabled: false             # HTML report output")
+	fmt.Println("    output_file: \"health-report.html\"")
+	fmt.Println("    template: dashboard        # HTML format: simple, dashboard, detailed")
+	fmt.Println("    options:")
+	fmt.Println("      include_charts: true     # Include visual charts")
+	fmt.Println("      theme: \"light\"           # Theme: light, dark")
+	fmt.Println()
+
+	// Categories configuration
+	fmt.Println("# Category configurations for organizing checks")
+	fmt.Println("categories:")
+
+	categories := make(map[string]bool)
+	for category := range checkersByCategory {
+		categories[category] = true
+	}
+
+	for category := range categories {
+		fmt.Printf("  %s:\n", category)
+		fmt.Printf("    name: \"%s Checks\"\n", capitalizeFirst(category))
+
+		var description string
+		switch category {
+		case "git":
+			description = "Git repository status and history checks"
+		case "security":
+			description = "Security vulnerability and configuration checks"
+		case "dependencies":
+			description = "Dependency management and freshness checks"
+		case "compliance":
+			description = "License and regulatory compliance checks"
+		case "ci":
+			description = "Continuous integration and deployment checks"
+		default:
+			description = fmt.Sprintf("%s related checks", capitalizeFirst(category))
+		}
+
+		fmt.Printf("    description: \"%s\"\n", description)
+		fmt.Printf("    enabled: true              # Enable all checkers in this category\n")
+
+		var severity string
+		switch category {
+		case "security":
+			severity = "critical"
+		case "dependencies":
+			severity = "high"
+		default:
+			severity = "medium"
+		}
+
+		fmt.Printf("    severity: %s              # Default severity for category\n", severity)
+		fmt.Println()
+	}
+
+	// Override configurations
+	fmt.Println("# Override configurations for specific conditions")
+	fmt.Println("# overrides:")
+	fmt.Println("#   - name: \"legacy-repositories\"")
+	fmt.Println("#     description: \"Special configuration for legacy repositories\"")
+	fmt.Println("#     conditions:")
+	fmt.Println("#       - type: \"tag\"")
+	fmt.Println("#         field: \"tags\"")
+	fmt.Println("#         operator: \"contains\"")
+	fmt.Println("#         value: \"legacy\"")
+	fmt.Println("#     checkers:")
+	fmt.Println("#       security-vulnerabilities:")
+	fmt.Println("#         enabled: false          # Disable for legacy repos")
+	fmt.Println("#     engine:")
+	fmt.Println("#       max_concurrency: 1       # Run sequentially for legacy repos")
+	fmt.Println()
+
+	fmt.Println("# Usage Instructions:")
+	fmt.Println("# 1. Save this output to a file (e.g., health-config.yaml)")
+	fmt.Println("# 2. Customize the options according to your project needs")
+	fmt.Println("# 3. Use with: repos health --config health-config.yaml")
+	fmt.Println("# 4. Test with: repos health --config health-config.yaml --dry-run")
 }

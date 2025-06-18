@@ -26,15 +26,17 @@ type HealthCommand struct {
 
 // HealthConfig contains all configuration for health checks
 type HealthConfig struct {
-	ConfigPath  string
-	Categories  []string
-	Pipeline    string
-	Parallel    bool
-	Timeout     time.Duration
-	DryRun      bool
-	Verbose     bool
-	Tag         string
-	BasicConfig string // Path to basic repo config
+	ConfigPath     string
+	Categories     []string
+	Pipeline       string
+	Parallel       bool
+	Timeout        time.Duration
+	DryRun         bool
+	Verbose        bool
+	Tag            string
+	BasicConfig    string // Path to basic repo config
+	ListCategories bool   // List available categories and checkers
+	GenConfig      bool   // Generate configuration template
 }
 
 // NewHealthCommand creates a new health command instance
