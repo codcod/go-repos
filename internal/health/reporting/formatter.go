@@ -24,37 +24,10 @@ func NewFormatter(verbose bool) *Formatter {
 
 // DisplayResults formats and displays the health analysis results
 func (f *Formatter) DisplayResults(result core.WorkflowResult) {
-	f.displaySummary(result.Summary)
-
-	// Display each repository individually
+	// Display each repository individually (removed summary)
 	f.displayRepositoryReports(result.RepositoryResults)
 
 	f.displayTiming(result)
-}
-
-// displaySummary shows the overall summary of the health check
-func (f *Formatter) displaySummary(summary core.WorkflowSummary) {
-	color.Green("\n=== Health Check Summary ===")
-	fmt.Printf("Total Repositories: %d\n", summary.SuccessfulRepos+summary.FailedRepos)
-	fmt.Printf("Successful Checks: %d\n", summary.SuccessfulRepos)
-
-	if summary.FailedRepos > 0 {
-		color.Red("Failed Checks: %d", summary.FailedRepos)
-	} else {
-		color.Green("Failed Checks: %d", summary.FailedRepos)
-	}
-
-	fmt.Printf("Average Score: %d\n", summary.AverageScore)
-	fmt.Printf("Total Issues Found: %d\n", summary.TotalIssues)
-
-	// Display status counts
-	if len(summary.StatusCounts) > 0 {
-		fmt.Println("Status Distribution:")
-		for status, count := range summary.StatusCounts {
-			fmt.Printf("  %s: %d\n", status, count)
-		}
-	}
-	fmt.Println()
 }
 
 // displayRepositoryReports shows individual reports for each repository
@@ -71,185 +44,198 @@ func (f *Formatter) displayRepositoryReports(results []core.RepositoryResult) {
 
 // displayIndividualRepositoryReport shows a comprehensive report for a single repository
 func (f *Formatter) displayIndividualRepositoryReport(result core.RepositoryResult) {
-	// Repository header
-	color.Cyan("┌─────────────────────────────────────────────────────────────────────────────────┐")
-	color.Cyan("│ Repository: %-67s │", result.Repository.Name)
-	color.Cyan("├─────────────────────────────────────────────────────────────────────────────────┤")
+	// Repository header in red (removed separator line)
+	color.Red("Repository: %s", result.Repository.Name)
 
-	// Basic information
-	fmt.Printf("│ Path: %-73s │\n", result.Repository.Path)
-	fmt.Printf("│ Language: %-67s │\n", result.Repository.Language)
+	// Language - handle empty case
+	language := result.Repository.Language
+	if language == "" {
+		language = "Unknown"
+	}
+	fmt.Printf("Language: %s\n", language)
 
-	// Status and score
-	statusDisplay := f.getStatusDisplay(result.Status)
-	fmt.Printf("│ Status: %-69s │\n", statusDisplay)
-	fmt.Printf("│ Health Score: %d/%d %-58s │\n", result.Score, result.MaxScore, f.getScoreBar(result.Score, result.MaxScore))
+	// Status with emoji and score
+	statusEmoji := f.getStatusEmoji(result.Status)
+	statusText := f.getStatusText(result.Status)
 
-	if result.Error != "" {
-		color.Cyan("├─────────────────────────────────────────────────────────────────────────────────┤")
-		color.Red("│ Error: %-72s │", result.Error)
-		color.Cyan("└─────────────────────────────────────────────────────────────────────────────────┘")
-		return
+	// Calculate proper max score if it's 0
+	maxScore := result.MaxScore
+	if maxScore == 0 {
+		maxScore = 100 // Default to 100 if not set
 	}
 
-	// Checks summary
-	checksRun := len(result.CheckResults)
-	passedChecks := f.countPassedChecks(result.CheckResults)
-	failedChecks := f.countFailedChecks(result.CheckResults)
-	totalIssues := f.countIssues(result.CheckResults)
+	fmt.Printf("Status: %s %s (%d/%d)\n", statusEmoji, statusText, result.Score, maxScore)
 
-	color.Cyan("├─────────────────────────────────────────────────────────────────────────────────┤")
-	fmt.Printf("│ Checks: %d total, %d passed, %d failed, %d issues found %-20s │\n",
-		checksRun, passedChecks, failedChecks, totalIssues, "")
+	// Add blank line before health checks
+	fmt.Println()
 
-	// Cyclomatic Complexity Analysis
-	f.displayCyclomaticComplexitySection(result)
-
-	// Health Checks Results
+	// Health checks results
 	if len(result.CheckResults) > 0 {
-		color.Cyan("├─────────────────────────────────────────────────────────────────────────────────┤")
-		color.Cyan("│ Health Check Results                                                            │")
-		color.Cyan("├─────────────────────────────────────────────────────────────────────────────────┤")
-
+		fmt.Println("Health checks results")
 		for _, checkResult := range result.CheckResults {
-			f.displayCheckResultInBox(checkResult)
+			f.displayCheckResultSimple(checkResult)
 		}
 	}
 
-	color.Cyan("└─────────────────────────────────────────────────────────────────────────────────┘")
+	// Add blank line before complexity section
+	fmt.Println()
+
+	// Cyclomatic complexity
+	f.displayCyclomaticComplexitySimple(result)
 }
 
-// displayCyclomaticComplexitySection shows detailed cyclomatic complexity analysis
-//
-//nolint:gocyclo
-func (f *Formatter) displayCyclomaticComplexitySection(result core.RepositoryResult) {
+// getStatusText returns a simple text representation of the status
+func (f *Formatter) getStatusText(status core.HealthStatus) string {
+	switch status {
+	case core.StatusHealthy:
+		return "Healthy"
+	case core.StatusWarning:
+		return "Warning"
+	case core.StatusCritical:
+		return "Critical"
+	default:
+		return "Unknown"
+	}
+}
+
+// getStatusEmoji returns the emoji for the overall status
+func (f *Formatter) getStatusEmoji(status core.HealthStatus) string {
+	switch status {
+	case core.StatusHealthy:
+		return "✅"
+	case core.StatusWarning:
+		return "⚠️"
+	case core.StatusCritical:
+		return "❌"
+	default:
+		return "❓"
+	}
+}
+
+// displayCheckResultSimple shows a check result in the simple format
+func (f *Formatter) displayCheckResultSimple(result core.CheckResult) {
+	emoji := f.getCheckStatusEmoji(result.Status)
+
+	// Check if this is a warning about tool not being available
+	scoreDisplay := fmt.Sprintf("%d", result.Score)
+	if result.Status == core.StatusWarning && f.isToolUnavailableWarning(result) {
+		scoreDisplay = "unknown"
+	}
+
+	fmt.Printf("%s %s (%s): %s\n", emoji, result.Name, result.Category, scoreDisplay)
+
+	// Show top 3 issues in grey
+	if len(result.Issues) > 0 {
+		limit := 3
+		if len(result.Issues) < limit {
+			limit = len(result.Issues)
+		}
+
+		for i := 0; i < limit; i++ {
+			issue := result.Issues[i]
+			// Print issues in grey color
+			_, _ = color.New(color.FgHiBlack).Printf("  - %s\n", issue.Message)
+		}
+	}
+}
+
+// isToolUnavailableWarning checks if a warning is about a tool not being available
+func (f *Formatter) isToolUnavailableWarning(result core.CheckResult) bool {
+	if len(result.Issues) == 0 {
+		return false
+	}
+
+	// Check for common patterns indicating tool unavailability
+	for _, issue := range result.Issues {
+		msg := strings.ToLower(issue.Message)
+		if strings.Contains(msg, "not available") ||
+			strings.Contains(msg, "not implemented") ||
+			strings.Contains(msg, "scanner not available") ||
+			strings.Contains(msg, "not found") {
+			return true
+		}
+	}
+	return false
+}
+
+// displayCyclomaticComplexitySimple shows complexity issues in the simple format
+func (f *Formatter) displayCyclomaticComplexitySimple(result core.RepositoryResult) {
 	if result.AnalysisResult == nil {
-		color.Cyan("├─────────────────────────────────────────────────────────────────────────────────┤")
-		fmt.Printf("│ Cyclomatic Complexity: No analysis data available %-27s │\n", "")
 		return
 	}
 
 	analysis := *result.AnalysisResult
 
-	color.Cyan("├─────────────────────────────────────────────────────────────────────────────────┤")
-	color.Cyan("│ Cyclomatic Complexity Analysis                                                  │")
-	color.Cyan("├─────────────────────────────────────────────────────────────────────────────────┤")
-
-	// Overall complexity metrics
-	if totalComplexity, ok := analysis.Metrics["total_complexity"].(int); ok {
-		fmt.Printf("│ Total Complexity: %-59d │\n", totalComplexity)
+	// Only show if there are functions with complexity issues
+	complexFunctions := f.getComplexFunctions(analysis.Functions)
+	if len(complexFunctions) == 0 {
+		return
 	}
 
-	if maxComplexity, ok := analysis.Metrics["max_complexity"].(int); ok {
-		complexityLevel := f.getComplexityLevel(maxComplexity)
-		fmt.Printf("│ Maximum Complexity: %-54s │\n",
-			fmt.Sprintf("%d (%s)", maxComplexity, complexityLevel))
+	fmt.Println("Cyclomatic complexity")
+
+	// Show top complex functions (limit to reasonable number)
+	limit := 10
+	if len(complexFunctions) < limit {
+		limit = len(complexFunctions)
 	}
 
-	if avgComplexity, ok := analysis.Metrics["average_complexity"].(float64); ok {
-		complexityLevel := f.getComplexityLevel(int(avgComplexity))
-		fmt.Printf("│ Average Complexity: %-54s │\n",
-			fmt.Sprintf("%.2f (%s)", avgComplexity, complexityLevel))
+	for i := 0; i < limit; i++ {
+		fn := complexFunctions[i]
+		// Make file path relative to repository
+		relativePath := f.getRelativePath(fn.File, result.Repository.Path)
+		// Format: path:line:column: 'function name' is too complex (score)
+		// Note: We don't have column info, so using 0
+		fmt.Printf("  - %s:%d:0: '%s' is too complex (%d)\n",
+			relativePath, fn.Line, fn.Name, fn.Complexity)
+	}
+}
+
+// getRelativePath returns a path relative to the repository root
+func (f *Formatter) getRelativePath(filePath, repoPath string) string {
+	// If the file path starts with the repo path, remove it
+	if strings.HasPrefix(filePath, repoPath) {
+		relativePath := strings.TrimPrefix(filePath, repoPath)
+		// Remove leading slash
+		relativePath = strings.TrimPrefix(relativePath, "/")
+		return relativePath
 	}
 
-	if totalFunctions, ok := analysis.Metrics["total_functions"].(int); ok {
-		fmt.Printf("│ Total Functions: %-60d │\n", totalFunctions)
-	}
+	// If we can't make it relative, return the original path
+	return filePath
+}
 
-	if totalFiles, ok := analysis.Metrics["total_files"].(int); ok {
-		fmt.Printf("│ Files Analyzed: %-61d │\n", totalFiles)
-	}
+// getComplexFunctions returns functions that are considered too complex (>10)
+// sorted by complexity descending
+func (f *Formatter) getComplexFunctions(functions []core.FunctionInfo) []core.FunctionInfo {
+	var complexFunctions []core.FunctionInfo
 
-	// Function-level complexity breakdown
-	if len(analysis.Functions) > 0 && f.verbose {
-		color.Cyan("├─────────────────────────────────────────────────────────────────────────────────┤")
-		color.Cyan("│ Function Complexity Breakdown                                                   │")
-		color.Cyan("├─────────────────────────────────────────────────────────────────────────────────┤")
-
-		// Sort functions by complexity (highest first)
-		functions := make([]core.FunctionInfo, len(analysis.Functions))
-		copy(functions, analysis.Functions)
-		f.sortFunctionsByComplexity(functions)
-
-		// Show top complex functions (limit to 10 for readability)
-		limit := 10
-		if len(functions) < limit {
-			limit = len(functions)
+	// Filter functions with complexity > 10 (considered high)
+	for _, fn := range functions {
+		if fn.Complexity > 10 {
+			complexFunctions = append(complexFunctions, fn)
 		}
+	}
 
-		for i := 0; i < limit; i++ {
-			fn := functions[i]
-			complexityLevel := f.getComplexityLevel(fn.Complexity)
-			fileName := f.getShortFileName(fn.File)
+	// Sort by complexity (highest first)
+	f.sortFunctionsByComplexity(complexFunctions)
 
-			fmt.Printf("│ %s:%d - %s() %-50s │\n",
-				fileName, fn.Line, fn.Name,
-				fmt.Sprintf("Complexity: %d (%s)", fn.Complexity, complexityLevel))
-		}
+	return complexFunctions
+}
 
-		if len(functions) > limit {
-			fmt.Printf("│ ... and %d more functions %-50s │\n", len(functions)-limit, "")
-		}
+// getCheckStatusEmoji returns the appropriate emoji for a check status
+func (f *Formatter) getCheckStatusEmoji(status core.HealthStatus) string {
+	switch status {
+	case core.StatusCritical:
+		return "❌"
+	case core.StatusWarning:
+		return "⚠️"
+	default:
+		return "✅"
 	}
 }
 
 // Helper functions for the new display format
-
-// getStatusDisplay returns a colored status display string
-func (f *Formatter) getStatusDisplay(status core.HealthStatus) string {
-	switch status {
-	case core.StatusHealthy:
-		return color.GreenString("✅ Healthy")
-	case core.StatusWarning:
-		return color.YellowString("⚠️  Warning")
-	case core.StatusCritical:
-		return color.RedString("❌ Critical")
-	default:
-		return string(status)
-	}
-}
-
-// getScoreBar creates a visual score bar
-func (f *Formatter) getScoreBar(score, maxScore int) string {
-	if maxScore <= 0 {
-		return ""
-	}
-
-	percentage := float64(score) / float64(maxScore)
-	barLength := 20
-	filledLength := int(percentage * float64(barLength))
-
-	bar := "["
-	for i := 0; i < barLength; i++ {
-		if i < filledLength {
-			if percentage >= 0.8 {
-				bar += color.GreenString("█")
-			} else if percentage >= 0.6 {
-				bar += color.YellowString("█")
-			} else {
-				bar += color.RedString("█")
-			}
-		} else {
-			bar += "░"
-		}
-	}
-	bar += fmt.Sprintf("] %.1f%%", percentage*100)
-	return bar
-}
-
-// getComplexityLevel returns a descriptive level for complexity values
-func (f *Formatter) getComplexityLevel(complexity int) string {
-	switch {
-	case complexity <= 5:
-		return color.GreenString("Low")
-	case complexity <= 10:
-		return color.YellowString("Moderate")
-	case complexity <= 20:
-		return color.RedString("High")
-	default:
-		return color.RedString("Very High")
-	}
-}
 
 // sortFunctionsByComplexity sorts functions by complexity in descending order
 func (f *Formatter) sortFunctionsByComplexity(functions []core.FunctionInfo) {
@@ -259,97 +245,6 @@ func (f *Formatter) sortFunctionsByComplexity(functions []core.FunctionInfo) {
 				functions[i], functions[j] = functions[j], functions[i]
 			}
 		}
-	}
-}
-
-// getShortFileName returns a shortened file name for display
-func (f *Formatter) getShortFileName(filePath string) string {
-	if len(filePath) <= 20 {
-		return filePath
-	}
-
-	// Extract just the filename from the path
-	parts := strings.Split(filePath, "/")
-	if len(parts) > 0 {
-		filename := parts[len(parts)-1]
-		if len(filename) <= 20 {
-			return filename
-		}
-		// Truncate if still too long
-		return filename[:17] + "..."
-	}
-
-	return filePath[:17] + "..."
-}
-
-// displayCheckResultInBox shows a check result within the repository box format
-//
-//nolint:gocyclo
-func (f *Formatter) displayCheckResultInBox(result core.CheckResult) {
-	statusIcon := f.getCheckStatusIcon(result.Status)
-
-	checkLine := fmt.Sprintf("%s %s (%s): Score %d/%d",
-		statusIcon, result.Name, result.Category, result.Score, result.MaxScore)
-
-	fmt.Printf("│ %-79s │\n", checkLine)
-
-	// Show metrics on next line if available and verbose
-	if len(result.Metrics) > 0 && f.verbose {
-		metricsStr := "  Metrics: "
-		first := true
-		for key, value := range result.Metrics {
-			if !first {
-				metricsStr += ", "
-			}
-			metricsStr += fmt.Sprintf("%s=%v", key, value)
-			first = false
-		}
-
-		// Truncate if too long
-		if len(metricsStr) > 75 {
-			metricsStr = metricsStr[:72] + "..."
-		}
-
-		fmt.Printf("│ %-79s │\n", metricsStr)
-	}
-
-	// Show issues summary
-	if len(result.Issues) > 0 {
-		issuesLine := fmt.Sprintf("  Issues: %d found", len(result.Issues))
-		fmt.Printf("│ %-79s │\n", issuesLine)
-
-		// Show first few issues if verbose
-		if f.verbose {
-			limit := 3
-			if len(result.Issues) < limit {
-				limit = len(result.Issues)
-			}
-
-			for i := 0; i < limit; i++ {
-				issue := result.Issues[i]
-				issueLine := fmt.Sprintf("    • %s: %s", issue.Severity, issue.Message)
-				if len(issueLine) > 75 {
-					issueLine = issueLine[:72] + "..."
-				}
-				fmt.Printf("│ %-79s │\n", issueLine)
-			}
-
-			if len(result.Issues) > limit {
-				fmt.Printf("│ %-79s │\n", fmt.Sprintf("    ... and %d more issues", len(result.Issues)-limit))
-			}
-		}
-	}
-}
-
-// getCheckStatusIcon returns the appropriate icon for a check status
-func (f *Formatter) getCheckStatusIcon(status core.HealthStatus) string {
-	switch status {
-	case core.StatusCritical:
-		return "❌"
-	case core.StatusWarning:
-		return "⚠️"
-	default:
-		return "✅"
 	}
 }
 
@@ -364,37 +259,6 @@ func (f *Formatter) displayTiming(result core.WorkflowResult) {
 		duration := result.EndTime.Sub(result.StartTime)
 		fmt.Printf("Total execution time: %v\n", duration.Round(time.Millisecond))
 	}
-}
-
-// countIssues counts the total number of issues in check results
-func (f *Formatter) countIssues(checkResults []core.CheckResult) int {
-	count := 0
-	for _, result := range checkResults {
-		count += len(result.Issues)
-	}
-	return count
-}
-
-// countPassedChecks counts checks that passed (not critical status)
-func (f *Formatter) countPassedChecks(checkResults []core.CheckResult) int {
-	count := 0
-	for _, result := range checkResults {
-		if result.Status != core.StatusCritical {
-			count++
-		}
-	}
-	return count
-}
-
-// countFailedChecks counts checks that failed (critical status)
-func (f *Formatter) countFailedChecks(checkResults []core.CheckResult) int {
-	count := 0
-	for _, result := range checkResults {
-		if result.Status == core.StatusCritical {
-			count++
-		}
-	}
-	return count
 }
 
 // ExitCode determines the appropriate exit code based on results

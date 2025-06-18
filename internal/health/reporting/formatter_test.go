@@ -1,7 +1,6 @@
 package reporting
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -46,43 +45,6 @@ func TestExitCode(t *testing.T) {
 	}
 	if ExitCode(failedResult) != 2 {
 		t.Errorf("Expected exit code 2 for failed result, got %d", ExitCode(failedResult))
-	}
-}
-
-func TestFormatter_countIssues(t *testing.T) {
-	formatter := NewFormatter(false)
-
-	// Test empty check results
-	emptyResults := []core.CheckResult{}
-	if count := formatter.countIssues(emptyResults); count != 0 {
-		t.Errorf("Expected 0 issues for empty results, got %d", count)
-	}
-
-	// Test check results with issues
-	resultsWithIssues := []core.CheckResult{
-		{
-			Issues: []core.Issue{
-				{Type: "test", Message: "Issue 1"},
-				{Type: "test", Message: "Issue 2"},
-			},
-		},
-		{
-			Issues: []core.Issue{
-				{Type: "test", Message: "Issue 3"},
-			},
-		},
-	}
-	if count := formatter.countIssues(resultsWithIssues); count != 3 {
-		t.Errorf("Expected 3 issues, got %d", count)
-	}
-
-	// Test check results without issues
-	resultsWithoutIssues := []core.CheckResult{
-		{Issues: []core.Issue{}},
-		{Issues: nil},
-	}
-	if count := formatter.countIssues(resultsWithoutIssues); count != 0 {
-		t.Errorf("Expected 0 issues for results without issues, got %d", count)
 	}
 }
 
@@ -311,26 +273,6 @@ func TestDisplayResults_EnhancedDetails(t *testing.T) {
 func TestComplexityFunctions(t *testing.T) {
 	formatter := NewFormatter(true)
 
-	// Test getComplexityLevel
-	testCases := []struct {
-		complexity int
-		expected   string
-	}{
-		{3, "Low"},
-		{8, "Moderate"},
-		{15, "High"},
-		{25, "Very High"},
-	}
-
-	for _, tc := range testCases {
-		result := formatter.getComplexityLevel(tc.complexity)
-		// Check that the result contains the expected level (ignoring color codes)
-		if !strings.Contains(result, tc.expected) {
-			t.Errorf("Expected complexity level for %d to contain '%s', got '%s'",
-				tc.complexity, tc.expected, result)
-		}
-	}
-
 	// Test sortFunctionsByComplexity
 	functions := []core.FunctionInfo{
 		{Name: "low", Complexity: 2},
@@ -347,24 +289,6 @@ func TestComplexityFunctions(t *testing.T) {
 		if fn.Name != expectedOrder[i] {
 			t.Errorf("Expected function at position %d to be '%s', got '%s'",
 				i, expectedOrder[i], fn.Name)
-		}
-	}
-
-	// Test getShortFileName
-	testFiles := []struct {
-		input    string
-		expected string
-	}{
-		{"short.go", "short.go"},
-		{"/very/long/path/to/some/file/with/long/name.go", "long/name.go"},
-		{"a_very_long_filename_that_exceeds_the_limit.py", "a_very_long_filenam..."},
-	}
-
-	for _, tc := range testFiles {
-		result := formatter.getShortFileName(tc.input)
-		if len(result) > 20 && !strings.HasSuffix(result, "...") {
-			t.Errorf("Expected short filename for '%s' to be <= 20 chars or end with '...', got '%s' (len=%d)",
-				tc.input, result, len(result))
 		}
 	}
 }
