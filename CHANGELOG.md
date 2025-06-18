@@ -1,3 +1,13 @@
+# [2.1.0](https://github.com/codcod/repos/compare/v2.0.0...v2.1.0) (2025-06-18)
+
+
+### Features
+
+* more comprehensive report ([f368bdb](https://github.com/codcod/repos/commit/f368bdbd6e01a1dc17e1238e2bf17c50cd32cd82))
+* more readable report ([d815a7f](https://github.com/codcod/repos/commit/d815a7f4b461dba5affba81f263fd7af4df2e5f7))
+* more readable report ([da47e0b](https://github.com/codcod/repos/commit/da47e0b74bdfd262cab45b9fe54a947963017055))
+* yaml configuration is optional now ([f51e298](https://github.com/codcod/repos/commit/f51e298b8849a2522811e829c9e9dee2a899537d))
+
 # [2.0.0](https://github.com/codcod/repos/compare/v1.5.0...v2.0.0) (2025-06-17)
 
 
