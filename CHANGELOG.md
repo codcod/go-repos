@@ -1,3 +1,23 @@
+# [3.0.0](https://github.com/codcod/repos/compare/v2.1.0...v3.0.0) (2025-06-18)
+
+
+### Bug Fixes
+
+* build issues ([94a9e47](https://github.com/codcod/repos/commit/94a9e47253a89dd71041d28529809427d11442df))
+* build issues ([e755132](https://github.com/codcod/repos/commit/e755132d4f1fac4c3aebfafaf1d72455c43a28a7))
+
+
+### Features
+
+* remove pipeline feature ([e5e5db1](https://github.com/codcod/repos/commit/e5e5db11444becaa5768ad5fbfe7519ba7b9ad27))
+* remove profile feature ([696253c](https://github.com/codcod/repos/commit/696253cab0f397e10b9c8b58f22ff6f37c7aa081))
+
+
+### BREAKING CHANGES
+
+* Profile feature has been removed
+* Pipeline feature has been removed
+
 # [2.1.0](https://github.com/codcod/repos/compare/v2.0.0...v2.1.0) (2025-06-18)
 
 
