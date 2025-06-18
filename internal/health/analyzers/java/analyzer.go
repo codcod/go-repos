@@ -356,8 +356,8 @@ func (j *JavaAnalyzer) calculateLineComplexity(line string) int {
 
 	// Decision points that increase McCabe complexity:
 
-	// Conditional branches
-	if strings.Contains(line, "if (") {
+	// Conditional branches - more flexible matching
+	if strings.Contains(line, "if") && (strings.Contains(line, "(") || strings.Contains(line, " ")) {
 		complexity++
 		// Count logical operators in conditional statements
 		complexity += strings.Count(line, "&&")
@@ -369,21 +369,21 @@ func (j *JavaAnalyzer) calculateLineComplexity(line string) int {
 		complexity += strings.Count(line, "||")
 	}
 
-	// Loops
-	if strings.Contains(line, "for (") {
+	// Loops - more flexible matching
+	if strings.Contains(line, "for") && strings.Contains(line, "(") {
 		complexity++
 	}
-	if strings.Contains(line, "while (") {
+	if strings.Contains(line, "while") && strings.Contains(line, "(") {
 		complexity++
 		complexity += strings.Count(line, "&&")
 		complexity += strings.Count(line, "||")
 	}
-	if strings.Contains(line, "do {") || strings.Contains(line, "do{") {
+	if strings.Contains(line, "do") && (strings.Contains(line, "{") || strings.Contains(line, " ")) {
 		complexity++
 	}
 
-	// Enhanced for loop (for-each)
-	if strings.Contains(line, "for (") && strings.Contains(line, " : ") {
+	// Enhanced for loop (for-each) - more flexible
+	if strings.Contains(line, "for") && strings.Contains(line, " : ") {
 		complexity++
 	}
 
@@ -392,8 +392,8 @@ func (j *JavaAnalyzer) calculateLineComplexity(line string) int {
 		complexity++
 	}
 
-	// Exception handling - only catch clauses
-	if strings.Contains(line, "catch (") {
+	// Exception handling - more flexible matching
+	if strings.Contains(line, "catch") && strings.Contains(line, "(") {
 		complexity++
 	}
 

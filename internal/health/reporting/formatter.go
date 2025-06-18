@@ -12,13 +12,23 @@ import (
 
 // Formatter handles the formatting and display of health analysis results
 type Formatter struct {
-	verbose bool
+	verbose             bool
+	ComplexityThreshold int // minimum complexity to show, default 10
 }
 
 // NewFormatter creates a new result formatter
 func NewFormatter(verbose bool) *Formatter {
 	return &Formatter{
-		verbose: verbose,
+		verbose:             verbose,
+		ComplexityThreshold: 10, // default threshold
+	}
+}
+
+// NewComplexityFormatterWithThreshold creates a formatter with a specific complexity threshold
+func NewComplexityFormatterWithThreshold(verbose bool, threshold int) *Formatter {
+	return &Formatter{
+		verbose:             verbose,
+		ComplexityThreshold: threshold,
 	}
 }
 
@@ -168,6 +178,7 @@ func (f *Formatter) displayCyclomaticComplexitySimple(result core.RepositoryResu
 
 	// Only show if there are functions with complexity issues
 	complexFunctions := f.getComplexFunctions(analysis.Functions)
+
 	if len(complexFunctions) == 0 {
 		return
 	}
@@ -205,14 +216,14 @@ func (f *Formatter) getRelativePath(filePath, repoPath string) string {
 	return filePath
 }
 
-// getComplexFunctions returns functions that are considered too complex (>10)
+// getComplexFunctions returns functions that are considered too complex (>= threshold)
 // sorted by complexity descending
 func (f *Formatter) getComplexFunctions(functions []core.FunctionInfo) []core.FunctionInfo {
 	var complexFunctions []core.FunctionInfo
 
-	// Filter functions with complexity > 10 (considered high)
+	// Filter functions with complexity >= threshold
 	for _, fn := range functions {
-		if fn.Complexity > 10 {
+		if fn.Complexity >= f.ComplexityThreshold {
 			complexFunctions = append(complexFunctions, fn)
 		}
 	}

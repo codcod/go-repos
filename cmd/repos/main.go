@@ -16,6 +16,7 @@ import (
 	"github.com/codcod/repos/internal/github"
 	"github.com/codcod/repos/internal/health"
 	healthconfig "github.com/codcod/repos/internal/health/config"
+	"github.com/codcod/repos/internal/health/reporting"
 	"github.com/codcod/repos/internal/runner"
 	"github.com/codcod/repos/internal/util"
 
@@ -51,14 +52,16 @@ var (
 	overwrite  bool
 
 	// Health command flags
-	healthConfig         string
-	healthCategories     []string
-	healthParallel       bool
-	healthTimeout        int
-	healthDryRun         bool
-	healthVerbose        bool
-	healthListCategories bool
-	healthGenConfig      bool
+	healthConfig           string
+	healthCategories       []string
+	healthParallel         bool
+	healthTimeout          int
+	healthDryRun           bool
+	healthVerbose          bool
+	healthListCategories   bool
+	healthGenConfig        bool
+	healthComplexityReport bool
+	healthMaxComplexity    int
 )
 
 // getEnvOrDefault returns the environment variable value or default if empty
@@ -411,6 +414,8 @@ func init() {
 	healthCmd.Flags().BoolVar(&healthVerbose, "verbose", false, "Enable verbose output for health checks")
 	healthCmd.Flags().BoolVar(&healthListCategories, "list-categories", false, "List all available categories, checkers, and analyzers")
 	healthCmd.Flags().BoolVar(&healthGenConfig, "gen-config", false, "Generate a comprehensive configuration template with all available options")
+	healthCmd.Flags().BoolVar(&healthComplexityReport, "complexity-report", false, "Generate a cyclomatic complexity report for the codebase")
+	healthCmd.Flags().IntVar(&healthMaxComplexity, "max-complexity", 0, "Fail if any function exceeds this cyclomatic complexity (0 disables check)")
 
 	rootCmd.AddCommand(cloneCmd)
 	rootCmd.AddCommand(runCmd)
@@ -448,6 +453,8 @@ Examples:
   repos health                           # Run with built-in defaults
   repos health --config custom.yaml     # Use custom configuration
   repos health --category git,security  # Run only git and security checks
+  repos health --complexity-report      # Run only cyclomatic complexity analysis
+  repos health --complexity-report --category docs,security # Run complexity and other checks
   repos health --verbose                # Show detailed output
   repos health --list-categories        # List all available categories and checks
   repos health --gen-config             # Generate comprehensive configuration template
@@ -462,6 +469,75 @@ Examples:
 		// Handle gen-config option
 		if healthGenConfig {
 			generateHealthConfig()
+			return
+		}
+
+		// If --complexity-report is set and no categories are specified, run only complexity analysis
+		if healthComplexityReport && len(healthCategories) == 0 {
+			color.Green("Running cyclomatic complexity analysis on all supported repositories...")
+			cfg, err := config.LoadConfig(configFile)
+			if err != nil {
+				color.Red("Error: %v", err)
+				os.Exit(1)
+			}
+			repositories := cfg.FilterRepositoriesByTag(tag)
+			if len(repositories) == 0 {
+				color.Yellow("No repositories found with tag: %s", tag)
+				return
+			}
+			coreRepos := make([]core.Repository, len(repositories))
+			for i, repo := range repositories {
+				repoPath := repo.Path
+				if repoPath == "" {
+					repoPath = filepath.Join("cloned_repos", repo.Name)
+				}
+				language := detectRepositoryLanguage(repo, repoPath)
+				coreRepos[i] = core.Repository{
+					Name:     repo.Name,
+					Path:     repoPath,
+					URL:      repo.URL,
+					Branch:   repo.Branch,
+					Tags:     repo.Tags,
+					Language: language,
+					Metadata: make(map[string]string),
+				}
+			}
+			fs := health.NewFileSystem()
+			analyzerReg := health.NewAnalyzerRegistry(fs, &simpleLogger{})
+			results := make([]*core.AnalysisResult, 0, len(coreRepos))
+			for _, repo := range coreRepos {
+				analyzer, err := analyzerReg.GetAnalyzer(repo.Language)
+				if err != nil {
+					color.Yellow("No analyzer for language: %s (repo: %s)", repo.Language, repo.Name)
+					results = append(results, nil)
+					continue
+				}
+				result, err := analyzer.Analyze(context.Background(), repo.Path, core.AnalyzerConfig{})
+				if err != nil {
+					color.Red("Error analyzing %s: %v", repo.Name, err)
+					results = append(results, nil)
+					continue
+				}
+				results = append(results, result)
+			}
+			var formatter *reporting.Formatter
+			if healthMaxComplexity > 0 {
+				formatter = reporting.NewComplexityFormatterWithThreshold(healthVerbose, healthMaxComplexity)
+			} else {
+				formatter = reporting.NewComplexityFormatterWithThreshold(healthVerbose, 1) // show all functions >= 1
+			}
+			for i, repo := range coreRepos {
+				if i >= len(results) || results[i] == nil {
+					continue
+				}
+				repoResult := core.RepositoryResult{
+					Repository:     repo,
+					AnalysisResult: results[i], // results[i] is already *core.AnalysisResult
+				}
+				formatter.DisplayResults(core.WorkflowResult{
+					RepositoryResults: []core.RepositoryResult{repoResult},
+				})
+			}
 			return
 		}
 
