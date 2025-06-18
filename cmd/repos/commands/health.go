@@ -11,13 +11,14 @@ import (
 	"github.com/codcod/repos/internal/core"
 	"github.com/codcod/repos/internal/errors"
 	"github.com/codcod/repos/internal/health"
+	healthconfig "github.com/codcod/repos/internal/health/config"
 	"github.com/codcod/repos/internal/observability"
 )
 
 // HealthCommand handles the health check command execution
 type HealthCommand struct {
 	config    *HealthConfig
-	validator *config.ConfigValidator
+	validator *healthconfig.ConfigValidator
 	executor  *HealthExecutor
 	logger    *observability.StructuredLogger
 	metrics   *observability.MetricsCollector
@@ -25,15 +26,17 @@ type HealthCommand struct {
 
 // HealthConfig contains all configuration for health checks
 type HealthConfig struct {
-	ConfigPath  string
-	Categories  []string
-	Pipeline    string
-	Parallel    bool
-	Timeout     time.Duration
-	DryRun      bool
-	Verbose     bool
-	Tag         string
-	BasicConfig string // Path to basic repo config
+	ConfigPath     string
+	Categories     []string
+	Pipeline       string
+	Parallel       bool
+	Timeout        time.Duration
+	DryRun         bool
+	Verbose        bool
+	Tag            string
+	BasicConfig    string // Path to basic repo config
+	ListCategories bool   // List available categories and checkers
+	GenConfig      bool   // Generate configuration template
 }
 
 // NewHealthCommand creates a new health command instance
@@ -45,7 +48,7 @@ func NewHealthCommand(healthConfig *HealthConfig) *HealthCommand {
 
 	return &HealthCommand{
 		config:    healthConfig,
-		validator: config.NewConfigValidator(),
+		validator: healthconfig.NewConfigValidator(),
 		executor:  NewHealthExecutor(),
 		logger:    logger.WithPrefix("health-cmd"),
 		metrics:   observability.NewMetricsCollector(),
@@ -161,7 +164,7 @@ func (he *HealthExecutor) setupContext(ctx context.Context, config *HealthConfig
 }
 
 // loadAndValidateConfig loads the advanced configuration
-func (he *HealthExecutor) loadAndValidateConfig(config *HealthConfig, logger *observability.StructuredLogger, metrics *observability.MetricsCollector) (*config.AdvancedConfig, error) {
+func (he *HealthExecutor) loadAndValidateConfig(config *HealthConfig, logger *observability.StructuredLogger, metrics *observability.MetricsCollector) (*healthconfig.AdvancedConfig, error) {
 	// Load advanced configuration
 	logger.Info("loading advanced configuration", core.String("config_path", config.ConfigPath))
 	advConfig, err := he.loadAdvancedConfig(config.ConfigPath)
@@ -200,7 +203,7 @@ func (he *HealthExecutor) loadAndPrepareRepositories(config *HealthConfig, logge
 }
 
 // executeAndReportResults executes health checks and reports the results
-func (he *HealthExecutor) executeAndReportResults(ctx context.Context, coreRepos []core.Repository, advConfig *config.AdvancedConfig, config *HealthConfig, logger *observability.StructuredLogger, metrics *observability.MetricsCollector) error {
+func (he *HealthExecutor) executeAndReportResults(ctx context.Context, coreRepos []core.Repository, advConfig *healthconfig.AdvancedConfig, config *HealthConfig, logger *observability.StructuredLogger, metrics *observability.MetricsCollector) error {
 	// Execute health checks
 	logger.Info("executing comprehensive health checks",
 		core.Int("repositories", len(coreRepos)),
@@ -244,7 +247,7 @@ func (he *HealthExecutor) executeAndReportResults(ctx context.Context, coreRepos
 
 // executeHealthChecks executes the actual health checks
 func (he *HealthExecutor) executeHealthChecks(ctx context.Context, repos []core.Repository,
-	advConfig *config.AdvancedConfig, config *HealthConfig, logger *observability.StructuredLogger, metrics *observability.MetricsCollector) (*core.WorkflowResult, error) {
+	advConfig *healthconfig.AdvancedConfig, config *HealthConfig, logger *observability.StructuredLogger, metrics *observability.MetricsCollector) (*core.WorkflowResult, error) {
 	opLogger := logger.WithField("operation", "execute_health_checks")
 
 	// Create command executor and registries
@@ -280,14 +283,14 @@ func (he *HealthExecutor) executeHealthChecks(ctx context.Context, repos []core.
 }
 
 // loadAdvancedConfig loads the advanced configuration file or returns default config
-func (he *HealthExecutor) loadAdvancedConfig(configPath string) (*config.AdvancedConfig, error) {
-	advConfig, err := config.LoadAdvancedConfigOrDefault(configPath)
+func (he *HealthExecutor) loadAdvancedConfig(configPath string) (*healthconfig.AdvancedConfig, error) {
+	advConfig, err := healthconfig.LoadAdvancedConfigOrDefault(configPath)
 	if err != nil {
 		return nil, err
 	}
 
 	// Validate the configuration
-	validator := config.NewConfigValidator()
+	validator := healthconfig.NewConfigValidator()
 	if err := validator.Validate(advConfig); err != nil {
 		return nil, errors.NewContextualError("validate_advanced_config", err).
 			WithContext("config_path", configPath)

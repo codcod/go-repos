@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"strings"
+
+	"github.com/codcod/repos/internal/config"
 )
 
 // ConfigValidator provides validation for configuration files
@@ -18,7 +20,7 @@ type ValidationRule interface {
 
 // BasicValidationRule defines validation for basic config
 type BasicValidationRule interface {
-	ValidateBasic(config *Config) error
+	ValidateBasic(config *config.Config) error
 	GetDescription() string
 }
 
@@ -57,7 +59,7 @@ func (v *ConfigValidator) Validate(config *AdvancedConfig) error {
 }
 
 // ValidateBasicConfig validates a basic configuration
-func (v *ConfigValidator) ValidateBasicConfig(config *Config) error {
+func (v *ConfigValidator) ValidateBasicConfig(config *config.Config) error {
 	if len(config.Repositories) == 0 {
 		return fmt.Errorf("no repositories configured")
 	}

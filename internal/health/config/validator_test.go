@@ -3,6 +3,7 @@ package config
 import (
 	"testing"
 
+	"github.com/codcod/repos/internal/config"
 	"github.com/codcod/repos/internal/core"
 )
 
@@ -11,13 +12,13 @@ func TestConfigValidator_ValidateBasicConfig(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		config  *Config
+		config  *config.Config
 		wantErr bool
 	}{
 		{
 			name: "valid config",
-			config: &Config{
-				Repositories: []Repository{
+			config: &config.Config{
+				Repositories: []config.Repository{
 					{Name: "test-repo", URL: "https://github.com/test/repo.git"},
 				},
 			},
@@ -25,15 +26,15 @@ func TestConfigValidator_ValidateBasicConfig(t *testing.T) {
 		},
 		{
 			name: "no repositories",
-			config: &Config{
-				Repositories: []Repository{},
+			config: &config.Config{
+				Repositories: []config.Repository{},
 			},
 			wantErr: true,
 		},
 		{
 			name: "repository with empty name",
-			config: &Config{
-				Repositories: []Repository{
+			config: &config.Config{
+				Repositories: []config.Repository{
 					{Name: "", URL: "https://github.com/test/repo.git"},
 				},
 			},
@@ -41,8 +42,8 @@ func TestConfigValidator_ValidateBasicConfig(t *testing.T) {
 		},
 		{
 			name: "repository with empty URL",
-			config: &Config{
-				Repositories: []Repository{
+			config: &config.Config{
+				Repositories: []config.Repository{
 					{Name: "test-repo", URL: ""},
 				},
 			},
