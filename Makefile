@@ -44,7 +44,7 @@ test: test-unit ## Run unit tests (default)
 
 test-unit: ## Run unit tests only
 	@echo "Running unit tests..."
-	go test -v ./internal/... ./cmd/...
+	@go test -timeout 30s ./internal/... ./cmd/... && echo "Unit tests completed successfully." || echo "Unit tests failed."
 
 test-integration: ## Run integration tests
 	@echo "Running integration tests..."

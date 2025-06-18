@@ -185,6 +185,97 @@ func LoadAdvancedConfig(configPath string) (*AdvancedConfig, error) {
 	return &config, nil
 }
 
+// NewDefaultAdvancedConfig creates a default advanced configuration with sane defaults
+func NewDefaultAdvancedConfig() *AdvancedConfig {
+	config := &AdvancedConfig{
+		Version: "1.0",
+		Engine: core.EngineConfig{
+			MaxConcurrency: 4,
+			Timeout:        30 * time.Minute,
+			CacheTTL:       1 * time.Hour,
+		},
+		Checkers:  make(map[string]core.CheckerConfig),
+		Analyzers: make(map[string]core.AnalyzerConfig),
+		Reporters: make(map[string]core.ReporterConfig),
+		Categories: map[string]CategoryConfig{
+			"security": {
+				Name:        "Security",
+				Description: "Security-related checks",
+				Weight:      30,
+				Enabled:     true,
+			},
+			"quality": {
+				Name:        "Code Quality",
+				Description: "Code quality and maintainability checks",
+				Weight:      25,
+				Enabled:     true,
+			},
+			"compliance": {
+				Name:        "Compliance",
+				Description: "Compliance and licensing checks",
+				Weight:      20,
+				Enabled:     true,
+			},
+			"ci": {
+				Name:        "CI/CD",
+				Description: "Continuous integration and deployment checks",
+				Weight:      15,
+				Enabled:     true,
+			},
+			"docs": {
+				Name:        "Documentation",
+				Description: "Documentation completeness checks",
+				Weight:      10,
+				Enabled:     true,
+			},
+		},
+		Profiles: map[string]ProfileConfig{
+			"default": {
+				Name:        "Default",
+				Description: "Default health check profile with basic checks",
+				Categories:  []string{"security", "quality", "compliance", "ci", "docs"},
+				Checkers:    make(map[string]core.CheckerConfig),
+				Analyzers:   make(map[string]core.AnalyzerConfig),
+			},
+			"minimal": {
+				Name:        "Minimal",
+				Description: "Minimal health checks for quick validation",
+				Categories:  []string{"security", "compliance"},
+				Checkers:    make(map[string]core.CheckerConfig),
+				Analyzers:   make(map[string]core.AnalyzerConfig),
+			},
+			"comprehensive": {
+				Name:        "Comprehensive",
+				Description: "Comprehensive health checks for detailed analysis",
+				Categories:  []string{"security", "quality", "compliance", "ci", "docs"},
+				Checkers:    make(map[string]core.CheckerConfig),
+				Analyzers:   make(map[string]core.AnalyzerConfig),
+			},
+		},
+		Pipelines:    make(map[string]PipelineConfig),
+		Overrides:    []OverrideConfig{},
+		Extensions:   ExtensionsConfig{},
+		Integrations: IntegrationsConfig{},
+	}
+
+	// Set defaults to ensure consistency
+	config.setDefaults()
+
+	return config
+}
+
+// LoadAdvancedConfigOrDefault loads configuration from a file, or returns default config if file doesn't exist
+func LoadAdvancedConfigOrDefault(configPath string) (*AdvancedConfig, error) {
+	// Check if config file exists
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		// Return default configuration if file doesn't exist
+		return NewDefaultAdvancedConfig(), nil
+	}
+
+	// Load from file if it exists
+	return LoadAdvancedConfig(configPath)
+}
+
 // setDefaults sets default values for configuration
 func (c *AdvancedConfig) setDefaults() {
 	if c.Version == "" {

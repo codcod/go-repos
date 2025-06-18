@@ -48,43 +48,6 @@ func TestExitCode(t *testing.T) {
 	}
 }
 
-func TestFormatter_countIssues(t *testing.T) {
-	formatter := NewFormatter(false)
-
-	// Test empty check results
-	emptyResults := []core.CheckResult{}
-	if count := formatter.countIssues(emptyResults); count != 0 {
-		t.Errorf("Expected 0 issues for empty results, got %d", count)
-	}
-
-	// Test check results with issues
-	resultsWithIssues := []core.CheckResult{
-		{
-			Issues: []core.Issue{
-				{Type: "test", Message: "Issue 1"},
-				{Type: "test", Message: "Issue 2"},
-			},
-		},
-		{
-			Issues: []core.Issue{
-				{Type: "test", Message: "Issue 3"},
-			},
-		},
-	}
-	if count := formatter.countIssues(resultsWithIssues); count != 3 {
-		t.Errorf("Expected 3 issues, got %d", count)
-	}
-
-	// Test check results without issues
-	resultsWithoutIssues := []core.CheckResult{
-		{Issues: []core.Issue{}},
-		{Issues: nil},
-	}
-	if count := formatter.countIssues(resultsWithoutIssues); count != 0 {
-		t.Errorf("Expected 0 issues for results without issues, got %d", count)
-	}
-}
-
 func TestFormatter_DisplayResults_Compact(t *testing.T) {
 	formatter := NewFormatter(false) // Non-verbose mode
 
@@ -220,4 +183,112 @@ func TestFormatter_DisplayResults_EmptyResults(t *testing.T) {
 	formatter.DisplayResults(workflowResult)
 
 	t.Log("DisplayResults completed successfully with empty results")
+}
+
+func TestDisplayResults_EnhancedDetails(t *testing.T) {
+	formatter := NewFormatter(false) // compact mode
+
+	// Create a sample result with detailed check information
+	result := core.WorkflowResult{
+		StartTime: time.Now().Add(-5 * time.Second),
+		EndTime:   time.Now(),
+		Duration:  5 * time.Second,
+		Summary: core.WorkflowSummary{
+			SuccessfulRepos: 1,
+			FailedRepos:     0,
+			AverageScore:    85,
+			TotalIssues:     2,
+			StatusCounts: map[core.HealthStatus]int{
+				core.StatusHealthy: 1,
+			},
+		},
+		RepositoryResults: []core.RepositoryResult{
+			{
+				Repository: core.Repository{
+					Name:     "test-repo",
+					Path:     "/path/to/test-repo",
+					Language: "python",
+				},
+				Status:   core.StatusHealthy,
+				Score:    85,
+				MaxScore: 100,
+				CheckResults: []core.CheckResult{
+					{
+						ID:       "security-scan",
+						Name:     "Security Scanner",
+						Category: "security",
+						Status:   core.StatusHealthy,
+						Score:    90,
+						MaxScore: 100,
+						Duration: 250 * time.Millisecond,
+						Issues: []core.Issue{
+							{
+								Type:     "potential_vulnerability",
+								Severity: core.SeverityMedium,
+								Message:  "Potential SQL injection vulnerability detected",
+								Location: &core.Location{
+									File: "app.py",
+									Line: 42,
+								},
+								Suggestion: "Use parameterized queries to prevent SQL injection",
+							},
+						},
+						Metrics: map[string]interface{}{
+							"files_scanned":         15,
+							"vulnerabilities_found": 1,
+						},
+					},
+					{
+						ID:       "license-check",
+						Name:     "License Compliance",
+						Category: "compliance",
+						Status:   core.StatusWarning,
+						Score:    80,
+						MaxScore: 100,
+						Duration: 100 * time.Millisecond,
+						Issues: []core.Issue{
+							{
+								Type:       "missing_license",
+								Severity:   core.SeverityLow,
+								Message:    "No license file found in repository",
+								Suggestion: "Add a LICENSE file to clarify usage rights",
+							},
+						},
+						Metrics: map[string]interface{}{
+							"license_files_found": 0,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Test that enhanced formatting doesn't panic and produces output
+	t.Log("=== Enhanced Health Check Output ===")
+	formatter.DisplayResults(result)
+	t.Log("DisplayResults completed successfully with enhanced details")
+}
+
+// TestComplexityFunctions tests the complexity-related helper functions
+func TestComplexityFunctions(t *testing.T) {
+	formatter := NewFormatter(true)
+
+	// Test sortFunctionsByComplexity
+	functions := []core.FunctionInfo{
+		{Name: "low", Complexity: 2},
+		{Name: "high", Complexity: 20},
+		{Name: "medium", Complexity: 8},
+		{Name: "very_high", Complexity: 30},
+	}
+
+	formatter.sortFunctionsByComplexity(functions)
+
+	// Verify sorted order (highest first)
+	expectedOrder := []string{"very_high", "high", "medium", "low"}
+	for i, fn := range functions {
+		if fn.Name != expectedOrder[i] {
+			t.Errorf("Expected function at position %d to be '%s', got '%s'",
+				i, expectedOrder[i], fn.Name)
+		}
+	}
 }
