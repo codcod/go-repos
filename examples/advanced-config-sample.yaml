@@ -1,6 +1,6 @@
 # Advanced Configuration Sample
 # This file demonstrates the advanced configuration format with
-# pipelines and comprehensive health checking options.
+# comprehensive health checking options.
 
 version: "1.0"
 
@@ -209,23 +209,4 @@ overrides:
         function_level: true
     engine:
 
-# Extension configurations (future use)
-extensions:
-  enabled: false
-  plugins: []
-  custom_checkers: []
-
-# Integration configurations
-integrations:
-  github:
-    enabled: false
-    token: ""
-    
-  jira:
-    enabled: false
-    url: ""
-    username: ""
-    
-  slack:
-    enabled: false
-    webhook_url: ""
+# Configuration validation and best practices are automatically enforced

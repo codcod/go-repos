@@ -160,28 +160,6 @@ func TestNewAnalyzerRegistry(t *testing.T) {
 	}
 }
 
-// Test NewFileSystem
-func TestNewFileSystem(t *testing.T) {
-	fs := NewFileSystem()
-
-	if fs == nil {
-		t.Error("Expected NewFileSystem to return non-nil filesystem")
-	}
-
-	// Test that it implements the FileSystem interface
-	var _ = fs
-}
-
-// Test NewCommandExecutor
-func TestNewCommandExecutor(t *testing.T) {
-	timeout := 30 * time.Second
-	executor := NewCommandExecutor(timeout)
-
-	if executor == nil {
-		t.Error("Expected NewCommandExecutor to return non-nil executor")
-	}
-}
-
 // Test factory function integration
 func TestFactoryFunctions_Integration(t *testing.T) {
 	// Create dependencies

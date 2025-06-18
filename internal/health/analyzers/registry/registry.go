@@ -165,11 +165,3 @@ func NewRegistryWithStandardAnalyzers(fs core.FileSystem, logger core.Logger) *R
 
 	return registry
 }
-
-// RegisterStandardAnalyzers registers all standard analyzers to an existing registry
-func (r *Registry) RegisterStandardAnalyzers(fs core.FileSystem, logger core.Logger) {
-	r.Register(golang.NewGoAnalyzer(fs, logger))
-	r.Register(python_analyzer.NewPythonAnalyzer(fs, logger))
-	r.Register(java_analyzer.NewJavaAnalyzer(fs, logger))
-	r.Register(javascript_analyzer.NewJavaScriptAnalyzer(fs, logger))
-}

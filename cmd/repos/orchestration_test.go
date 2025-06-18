@@ -14,7 +14,7 @@ import (
 	"github.com/codcod/repos/internal/platform/commands"
 )
 
-// TestOrchestrationEndToEnd tests the complete orchestration pipeline
+// TestOrchestrationEndToEnd tests the complete orchestration workflow
 func TestOrchestrationEndToEnd(t *testing.T) {
 	// Skip if running in CI without proper setup
 	if os.Getenv("CI") == "true" && os.Getenv("INTEGRATION_TESTS") != "true" {

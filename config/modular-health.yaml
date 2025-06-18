@@ -25,17 +25,7 @@ checkers:
       - "*.spec.js"
       - "*.test.js"
 
-  deprecated-components:
-    enabled: true
-    severity: medium
-    timeout: 30s
-    options:
-      severity_levels:
-        high: ["security", "breaking_change"]
-        medium: ["performance", "deprecated_api"]
-        low: ["style", "legacy"]
-    categories: ["quality", "security"]
-    exclusions: []
+
 
   # Git checkers
   git-status:

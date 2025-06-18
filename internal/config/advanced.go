@@ -12,15 +12,16 @@ import (
 
 // AdvancedConfig implements the Config interface with advanced features
 type AdvancedConfig struct {
-	Version      string                         `yaml:"version"`
-	Engine       core.EngineConfig              `yaml:"engine"`
-	Checkers     map[string]core.CheckerConfig  `yaml:"checkers"`
-	Analyzers    map[string]core.AnalyzerConfig `yaml:"analyzers"`
-	Reporters    map[string]core.ReporterConfig `yaml:"reporters"`
-	Categories   map[string]CategoryConfig      `yaml:"categories"`
-	Overrides    []OverrideConfig               `yaml:"overrides"`
-	Extensions   ExtensionsConfig               `yaml:"extensions"`
-	Integrations IntegrationsConfig             `yaml:"integrations"`
+	Version    string                         `yaml:"version"`
+	Engine     core.EngineConfig              `yaml:"engine"`
+	Checkers   map[string]core.CheckerConfig  `yaml:"checkers"`
+	Analyzers  map[string]core.AnalyzerConfig `yaml:"analyzers"`
+	Reporters  map[string]core.ReporterConfig `yaml:"reporters"`
+	Categories map[string]CategoryConfig      `yaml:"categories"`
+	Overrides  []OverrideConfig               `yaml:"overrides"`
+	// Future use - extension points not yet implemented
+	// Extensions   ExtensionsConfig               `yaml:"extensions"`
+	// Integrations IntegrationsConfig             `yaml:"integrations"`
 }
 
 // CategoryConfig defines configuration for a category of checks
@@ -185,9 +186,8 @@ func NewDefaultAdvancedConfig() *AdvancedConfig {
 				Enabled:     true,
 			},
 		},
-		Overrides:    []OverrideConfig{},
-		Extensions:   ExtensionsConfig{},
-		Integrations: IntegrationsConfig{},
+		Overrides: []OverrideConfig{},
+		// Extensions and Integrations will be added when implemented
 	}
 
 	// Set defaults to ensure consistency
@@ -473,15 +473,13 @@ func (c *AdvancedConfig) FilterByCategories(categories []string) *AdvancedConfig
 
 	// Create a copy of the configuration
 	filtered := &AdvancedConfig{
-		Version:      c.Version,
-		Engine:       c.Engine,
-		Checkers:     make(map[string]core.CheckerConfig),
-		Analyzers:    make(map[string]core.AnalyzerConfig),
-		Reporters:    c.Reporters,  // Copy reporters as-is
-		Categories:   c.Categories, // Copy categories as-is
-		Overrides:    c.Overrides,  // Copy overrides as-is
-		Extensions:   c.Extensions,
-		Integrations: c.Integrations,
+		Version:    c.Version,
+		Engine:     c.Engine,
+		Checkers:   make(map[string]core.CheckerConfig),
+		Analyzers:  make(map[string]core.AnalyzerConfig),
+		Reporters:  c.Reporters,  // Copy reporters as-is
+		Categories: c.Categories, // Copy categories as-is
+		Overrides:  c.Overrides,  // Copy overrides as-is
 	}
 
 	// Create a set of target categories for efficient lookup

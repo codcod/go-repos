@@ -55,46 +55,28 @@ type FileAnalysis struct {
 
 // FunctionInfo represents information about a function
 type FunctionInfo struct {
-	Name       string   `json:"name"`
-	File       string   `json:"file"`
-	Language   string   `json:"language"`
-	Line       int      `json:"line"`
-	Column     int      `json:"column"`
-	EndLine    int      `json:"end_line"`
-	Complexity int      `json:"complexity"`
-	Size       int      `json:"size"`
-	Parameters []string `json:"parameters"`
-	ReturnType string   `json:"return_type,omitempty"`
-	Visibility string   `json:"visibility,omitempty"`
-	IsAsync    bool     `json:"is_async,omitempty"`
-	IsStatic   bool     `json:"is_static,omitempty"`
+	Name       string `json:"name"`
+	File       string `json:"file"`
+	Language   string `json:"language"`
+	Line       int    `json:"line"`
+	Complexity int    `json:"complexity"`
 }
 
 // ClassInfo represents information about a class
 type ClassInfo struct {
-	Name       string         `json:"name"`
-	File       string         `json:"file"`
-	Language   string         `json:"language"`
-	Line       int            `json:"line"`
-	Column     int            `json:"column"`
-	EndLine    int            `json:"end_line"`
-	Methods    []FunctionInfo `json:"methods"`
-	Fields     []FieldInfo    `json:"fields"`
-	SuperClass string         `json:"super_class,omitempty"`
-	SuperType  string         `json:"super_type,omitempty"`
-	Interfaces []string       `json:"interfaces,omitempty"`
-	Visibility string         `json:"visibility,omitempty"`
-	IsAbstract bool           `json:"is_abstract,omitempty"`
+	Name     string         `json:"name"`
+	File     string         `json:"file"`
+	Language string         `json:"language"`
+	Line     int            `json:"line"`
+	Methods  []FunctionInfo `json:"methods"`
+	Fields   []FieldInfo    `json:"fields"`
 }
 
 // FieldInfo represents information about a class field
 type FieldInfo struct {
-	Name       string `json:"name"`
-	Type       string `json:"type"`
-	Line       int    `json:"line"`
-	Visibility string `json:"visibility,omitempty"`
-	IsStatic   bool   `json:"is_static,omitempty"`
-	IsFinal    bool   `json:"is_final,omitempty"`
+	Name string `json:"name"`
+	Type string `json:"type"`
+	Line int    `json:"line"`
 }
 
 // ImportInfo represents information about an import
@@ -268,13 +250,5 @@ func Error(key string, value error) Field {
 }
 
 func Bool(key string, value bool) Field {
-	return Field{Key: key, Value: value}
-}
-
-func Float64(key string, value float64) Field {
-	return Field{Key: key, Value: value}
-}
-
-func Any(key string, value interface{}) Field {
 	return Field{Key: key, Value: value}
 }

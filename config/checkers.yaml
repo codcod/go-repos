@@ -17,26 +17,7 @@ cyclomatic_complexity:
     - "*.spec.js"
     - "*.test.js"
 
-# Deprecated Components Configuration
-deprecated_components:
-  severity_levels:
-    high:
-      - "security"
-      - "breaking_change"
-    medium:
-      - "performance"
-      - "deprecated_api"
-    low:
-      - "style"
-      - "legacy"
-  custom_patterns:
-    - name: "deprecated_functions"
-      patterns:
-        - "deprecated_function_*"
-        - "legacy_*"
-      severity: "medium"
-      message: "Deprecated function usage detected"
-      suggestion: "Replace with modern equivalent"
+
 
 # General Configuration
 general:
