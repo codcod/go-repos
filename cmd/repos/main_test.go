@@ -1,7 +1,9 @@
 package main
 
 import (
+	"io"
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 )
@@ -307,5 +309,91 @@ func BenchmarkGetEnvOrDefaultNotSet(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = getEnvOrDefault(key, defaultValue)
+	}
+}
+
+func TestListHealthCategoriesFunction(t *testing.T) {
+	// This is a simple test to ensure the function doesn't panic
+	// and can be called without errors
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("listHealthCategories() panicked: %v", r)
+		}
+	}()
+
+	// Redirect stdout to capture the output
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	// Call the function
+	listHealthCategories()
+
+	// Restore stdout
+	w.Close()
+	os.Stdout = old
+
+	// Read the captured output
+	out, _ := io.ReadAll(r)
+	output := string(out)
+
+	// Check that expected content is present
+	if !strings.Contains(output, "Available Health Check Categories") {
+		t.Error("Expected header not found in output")
+	}
+
+	if !strings.Contains(output, "CHECKERS:") {
+		t.Error("Expected checkers section not found in output")
+	}
+
+	if !strings.Contains(output, "ANALYZERS:") {
+		t.Error("Expected analyzers section not found in output")
+	}
+
+	if !strings.Contains(output, "Summary") {
+		t.Error("Expected summary section not found in output")
+	}
+}
+
+func TestHealthCommandWithListCategories(t *testing.T) {
+	// Test that the command can be executed with --list-categories flag
+	// This is an integration test
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Build the binary first
+	buildCmd := exec.Command("go", "build", "-o", "repos_test", "./cmd/repos")
+	buildCmd.Dir = "../.." // Go to repo root
+	if err := buildCmd.Run(); err != nil {
+		t.Fatalf("Failed to build binary: %v", err)
+	}
+	defer os.Remove("../../repos_test")
+
+	// Run the command with --list-categories
+	cmd := exec.Command("../../repos_test", "health", "--list-categories")
+	cmd.Dir = "../.." // Run from repo root
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("Command failed: %v", err)
+	}
+
+	outputStr := string(output)
+
+	// Verify expected content
+	expectedPhrases := []string{
+		"Available Health Check Categories",
+		"CHECKERS:",
+		"ANALYZERS:",
+		"Summary",
+		"Total Checkers:",
+		"Total Categories:",
+		"Total Analyzers:",
+	}
+
+	for _, phrase := range expectedPhrases {
+		if !strings.Contains(outputStr, phrase) {
+			t.Errorf("Expected phrase '%s' not found in output", phrase)
+		}
 	}
 }

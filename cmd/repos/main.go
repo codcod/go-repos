@@ -50,12 +50,13 @@ var (
 	overwrite  bool
 
 	// Health command flags
-	healthConfig     string
-	healthCategories []string
-	healthParallel   bool
-	healthTimeout    int
-	healthDryRun     bool
-	healthVerbose    bool
+	healthConfig         string
+	healthCategories     []string
+	healthParallel       bool
+	healthTimeout        int
+	healthDryRun         bool
+	healthVerbose        bool
+	healthListCategories bool
 )
 
 // getEnvOrDefault returns the environment variable value or default if empty
@@ -406,6 +407,7 @@ func init() {
 	healthCmd.Flags().IntVar(&healthTimeout, "timeout", 30, "Timeout in seconds for health checks (default: 30)")
 	healthCmd.Flags().BoolVar(&healthDryRun, "dry-run", false, "Dry run mode - show what would be executed")
 	healthCmd.Flags().BoolVar(&healthVerbose, "verbose", false, "Enable verbose output for health checks")
+	healthCmd.Flags().BoolVar(&healthListCategories, "list-categories", false, "List all available categories, checkers, and analyzers")
 
 	rootCmd.AddCommand(cloneCmd)
 	rootCmd.AddCommand(runCmd)
@@ -443,8 +445,16 @@ Examples:
   repos health                           # Run with built-in defaults
   repos health --config custom.yaml     # Use custom configuration
   repos health --category git,security  # Run only git and security checks
-  repos health --verbose                # Show detailed output`,
+  repos health --verbose                # Show detailed output
+  repos health --list-categories        # List all available categories and checks
+  repos health --dry-run                # Preview what would be executed`,
 	Run: func(_ *cobra.Command, _ []string) {
+		// Handle list-categories option first
+		if healthListCategories {
+			listHealthCategories()
+			return
+		}
+
 		// Create simple logger
 		logger := &simpleLogger{}
 
@@ -646,4 +656,67 @@ func hasFile(repoPath string, patterns ...string) bool {
 		}
 	}
 	return false
+}
+
+// listHealthCategories lists all available categories, checkers, and analyzers
+func listHealthCategories() {
+	logger := &simpleLogger{}
+
+	// Create registries to discover available checkers and analyzers
+	executor := health.NewCommandExecutor(30 * time.Second)
+	checkerRegistry := health.NewCheckerRegistry(executor)
+
+	fs := health.NewFileSystem()
+	analyzerRegistry := health.NewAnalyzerRegistry(fs, logger)
+
+	color.Green("=== Available Health Check Categories ===\n")
+
+	// List checkers by category
+	checkers := checkerRegistry.GetCheckers()
+	checkersByCategory := make(map[string][]core.Checker)
+
+	for _, checker := range checkers {
+		category := checker.Category()
+		checkersByCategory[category] = append(checkersByCategory[category], checker)
+	}
+
+	color.Blue("📋 CHECKERS:\n")
+	for category, categoryCheckers := range checkersByCategory {
+		color.Cyan("  Category: %s", category)
+		for _, checker := range categoryCheckers {
+			config := checker.Config()
+			status := "disabled"
+			if config.Enabled {
+				status = "enabled"
+			}
+			fmt.Printf("    • %s (%s) - %s [%s]\n",
+				checker.Name(),
+				checker.ID(),
+				status,
+				config.Severity)
+		}
+		fmt.Println()
+	}
+
+	// List analyzers by language
+	analyzers := analyzerRegistry.GetAnalyzers()
+	color.Blue("🔍 ANALYZERS:\n")
+
+	for _, analyzer := range analyzers {
+		fmt.Printf("  Language: %s\n", analyzer.Language())
+		fmt.Printf("    • Name: %s\n", analyzer.Name())
+		fmt.Printf("    • Extensions: %v\n", analyzer.SupportedExtensions())
+		fmt.Println()
+	}
+
+	// Summary
+	color.Green("=== Summary ===")
+	fmt.Printf("Total Checkers: %d\n", len(checkers))
+	fmt.Printf("Total Categories: %d\n", len(checkersByCategory))
+	fmt.Printf("Total Analyzers: %d\n", len(analyzers))
+
+	color.Yellow("\nUsage Examples:")
+	fmt.Println("  repos health --category git,security     # Run only git and security checkers")
+	fmt.Println("  repos health --verbose                   # Show detailed output")
+	fmt.Println("  repos health --dry-run                   # Preview what would be executed")
 }
