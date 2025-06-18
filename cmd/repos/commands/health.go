@@ -4,6 +4,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/codcod/repos/internal/config"
@@ -25,6 +26,7 @@ type HealthCommand struct {
 // HealthConfig contains all configuration for health checks
 type HealthConfig struct {
 	ConfigPath  string
+	Categories  []string
 	Pipeline    string
 	Parallel    bool
 	Timeout     time.Duration
@@ -357,4 +359,9 @@ func (l *simpleLogger) Warn(msg string, fields ...core.Field) {
 
 func (l *simpleLogger) Error(msg string, fields ...core.Field) {
 	fmt.Printf("[ERROR] %s\n", msg)
+}
+
+func (l *simpleLogger) Fatal(msg string, fields ...core.Field) {
+	fmt.Printf("[FATAL] %s\n", msg)
+	os.Exit(1)
 }

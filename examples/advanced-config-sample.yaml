@@ -77,6 +77,7 @@ analyzers:
     exclude_patterns: ["__pycache__", "*.pyc", ".venv"]
     complexity_enabled: true
     function_level: true
+    categories: ["quality", "analysis"]
 
   go:
     enabled: true
@@ -84,6 +85,7 @@ analyzers:
     exclude_patterns: ["vendor", "_test.go"]
     complexity_enabled: true
     function_level: true
+    categories: ["quality", "analysis"]
 
   javascript:
     enabled: true
@@ -91,6 +93,7 @@ analyzers:
     exclude_patterns: ["node_modules", "dist", "build"]
     complexity_enabled: true
     function_level: false
+    categories: ["quality", "analysis"]
 
   java:
     enabled: true
@@ -98,6 +101,7 @@ analyzers:
     exclude_patterns: ["target", "*.class"]
     complexity_enabled: true
     function_level: true
+    categories: ["quality", "analysis"]
 
 # Reporter configurations
 reporters:

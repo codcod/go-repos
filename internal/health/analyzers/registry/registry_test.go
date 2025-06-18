@@ -517,10 +517,11 @@ func (m *MockFileSystem) Walk(path string, walkFn func(path string, info core.Fi
 
 type MockLogger struct{}
 
-func (m *MockLogger) Info(msg string, args ...interface{})  {}
-func (m *MockLogger) Error(msg string, args ...interface{}) {}
-func (m *MockLogger) Debug(msg string, args ...interface{}) {}
-func (m *MockLogger) Warn(msg string, args ...interface{})  {}
+func (m *MockLogger) Info(msg string, fields ...core.Field)  {}
+func (m *MockLogger) Error(msg string, fields ...core.Field) {}
+func (m *MockLogger) Debug(msg string, fields ...core.Field) {}
+func (m *MockLogger) Warn(msg string, fields ...core.Field)  {}
+func (m *MockLogger) Fatal(msg string, fields ...core.Field) {}
 
 // Test registry interface compliance
 func TestRegistry_ImplementsAnalyzerRegistry(t *testing.T) {

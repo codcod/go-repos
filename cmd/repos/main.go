@@ -50,11 +50,12 @@ var (
 	overwrite  bool
 
 	// Health command flags
-	healthConfig   string
-	healthParallel bool
-	healthTimeout  int
-	healthDryRun   bool
-	healthVerbose  bool
+	healthConfig     string
+	healthCategories []string
+	healthParallel   bool
+	healthTimeout    int
+	healthDryRun     bool
+	healthVerbose    bool
 )
 
 // getEnvOrDefault returns the environment variable value or default if empty
@@ -400,6 +401,7 @@ func init() {
 
 	// Health command flags
 	healthCmd.Flags().StringVar(&healthConfig, "config", "", "health config file path (optional, uses built-in defaults if not provided)")
+	healthCmd.Flags().StringSliceVar(&healthCategories, "category", []string{}, "filter checkers and analyzers by categories (comma-separated, e.g., 'git,security')")
 	healthCmd.Flags().BoolVar(&healthParallel, "parallel", false, "Execute health checks in parallel")
 	healthCmd.Flags().IntVar(&healthTimeout, "timeout", 30, "Timeout in seconds for health checks (default: 30)")
 	healthCmd.Flags().BoolVar(&healthDryRun, "dry-run", false, "Dry run mode - show what would be executed")
@@ -440,6 +442,7 @@ If you want to customize the checks, you can provide an optional configuration f
 Examples:
   repos health                           # Run with built-in defaults
   repos health --config custom.yaml     # Use custom configuration
+  repos health --category git,security  # Run only git and security checks
   repos health --verbose                # Show detailed output`,
 	Run: func(_ *cobra.Command, _ []string) {
 		// Create simple logger
@@ -495,6 +498,12 @@ Examples:
 		}
 
 		color.Green("Running comprehensive health checks on %d repositories...", len(repositories))
+
+		// Apply category filtering if specified
+		if len(healthCategories) > 0 {
+			color.Blue("Filtering by categories: %v", healthCategories)
+			advConfig.FilterByCategories(healthCategories)
+		}
 
 		// Create command executor and registries
 		executor := health.NewCommandExecutor(time.Duration(healthTimeout) * time.Second)
@@ -554,6 +563,11 @@ func (l *simpleLogger) Warn(msg string, fields ...core.Field) {
 
 func (l *simpleLogger) Error(msg string, fields ...core.Field) {
 	color.Red("[ERROR] " + msg + l.formatFieldsAsString(fields))
+}
+
+func (l *simpleLogger) Fatal(msg string, fields ...core.Field) {
+	color.Red("[FATAL] " + msg + l.formatFieldsAsString(fields))
+	os.Exit(1)
 }
 
 func (l *simpleLogger) formatFieldsAsString(fields []core.Field) string {

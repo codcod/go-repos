@@ -151,6 +151,7 @@ analyzers:
       - "site-packages/"
     complexity_enabled: true
     function_level: true
+    categories: ["quality", "analysis"]
 
   java:
     enabled: true
@@ -162,6 +163,7 @@ analyzers:
       - ".mvn/"
     complexity_enabled: true
     function_level: true
+    categories: ["quality", "analysis"]
 
   javascript:
     enabled: true
@@ -175,6 +177,7 @@ analyzers:
       - "coverage/"
     complexity_enabled: true
     function_level: true
+    categories: ["quality", "analysis"]
 
   typescript:
     enabled: true
@@ -188,6 +191,7 @@ analyzers:
       - "coverage/"
     complexity_enabled: true
     function_level: true
+    categories: ["quality", "analysis"]
 
   go:
     enabled: true
@@ -197,6 +201,7 @@ analyzers:
       - "*_test.go"
     complexity_enabled: true
     function_level: true
+    categories: ["quality", "analysis"]
 
   csharp:
     enabled: false

@@ -283,3 +283,7 @@ func (l *testLogger) Warn(msg string, fields ...core.Field) {
 func (l *testLogger) Error(msg string, fields ...core.Field) {
 	l.t.Logf("[ERROR] %s %v", msg, fields)
 }
+
+func (l *testLogger) Fatal(msg string, fields ...core.Field) {
+	l.t.Fatalf("[FATAL] %s %v", msg, fields)
+}

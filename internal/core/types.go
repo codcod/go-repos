@@ -4,7 +4,200 @@ import (
 	"time"
 )
 
-// HealthStatus represents the overall health status
+// Config represents the main configuration interface
+type Config interface {
+	GetCheckerConfig(checkerID string) (CheckerConfig, bool)
+	GetAnalyzerConfig(language string) (AnalyzerConfig, bool)
+	GetReporterConfig(reporterID string) (ReporterConfig, bool)
+	GetEngineConfig() EngineConfig
+}
+
+// Logger represents a structured logger interface
+type Logger interface {
+	Debug(msg string, fields ...Field)
+	Info(msg string, fields ...Field)
+	Warn(msg string, fields ...Field)
+	Error(msg string, fields ...Field)
+	Fatal(msg string, fields ...Field)
+}
+
+// FileSystem represents a file system interface
+type FileSystem interface {
+	ReadFile(filename string) ([]byte, error)
+	WriteFile(filename string, data []byte) error
+	Exists(filename string) bool
+	IsDir(filename string) bool
+	ListFiles(path string, pattern string) ([]string, error)
+	Walk(root string, walkFn func(path string, info FileInfo) error) error
+}
+
+// FileInfo represents file information
+type FileInfo struct {
+	Name    string    `json:"name"`
+	Size    int64     `json:"size"`
+	Mode    uint32    `json:"mode"`
+	ModTime time.Time `json:"mod_time"`
+	IsDir   bool      `json:"is_dir"`
+}
+
+// FileAnalysis represents analysis of a single file
+type FileAnalysis struct {
+	Path       string                 `json:"path"`
+	Language   string                 `json:"language"`
+	Lines      int                    `json:"lines"`
+	Functions  []FunctionInfo         `json:"functions"`
+	Classes    []ClassInfo            `json:"classes"`
+	Imports    []ImportInfo           `json:"imports"`
+	Complexity int                    `json:"complexity"`
+	Issues     []Issue                `json:"issues"`
+	Metrics    map[string]interface{} `json:"metrics"`
+}
+
+// FunctionInfo represents information about a function
+type FunctionInfo struct {
+	Name       string   `json:"name"`
+	File       string   `json:"file"`
+	Language   string   `json:"language"`
+	Line       int      `json:"line"`
+	Column     int      `json:"column"`
+	EndLine    int      `json:"end_line"`
+	Complexity int      `json:"complexity"`
+	Size       int      `json:"size"`
+	Parameters []string `json:"parameters"`
+	ReturnType string   `json:"return_type,omitempty"`
+	Visibility string   `json:"visibility,omitempty"`
+	IsAsync    bool     `json:"is_async,omitempty"`
+	IsStatic   bool     `json:"is_static,omitempty"`
+}
+
+// ClassInfo represents information about a class
+type ClassInfo struct {
+	Name       string         `json:"name"`
+	File       string         `json:"file"`
+	Language   string         `json:"language"`
+	Line       int            `json:"line"`
+	Column     int            `json:"column"`
+	EndLine    int            `json:"end_line"`
+	Methods    []FunctionInfo `json:"methods"`
+	Fields     []FieldInfo    `json:"fields"`
+	SuperClass string         `json:"super_class,omitempty"`
+	SuperType  string         `json:"super_type,omitempty"`
+	Interfaces []string       `json:"interfaces,omitempty"`
+	Visibility string         `json:"visibility,omitempty"`
+	IsAbstract bool           `json:"is_abstract,omitempty"`
+}
+
+// FieldInfo represents information about a class field
+type FieldInfo struct {
+	Name       string `json:"name"`
+	Type       string `json:"type"`
+	Line       int    `json:"line"`
+	Visibility string `json:"visibility,omitempty"`
+	IsStatic   bool   `json:"is_static,omitempty"`
+	IsFinal    bool   `json:"is_final,omitempty"`
+}
+
+// ImportInfo represents information about an import
+type ImportInfo struct {
+	Name     string `json:"name,omitempty"`
+	Path     string `json:"path"`
+	Alias    string `json:"alias,omitempty"`
+	Line     int    `json:"line"`
+	IsStatic bool   `json:"is_static,omitempty"`
+	IsLocal  bool   `json:"is_local,omitempty"`
+}
+
+// CheckerConfig represents configuration for a checker
+type CheckerConfig struct {
+	Enabled    bool                   `yaml:"enabled" json:"enabled"`
+	Severity   string                 `yaml:"severity" json:"severity"`
+	Timeout    time.Duration          `yaml:"timeout" json:"timeout"`
+	Categories []string               `yaml:"categories" json:"categories"`
+	Options    map[string]interface{} `yaml:"options" json:"options"`
+	Exclusions []string               `yaml:"exclusions" json:"exclusions"`
+}
+
+// AnalyzerConfig represents configuration for an analyzer
+type AnalyzerConfig struct {
+	Enabled           bool                   `yaml:"enabled" json:"enabled"`
+	FileExtensions    []string               `yaml:"file_extensions" json:"file_extensions"`
+	ExcludePatterns   []string               `yaml:"exclude_patterns" json:"exclude_patterns"`
+	ComplexityEnabled bool                   `yaml:"complexity_enabled" json:"complexity_enabled"`
+	FunctionLevel     bool                   `yaml:"function_level" json:"function_level"`
+	Categories        []string               `yaml:"categories" json:"categories"`
+	Options           map[string]interface{} `yaml:"options" json:"options"`
+}
+
+// ReporterConfig represents configuration for a reporter
+type ReporterConfig struct {
+	Enabled    bool                   `yaml:"enabled" json:"enabled"`
+	Format     string                 `yaml:"format" json:"format"`
+	Output     string                 `yaml:"output" json:"output"`
+	OutputFile string                 `yaml:"output_file" json:"output_file"`
+	Template   string                 `yaml:"template" json:"template"`
+	Options    map[string]interface{} `yaml:"options" json:"options"`
+}
+
+// EngineConfig represents configuration for the health engine
+type EngineConfig struct {
+	MaxConcurrency int           `yaml:"max_concurrency" json:"max_concurrency"`
+	Timeout        time.Duration `yaml:"timeout" json:"timeout"`
+	CacheEnabled   bool          `yaml:"cache_enabled" json:"cache_enabled"`
+	CacheTTL       time.Duration `yaml:"cache_ttl" json:"cache_ttl"`
+	Parallel       bool          `yaml:"parallel" json:"parallel"`
+}
+
+// Repository represents a repository to be analyzed
+type Repository struct {
+	Name      string            `yaml:"name" json:"name"`
+	URL       string            `yaml:"url" json:"url"`
+	Branch    string            `yaml:"branch" json:"branch"`
+	Path      string            `yaml:"path" json:"path"`
+	Tags      []string          `yaml:"tags" json:"tags"`
+	Language  string            `yaml:"language" json:"language"`
+	Framework string            `yaml:"framework" json:"framework"`
+	Metadata  map[string]string `yaml:"metadata" json:"metadata"`
+}
+
+// RepositoryContext provides context for repository operations
+type RepositoryContext struct {
+	Repository Repository        `json:"repository"`
+	Config     Config            `json:"config"`
+	Metadata   map[string]string `json:"metadata"`
+}
+
+// CheckResult represents the result of a health check
+type CheckResult struct {
+	ID         string                 `json:"id"`
+	Name       string                 `json:"name"`
+	Category   string                 `json:"category"`
+	Repository string                 `json:"repository"`
+	Status     HealthStatus           `json:"status"`
+	Score      int                    `json:"score"`
+	MaxScore   int                    `json:"max_score"`
+	Issues     []Issue                `json:"issues"`
+	Warnings   []Warning              `json:"warnings"`
+	Metrics    map[string]interface{} `json:"metrics"`
+	Metadata   map[string]string      `json:"metadata"`
+	Duration   time.Duration          `json:"duration"`
+	Timestamp  time.Time              `json:"timestamp"`
+	Error      string                 `json:"error,omitempty"`
+}
+
+// AnalysisResult represents the result of code analysis
+type AnalysisResult struct {
+	Language          string                   `json:"language"`
+	TotalFiles        int                      `json:"total_files"`
+	TotalLines        int                      `json:"total_lines"`
+	TotalFunctions    int                      `json:"total_functions"`
+	AverageComplexity float64                  `json:"average_complexity"`
+	Functions         []FunctionInfo           `json:"functions"`
+	Files             map[string]*FileAnalysis `json:"files"`
+	Patterns          []PatternMatch           `json:"patterns"`
+	Metrics           map[string]interface{}   `json:"metrics"`
+}
+
+// HealthStatus represents the health status of a check
 type HealthStatus string
 
 const (
@@ -24,154 +217,40 @@ const (
 	SeverityCritical Severity = "critical"
 )
 
-// Repository represents a code repository
-type Repository struct {
-	Name      string            `json:"name" yaml:"name"`
-	Path      string            `json:"path" yaml:"path"`
-	URL       string            `json:"url,omitempty" yaml:"url,omitempty"`
-	Branch    string            `json:"branch,omitempty" yaml:"branch,omitempty"`
-	Tags      []string          `json:"tags,omitempty" yaml:"tags,omitempty"`
-	Metadata  map[string]string `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-	Language  string            `json:"language,omitempty" yaml:"language,omitempty"`
-	Framework string            `json:"framework,omitempty" yaml:"framework,omitempty"`
-}
-
-// CheckResult represents the result of a health check
-type CheckResult struct {
-	ID         string                 `json:"id"`
-	Name       string                 `json:"name"`
-	Category   string                 `json:"category"`
-	Status     HealthStatus           `json:"status"`
-	Score      int                    `json:"score"`
-	MaxScore   int                    `json:"max_score"`
-	Issues     []Issue                `json:"issues"`
-	Warnings   []Warning              `json:"warnings"`
-	Metrics    map[string]interface{} `json:"metrics"`
-	Metadata   map[string]string      `json:"metadata"`
-	Duration   time.Duration          `json:"duration"`
-	Timestamp  time.Time              `json:"timestamp"`
-	Repository string                 `json:"repository"`
-}
-
-// Issue represents a specific issue found during checking
+// Issue represents a health check issue
 type Issue struct {
-	Type       string                 `json:"type"`
-	Severity   Severity               `json:"severity"`
-	Message    string                 `json:"message"`
-	Location   *Location              `json:"location,omitempty"`
-	Suggestion string                 `json:"suggestion,omitempty"`
-	Context    map[string]interface{} `json:"context,omitempty"`
+	Type        string                 `json:"type"`
+	Severity    Severity               `json:"severity"`
+	Message     string                 `json:"message"`
+	Description string                 `json:"description,omitempty"`
+	Location    *Location              `json:"location,omitempty"`
+	Context     map[string]interface{} `json:"context,omitempty"`
+	Suggestion  string                 `json:"suggestion,omitempty"`
 }
 
-// Warning represents a warning found during checking
+// Warning represents a health check warning
 type Warning struct {
-	Type     string    `json:"type"`
-	Message  string    `json:"message"`
-	Location *Location `json:"location,omitempty"`
+	Type        string    `json:"type"`
+	Message     string    `json:"message"`
+	Description string    `json:"description,omitempty"`
+	Location    *Location `json:"location,omitempty"`
+	Context     string    `json:"context,omitempty"`
 }
 
-// Location represents a location in a file
+// Location represents a location in code
 type Location struct {
-	File     string `json:"file"`
-	Line     int    `json:"line"`
-	Column   int    `json:"column"`
-	Function string `json:"function,omitempty"`
+	File   string `json:"file"`
+	Line   int    `json:"line"`
+	Column int    `json:"column,omitempty"`
 }
 
-// RepositoryContext contains context for repository checking
-type RepositoryContext struct {
-	Repository Repository
-	Config     Config
-	FileSystem FileSystem
-	Cache      Cache
-	Logger     Logger
-}
-
-// Config represents configuration interface
-type Config interface {
-	GetCheckerConfig(checkerID string) (CheckerConfig, bool)
-	GetAnalyzerConfig(language string) (AnalyzerConfig, bool)
-	GetReporterConfig(reporterID string) (ReporterConfig, bool)
-	GetEngineConfig() EngineConfig
-}
-
-// CheckerConfig represents configuration for a checker
-type CheckerConfig struct {
-	Enabled    bool                   `json:"enabled" yaml:"enabled"`
-	Severity   string                 `json:"severity" yaml:"severity"`
-	Timeout    time.Duration          `json:"timeout" yaml:"timeout"`
-	Options    map[string]interface{} `json:"options" yaml:"options"`
-	Categories []string               `json:"categories" yaml:"categories"`
-	Exclusions []string               `json:"exclusions" yaml:"exclusions"`
-}
-
-// AnalyzerConfig represents configuration for an analyzer
-type AnalyzerConfig struct {
-	Enabled           bool     `json:"enabled" yaml:"enabled"`
-	FileExtensions    []string `json:"file_extensions" yaml:"file_extensions"`
-	ExcludePatterns   []string `json:"exclude_patterns" yaml:"exclude_patterns"`
-	ComplexityEnabled bool     `json:"complexity_enabled" yaml:"complexity_enabled"`
-	FunctionLevel     bool     `json:"function_level" yaml:"function_level"`
-}
-
-// ReporterConfig represents configuration for a reporter
-type ReporterConfig struct {
-	Enabled    bool                   `json:"enabled" yaml:"enabled"`
-	OutputFile string                 `json:"output_file" yaml:"output_file"`
-	Template   string                 `json:"template" yaml:"template"`
-	Options    map[string]interface{} `json:"options" yaml:"options"`
-}
-
-// EngineConfig represents configuration for the execution engine
-type EngineConfig struct {
-	MaxConcurrency int           `json:"max_concurrency" yaml:"max_concurrency"`
-	Timeout        time.Duration `json:"timeout" yaml:"timeout"`
-	CacheEnabled   bool          `json:"cache_enabled" yaml:"cache_enabled"`
-	CacheTTL       time.Duration `json:"cache_ttl" yaml:"cache_ttl"`
-}
-
-// FileSystem represents file system operations interface
-type FileSystem interface {
-	ReadFile(path string) ([]byte, error)
-	WriteFile(path string, data []byte) error
-	Exists(path string) bool
-	IsDir(path string) bool
-	ListFiles(path string, pattern string) ([]string, error)
-	Walk(path string, walkFn func(path string, info FileInfo) error) error
-}
-
-// FileInfo represents file information
-type FileInfo struct {
-	Name    string
-	Size    int64
-	Mode    uint32
-	ModTime time.Time
-	IsDir   bool
-}
-
-// Cache represents caching interface
-type Cache interface {
-	Get(key string) (interface{}, bool)
-	Set(key string, value interface{}, ttl time.Duration)
-	Delete(key string)
-	Clear()
-}
-
-// Logger represents logging interface
-type Logger interface {
-	Debug(message string, fields ...Field)
-	Info(message string, fields ...Field)
-	Warn(message string, fields ...Field)
-	Error(message string, fields ...Field)
-}
-
-// Field represents a log field
+// Field represents a structured logging field
 type Field struct {
 	Key   string
 	Value interface{}
 }
 
-// Helper functions for creating log fields
+// Logger helper functions for structured logging
 func String(key, value string) Field {
 	return Field{Key: key, Value: value}
 }
@@ -184,85 +263,18 @@ func Duration(key string, value time.Duration) Field {
 	return Field{Key: key, Value: value}
 }
 
+func Error(key string, value error) Field {
+	return Field{Key: key, Value: value}
+}
+
 func Bool(key string, value bool) Field {
+	return Field{Key: key, Value: value}
+}
+
+func Float64(key string, value float64) Field {
 	return Field{Key: key, Value: value}
 }
 
 func Any(key string, value interface{}) Field {
 	return Field{Key: key, Value: value}
-}
-
-func Error(key string, err error) Field {
-	return Field{Key: key, Value: err}
-}
-
-// Analysis types for language analyzers
-
-// AnalysisResult represents the result of language-specific analysis
-type AnalysisResult struct {
-	Language  string                   `json:"language"`
-	Files     map[string]*FileAnalysis `json:"files"`
-	Functions []FunctionInfo           `json:"functions"`
-	Metrics   map[string]interface{}   `json:"metrics"`
-	Timestamp time.Time                `json:"timestamp"`
-	Duration  time.Duration            `json:"duration"`
-}
-
-// FileAnalysis represents analysis results for a single file
-type FileAnalysis struct {
-	Path      string                 `json:"path"`
-	Language  string                 `json:"language"`
-	Functions []FunctionInfo         `json:"functions"`
-	Classes   []ClassInfo            `json:"classes,omitempty"`
-	Imports   []ImportInfo           `json:"imports,omitempty"`
-	Metrics   map[string]interface{} `json:"metrics"`
-	Issues    []Issue                `json:"issues,omitempty"`
-}
-
-// FunctionInfo represents information about a function
-type FunctionInfo struct {
-	Name       string                 `json:"name"`
-	File       string                 `json:"file"`
-	Line       int                    `json:"line"`
-	EndLine    int                    `json:"end_line,omitempty"`
-	Complexity int                    `json:"complexity"`
-	Language   string                 `json:"language"`
-	Parameters []ParameterInfo        `json:"parameters,omitempty"`
-	ReturnType string                 `json:"return_type,omitempty"`
-	Metadata   map[string]interface{} `json:"metadata,omitempty"`
-}
-
-// ClassInfo represents information about a class
-type ClassInfo struct {
-	Name      string         `json:"name"`
-	File      string         `json:"file"`
-	Line      int            `json:"line"`
-	EndLine   int            `json:"end_line,omitempty"`
-	Language  string         `json:"language"`
-	Methods   []FunctionInfo `json:"methods"`
-	Fields    []FieldInfo    `json:"fields,omitempty"`
-	SuperType string         `json:"super_type,omitempty"`
-}
-
-// FieldInfo represents information about a class field
-type FieldInfo struct {
-	Name       string `json:"name"`
-	Type       string `json:"type"`
-	Line       int    `json:"line"`
-	Visibility string `json:"visibility,omitempty"`
-}
-
-// ParameterInfo represents information about a function parameter
-type ParameterInfo struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-}
-
-// ImportInfo represents information about imports/includes
-type ImportInfo struct {
-	Name    string `json:"name"`
-	Path    string `json:"path"`
-	Alias   string `json:"alias,omitempty"`
-	Line    int    `json:"line"`
-	IsLocal bool   `json:"is_local"`
 }

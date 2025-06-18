@@ -462,3 +462,53 @@ func (c *AdvancedConfig) MergeConfig(other *AdvancedConfig) {
 	// Append overrides
 	c.Overrides = append(c.Overrides, other.Overrides...)
 }
+
+// FilterByCategories creates a new AdvancedConfig with only checkers and analyzers
+// that belong to the specified categories. If no categories are specified, returns
+// the original config unchanged.
+func (c *AdvancedConfig) FilterByCategories(categories []string) *AdvancedConfig {
+	if len(categories) == 0 {
+		return c
+	}
+
+	// Create a copy of the configuration
+	filtered := &AdvancedConfig{
+		Version:      c.Version,
+		Engine:       c.Engine,
+		Checkers:     make(map[string]core.CheckerConfig),
+		Analyzers:    make(map[string]core.AnalyzerConfig),
+		Reporters:    c.Reporters,  // Copy reporters as-is
+		Categories:   c.Categories, // Copy categories as-is
+		Overrides:    c.Overrides,  // Copy overrides as-is
+		Extensions:   c.Extensions,
+		Integrations: c.Integrations,
+	}
+
+	// Create a set of target categories for efficient lookup
+	categorySet := make(map[string]bool)
+	for _, cat := range categories {
+		categorySet[cat] = true
+	}
+
+	// Filter checkers by categories
+	for id, checker := range c.Checkers {
+		// Check if any of the checker's categories match our target categories
+		for _, checkerCategory := range checker.Categories {
+			if categorySet[checkerCategory] {
+				filtered.Checkers[id] = checker
+				break
+			}
+		}
+	}
+
+	// Filter analyzers by categories (analyzers need a different approach since they don't have explicit categories)
+	// For now, we'll include analyzers based on language categories or keep all analyzers
+	// This can be enhanced later if analyzers get explicit category support
+	for lang, analyzer := range c.Analyzers {
+		// For now, we include all analyzers if any category is specified
+		// This could be enhanced by adding category support to AnalyzerConfig
+		filtered.Analyzers[lang] = analyzer
+	}
+
+	return filtered
+}
