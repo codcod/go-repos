@@ -9,6 +9,7 @@ import (
 	"github.com/codcod/repos/internal/health/checkers/ci"
 	"github.com/codcod/repos/internal/health/checkers/compliance"
 	"github.com/codcod/repos/internal/health/checkers/dependencies"
+	"github.com/codcod/repos/internal/health/checkers/docs"
 	"github.com/codcod/repos/internal/health/checkers/git"
 	"github.com/codcod/repos/internal/health/checkers/security"
 	"github.com/codcod/repos/internal/platform/commands"
@@ -50,6 +51,9 @@ func (r *CheckerRegistry) registerDefaultCheckers(executor commands.CommandExecu
 
 	// CI/CD checkers
 	r.Register(ci.NewCIConfigChecker())
+
+	// Documentation checkers
+	r.Register(docs.NewReadmeChecker())
 }
 
 // Register adds a checker to the registry

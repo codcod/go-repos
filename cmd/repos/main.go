@@ -835,6 +835,19 @@ func generateHealthConfig() {
 				fmt.Println("      require_tests: true        # Require test execution in CI")
 				fmt.Println("      require_linting: false     # Require linting in CI")
 
+			case "readme-check":
+				fmt.Println("      require_badges: true       # Require status badges (build, coverage, etc.)")
+				fmt.Println("      require_code_examples: true # Require code examples and usage")
+				fmt.Println("      require_license_info: true # Require license information")
+				fmt.Println("      min_length: 200            # Minimum content length")
+				fmt.Println("      required_sections:         # Required sections in README")
+				fmt.Println("        - \"description\"")
+				fmt.Println("        - \"installation\"")
+				fmt.Println("        - \"usage\"")
+				fmt.Println("      custom_badge_patterns:     # Custom badge patterns to check")
+				fmt.Println("        - \"travis-ci\"")
+				fmt.Println("        - \"codecov\"")
+
 			default:
 				fmt.Println("      # Checker-specific options would be documented here")
 			}
