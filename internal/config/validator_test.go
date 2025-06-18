@@ -78,13 +78,6 @@ func TestAdvancedConfigValidation(t *testing.T) {
 				Profiles: map[string]ProfileConfig{
 					"dev": {Description: "Development profile"},
 				},
-				Pipelines: map[string]PipelineConfig{
-					"default": {
-						Name:        "default",
-						Description: "Default pipeline",
-						Steps:       []StepConfig{{Name: "test-step", Type: "check"}},
-					},
-				},
 			},
 			wantErr: false,
 		},
@@ -107,23 +100,6 @@ func TestAdvancedConfigValidation(t *testing.T) {
 				},
 				Profiles: map[string]ProfileConfig{
 					"dev": {Description: ""}, // Invalid
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "pipeline without steps",
-			config: &AdvancedConfig{
-				Version: "1.0",
-				Engine: core.EngineConfig{
-					MaxConcurrency: 4,
-				},
-				Pipelines: map[string]PipelineConfig{
-					"default": {
-						Name:        "default",
-						Description: "Default pipeline",
-						Steps:       []StepConfig{}, // Invalid
-					},
 				},
 			},
 			wantErr: true,
@@ -158,34 +134,6 @@ func TestValidationRules(t *testing.T) {
 		config.Profiles["invalid"] = ProfileConfig{Description: ""}
 		if err := rule.Validate(config); err == nil {
 			t.Error("Expected error for profile without description")
-		}
-	})
-
-	t.Run("PipelineValidationRule", func(t *testing.T) {
-		rule := &PipelineValidationRule{}
-
-		// Valid pipeline
-		config := &AdvancedConfig{
-			Pipelines: map[string]PipelineConfig{
-				"test": {
-					Name:        "test",
-					Description: "Test pipeline",
-					Steps:       []StepConfig{{Name: "step1", Type: "check"}},
-				},
-			},
-		}
-		if err := rule.Validate(config); err != nil {
-			t.Errorf("Expected no error for valid pipeline, got: %v", err)
-		}
-
-		// Invalid pipeline - no steps
-		config.Pipelines["invalid"] = PipelineConfig{
-			Name:        "invalid",
-			Description: "Invalid pipeline",
-			Steps:       []StepConfig{},
-		}
-		if err := rule.Validate(config); err == nil {
-			t.Error("Expected error for pipeline without steps")
 		}
 	})
 

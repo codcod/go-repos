@@ -181,9 +181,6 @@ profiles:
 
 # With specific profile
 ./repos health --config config.yaml --profile development
-
-# With custom pipeline
-./repos health --config config.yaml --pipeline quality-checks
 ```
 
 ### Feature Flag Management

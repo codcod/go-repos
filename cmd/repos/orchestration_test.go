@@ -158,9 +158,6 @@ func TestOrchestrationConfigLoading(t *testing.T) {
 	if len(config.Profiles) == 0 {
 		t.Error("Should have profiles configured")
 	}
-	if len(config.Pipelines) == 0 {
-		t.Error("Should have pipelines configured")
-	}
 
 	// Verify engine config
 	engineConfig := config.GetEngineConfig()
@@ -176,8 +173,8 @@ func TestOrchestrationConfigLoading(t *testing.T) {
 		}
 	}
 
-	t.Logf("Configuration loaded successfully with %d checkers, %d profiles, %d pipelines",
-		len(config.Checkers), len(config.Profiles), len(config.Pipelines))
+	t.Logf("Configuration loaded successfully with %d checkers, %d profiles",
+		len(config.Checkers), len(config.Profiles))
 }
 
 // TestOrchestrationDryRun tests dry run functionality
@@ -279,23 +276,6 @@ func createTestAdvancedConfig(t *testing.T) *config.AdvancedConfig {
 				Name:        "Test Profile",
 				Description: "Profile for testing",
 				Categories:  []string{"git"},
-			},
-		},
-		Pipelines: map[string]config.PipelineConfig{
-			"test": {
-				Name:        "Test Pipeline",
-				Description: "Simple test pipeline",
-				Steps: []config.StepConfig{
-					{
-						Name:    "git-checks",
-						Type:    "checkers",
-						Enabled: true,
-						Timeout: "1m",
-						Config: map[string]interface{}{
-							"categories": []string{"git"},
-						},
-					},
-				},
 			},
 		},
 	}

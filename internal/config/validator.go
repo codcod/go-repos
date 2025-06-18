@@ -30,7 +30,6 @@ func NewConfigValidator() *ConfigValidator {
 
 	// Add default validation rules
 	validator.AddRule(&ProfileValidationRule{})
-	validator.AddRule(&PipelineValidationRule{})
 	validator.AddRule(&EngineValidationRule{})
 
 	return validator
@@ -114,28 +113,4 @@ func (r *ProfileValidationRule) Validate(config *AdvancedConfig) error {
 
 func (r *ProfileValidationRule) GetDescription() string {
 	return "Profile Configuration Validation"
-}
-
-// PipelineValidationRule validates pipeline configurations
-type PipelineValidationRule struct{}
-
-func (r *PipelineValidationRule) Validate(config *AdvancedConfig) error {
-	for name, pipeline := range config.Pipelines {
-		if name == "" {
-			return fmt.Errorf("pipeline name cannot be empty")
-		}
-		if len(pipeline.Steps) == 0 {
-			return fmt.Errorf("pipeline '%s' has no steps configured", name)
-		}
-		for i, step := range pipeline.Steps {
-			if step.Name == "" {
-				return fmt.Errorf("pipeline '%s' step %d missing name", name, i+1)
-			}
-		}
-	}
-	return nil
-}
-
-func (r *PipelineValidationRule) GetDescription() string {
-	return "Pipeline Configuration Validation"
 }

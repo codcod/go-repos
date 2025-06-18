@@ -79,7 +79,7 @@ Health checkers validate various aspects of repository health:
 # Orchestration
 
 The orchestration engine coordinates the execution of analyzers and checkers:
-  - Configurable pipelines and workflows
+  - Configurable execution workflows
   - Parallel execution support
   - Error handling and retry logic
   - Progress reporting and logging

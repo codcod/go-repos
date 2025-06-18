@@ -19,41 +19,9 @@ type AdvancedConfig struct {
 	Reporters    map[string]core.ReporterConfig `yaml:"reporters"`
 	Categories   map[string]CategoryConfig      `yaml:"categories"`
 	Profiles     map[string]ProfileConfig       `yaml:"profiles"`
-	Pipelines    map[string]PipelineConfig      `yaml:"pipelines"`
 	Overrides    []OverrideConfig               `yaml:"overrides"`
 	Extensions   ExtensionsConfig               `yaml:"extensions"`
 	Integrations IntegrationsConfig             `yaml:"integrations"`
-}
-
-// PipelineConfig represents a pipeline configuration
-type PipelineConfig struct {
-	Name        string            `yaml:"name"`
-	Description string            `yaml:"description"`
-	Steps       []StepConfig      `yaml:"steps"`
-	Config      ExecutionConfig   `yaml:"config"`
-	Metadata    map[string]string `yaml:"metadata,omitempty"`
-}
-
-// StepConfig represents a step configuration
-type StepConfig struct {
-	Name         string                 `yaml:"name"`
-	Type         string                 `yaml:"type"`
-	Config       map[string]interface{} `yaml:"config"`
-	Dependencies []string               `yaml:"dependencies,omitempty"`
-	Enabled      bool                   `yaml:"enabled"`
-	Timeout      string                 `yaml:"timeout,omitempty"`
-}
-
-// ExecutionConfig represents execution configuration
-type ExecutionConfig struct {
-	MaxConcurrency  int                    `yaml:"max_concurrency"`
-	Timeout         string                 `yaml:"timeout"`
-	FailFast        bool                   `yaml:"fail_fast"`
-	RetryCount      int                    `yaml:"retry_count"`
-	RetryDelay      string                 `yaml:"retry_delay"`
-	ContinueOnError bool                   `yaml:"continue_on_error"`
-	OutputFormats   []string               `yaml:"output_formats"`
-	ReportingConfig map[string]interface{} `yaml:"reporting_config"`
 }
 
 // CategoryConfig defines configuration for a category of checks
@@ -252,7 +220,6 @@ func NewDefaultAdvancedConfig() *AdvancedConfig {
 				Analyzers:   make(map[string]core.AnalyzerConfig),
 			},
 		},
-		Pipelines:    make(map[string]PipelineConfig),
 		Overrides:    []OverrideConfig{},
 		Extensions:   ExtensionsConfig{},
 		Integrations: IntegrationsConfig{},

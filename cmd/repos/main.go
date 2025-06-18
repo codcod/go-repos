@@ -52,7 +52,6 @@ var (
 	// Health command flags
 	healthConfig   string
 	healthProfile  string
-	healthPipeline string
 	healthParallel bool
 	healthTimeout  int
 	healthDryRun   bool
@@ -403,8 +402,7 @@ func init() {
 	// Health command flags
 	healthCmd.Flags().StringVar(&healthConfig, "config", "", "health config file path (optional, uses built-in defaults if not provided)")
 	healthCmd.Flags().StringVar(&healthProfile, "profile", "default", "Profile name to apply from health config (default: 'default')")
-	healthCmd.Flags().StringVar(&healthPipeline, "pipeline", "", "Pipeline name to execute")
-	healthCmd.Flags().BoolVar(&healthParallel, "parallel", false, "Execute pipeline steps in parallel")
+	healthCmd.Flags().BoolVar(&healthParallel, "parallel", false, "Execute health checks in parallel")
 	healthCmd.Flags().IntVar(&healthTimeout, "timeout", 30, "Timeout in seconds for health checks (default: 30)")
 	healthCmd.Flags().BoolVar(&healthDryRun, "dry-run", false, "Dry run mode - show what would be executed")
 	healthCmd.Flags().BoolVar(&healthVerbose, "verbose", false, "Enable verbose output for health checks")
@@ -435,11 +433,11 @@ func main() {
 
 var healthCmd = &cobra.Command{
 	Use:   "health",
-	Short: "Run comprehensive health checks using pipelines",
-	Long: `Execute modular health checks using the health engine with configurable pipelines and advanced reporting.
+	Short: "Run comprehensive health checks with advanced analysis",
+	Long: `Execute modular health checks using the health engine with configurable profiles and advanced reporting.
 
 The health command works out-of-the-box with sensible defaults. No configuration file is required.
-If you want to customize the checks, you can provide an optional orchestration.yaml file.
+If you want to customize the checks, you can provide an optional configuration file.
 
 Examples:
   repos health                           # Run with built-in defaults
@@ -526,23 +524,9 @@ Examples:
 		// Create orchestration engine
 		engine := health.NewOrchestrationEngine(checkerRegistry, analyzerReg, advConfig, logger)
 
-		// Determine pipeline to use
-		pipelineName := healthPipeline
-		if pipelineName == "" {
-			pipelineName = "default"
-		}
-
-		// For now, use the engine directly since we don't have pipeline config yet
-		// In a production system, you would look up the pipeline configuration
-		// pipeline, exists := advancedConfig.Pipelines[pipelineName]
-		// if !exists {
-		//     color.Red("Pipeline '%s' not found in configuration", pipelineName)
-		//     os.Exit(1)
-		// }
-
-		// Execute pipeline
+		// Execute health checks
 		if healthDryRun {
-			color.Yellow("Dry run mode - would execute pipeline '%s' on %d repositories", pipelineName, len(coreRepos))
+			color.Yellow("Dry run mode - would execute health checks on %d repositories", len(coreRepos))
 			return
 		}
 

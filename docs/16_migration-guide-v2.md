@@ -81,7 +81,7 @@ Done.
 [2025-06-17 10:30:15] [INFO] [health-cmd] loading advanced configuration config_path=/path/to/config.yaml
 [2025-06-17 10:30:15] [INFO] [health-cmd] loading repositories basic_config=/path/to/basic.yaml tag=backend
 [2025-06-17 10:30:15] [INFO] [health-cmd] converted repositories count=5
-[2025-06-17 10:30:15] [INFO] [health-cmd] executing comprehensive health checks repositories=5 pipeline=default
+[2025-06-17 10:30:15] [INFO] [health-cmd] executing comprehensive health checks repositories=5 profile=default
 [2025-06-17 10:30:16] [INFO] [health-cmd] health checks completed successfully
 
 === Metrics Summary ===

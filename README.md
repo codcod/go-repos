@@ -189,9 +189,6 @@ repos health --config examples/advanced-config-sample.yaml
 # Use specific profile for different environments
 repos health --config examples/advanced-config-sample.yaml --profile production
 
-# Run specific pipeline
-repos health --config examples/advanced-config-sample.yaml --pipeline standard
-
 # Dry run to see what would be executed
 repos health --config examples/advanced-config-sample.yaml --dry-run
 ```
@@ -208,7 +205,6 @@ Both health analysis methods provide comprehensive checks including:
 The health-based approach offers additional benefits:
 - **Feature Flags**: Control which components are enabled
 - **Profiles**: Different check configurations for different environments
-- **Pipelines**: Complex workflows with dependencies
 - **Parallel Execution**: Improved performance
 - **Advanced Configuration**: YAML-based configuration with inheritance
 
@@ -230,12 +226,12 @@ The health engine provides:
 - **Multi-language support**: Go, Python, Java, JavaScript analysis
 - **Security scanning**: Vulnerability detection and dependency analysis
 - **Quality metrics**: Code quality and maintainability assessment
-- **Configurable pipelines**: Customizable analysis workflows
+- **Advanced configuration**: Flexible YAML-based configuration system
 
 **Flake8-style Format** (`--complexity-detailed`):
 - One violation per line (similar to flake8 output)
 - Format: `file:line:column: C901 'function_name' is too complex (complexity)`
-- Easy to integrate with CI/CD pipelines and linters
+- Easy to integrate with CI/CD systems and linters
 
 **Note**: When `--complexity-report` or `--complexity-detailed` is used alone (without `--categories`), it generates **only** the complexity analysis and skips all other health checks for faster execution. To combine complexity reporting with other health checks, specify the desired categories using `--categories`.
 
