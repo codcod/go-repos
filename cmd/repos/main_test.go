@@ -363,16 +363,14 @@ func TestHealthCommandWithListCategories(t *testing.T) {
 	}
 
 	// Build the binary first
-	buildCmd := exec.Command("go", "build", "-o", "repos_test", "./cmd/repos")
-	buildCmd.Dir = "../.." // Go to repo root
+	buildCmd := exec.Command("go", "build", "-o", "repos_test", ".")
 	if err := buildCmd.Run(); err != nil {
 		t.Fatalf("Failed to build binary: %v", err)
 	}
-	defer os.Remove("../../repos_test")
+	defer os.Remove("repos_test")
 
 	// Run the command with --list-categories
-	cmd := exec.Command("../../repos_test", "health", "--list-categories")
-	cmd.Dir = "../.." // Run from repo root
+	cmd := exec.Command("./repos_test", "health", "--list-categories")
 	output, err := cmd.Output()
 	if err != nil {
 		t.Fatalf("Command failed: %v", err)

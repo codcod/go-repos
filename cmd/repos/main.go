@@ -15,6 +15,7 @@ import (
 	"github.com/codcod/repos/internal/git"
 	"github.com/codcod/repos/internal/github"
 	"github.com/codcod/repos/internal/health"
+	healthconfig "github.com/codcod/repos/internal/health/config"
 	"github.com/codcod/repos/internal/runner"
 	"github.com/codcod/repos/internal/util"
 
@@ -465,7 +466,7 @@ Examples:
 		}
 
 		// Load advanced configuration or use defaults if file doesn't exist
-		advConfig, err := config.LoadAdvancedConfigOrDefault(configPath)
+		advConfig, err := healthconfig.LoadAdvancedConfigOrDefault(configPath)
 		if err != nil {
 			color.Red("Error loading health config: %v", err)
 			os.Exit(1)
@@ -669,7 +670,8 @@ func listHealthCategories() {
 	fs := health.NewFileSystem()
 	analyzerRegistry := health.NewAnalyzerRegistry(fs, logger)
 
-	color.Green("=== Available Health Check Categories ===\n")
+	fmt.Println("=== Available Health Check Categories ===")
+	fmt.Println()
 
 	// List checkers by category
 	checkers := checkerRegistry.GetCheckers()
@@ -680,9 +682,9 @@ func listHealthCategories() {
 		checkersByCategory[category] = append(checkersByCategory[category], checker)
 	}
 
-	color.Blue("📋 CHECKERS:\n")
+	fmt.Println("📋 CHECKERS:")
 	for category, categoryCheckers := range checkersByCategory {
-		color.Cyan("  Category: %s", category)
+		fmt.Printf("  Category: %s\n", category)
 		for _, checker := range categoryCheckers {
 			config := checker.Config()
 			status := "disabled"
@@ -700,7 +702,7 @@ func listHealthCategories() {
 
 	// List analyzers by language
 	analyzers := analyzerRegistry.GetAnalyzers()
-	color.Blue("🔍 ANALYZERS:\n")
+	fmt.Println("🔍 ANALYZERS:")
 
 	for _, analyzer := range analyzers {
 		fmt.Printf("  Language: %s\n", analyzer.Language())
@@ -710,12 +712,12 @@ func listHealthCategories() {
 	}
 
 	// Summary
-	color.Green("=== Summary ===")
+	fmt.Println("=== Summary ===")
 	fmt.Printf("Total Checkers: %d\n", len(checkers))
 	fmt.Printf("Total Categories: %d\n", len(checkersByCategory))
 	fmt.Printf("Total Analyzers: %d\n", len(analyzers))
 
-	color.Yellow("\nUsage Examples:")
+	fmt.Println("\nUsage Examples:")
 	fmt.Println("  repos health --category git,security     # Run only git and security checkers")
 	fmt.Println("  repos health --verbose                   # Show detailed output")
 	fmt.Println("  repos health --dry-run                   # Preview what would be executed")

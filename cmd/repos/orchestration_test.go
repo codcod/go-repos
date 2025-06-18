@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codcod/repos/internal/config"
 	"github.com/codcod/repos/internal/core"
 	"github.com/codcod/repos/internal/health/checkers/registry"
+	healthconfig "github.com/codcod/repos/internal/health/config"
 	"github.com/codcod/repos/internal/health/orchestration"
 	"github.com/codcod/repos/internal/platform/commands"
 )
@@ -137,7 +137,7 @@ func TestOrchestrationConfigLoading(t *testing.T) {
 	}
 
 	// Load configuration
-	config, err := config.LoadAdvancedConfig(configPath)
+	config, err := healthconfig.LoadAdvancedConfig(configPath)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
@@ -231,8 +231,8 @@ func createTestGitRepo(t *testing.T, dir string) {
 	executor.ExecuteInDir(ctx, dir, "git", "commit", "-m", "Initial commit")
 }
 
-func createTestAdvancedConfig(t *testing.T) *config.AdvancedConfig {
-	return &config.AdvancedConfig{
+func createTestAdvancedConfig(t *testing.T) *healthconfig.AdvancedConfig {
+	return &healthconfig.AdvancedConfig{
 		Version: "1.0",
 		Engine: core.EngineConfig{
 			MaxConcurrency: 2,
@@ -250,7 +250,7 @@ func createTestAdvancedConfig(t *testing.T) *config.AdvancedConfig {
 				},
 			},
 		},
-		Categories: map[string]config.CategoryConfig{
+		Categories: map[string]healthconfig.CategoryConfig{
 			"git": {
 				Name:        "Git Checks",
 				Description: "Git repository checks",
