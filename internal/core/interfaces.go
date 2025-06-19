@@ -24,17 +24,6 @@ type Analyzer interface {
 	Analyze(ctx context.Context, repoPath string, config AnalyzerConfig) (*AnalysisResult, error)
 }
 
-// LegacyAnalyzer represents the legacy analyzer interface for backward compatibility
-type LegacyAnalyzer interface {
-	Language() string
-	FileExtensions() []string
-	SupportsComplexity() bool
-	SupportsFunctionLevel() bool
-	AnalyzeComplexity(ctx context.Context, repoPath string) (ComplexityResult, error)
-	AnalyzeFunctions(ctx context.Context, repoPath string) ([]FunctionComplexity, error)
-	DetectPatterns(ctx context.Context, content string, patterns []Pattern) ([]PatternMatch, error)
-}
-
 // Reporter represents a result reporter interface
 type Reporter interface {
 	ID() string

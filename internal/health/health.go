@@ -7,7 +7,6 @@ import (
 	"github.com/codcod/repos/internal/core"
 	"github.com/codcod/repos/internal/health/analyzers"
 	"github.com/codcod/repos/internal/health/analyzers/common"
-	analyzer_registry "github.com/codcod/repos/internal/health/analyzers/registry"
 	checker_registry "github.com/codcod/repos/internal/health/checkers/registry"
 	"github.com/codcod/repos/internal/health/commands"
 	"github.com/codcod/repos/internal/health/filesystem"
@@ -17,69 +16,83 @@ import (
 
 // Re-export key types for cleaner imports
 type (
-	AnalyzerRegistry = analyzer_registry.Registry
-	CheckerRegistry  = checker_registry.CheckerRegistry
-	Engine           = orchestration.Engine
-	Formatter        = reporting.Formatter
+	CheckerRegistry = checker_registry.CheckerRegistry
+	Engine          = orchestration.Engine
+	Formatter       = reporting.Formatter
 )
 
-// NewAnalyzerMap creates a map of analyzers using the new factory system
-// This is the recommended way to get analyzers in the new architecture
-func NewAnalyzerMap(logger core.Logger) map[string]common.FullAnalyzer {
-	registry := make(map[string]common.FullAnalyzer)
-
-	for _, lang := range analyzers.GetSupportedLanguages() {
-		if analyzer, err := analyzers.GetAnalyzer(lang, logger); err == nil {
-			registry[lang] = analyzer
-		}
-	}
-
-	return registry
-}
-
 // NewAnalyzerRegistry creates a new analyzer registry using the new factory system
-// This method creates a legacy registry for backward compatibility
-func NewAnalyzerRegistry(logger core.Logger) *AnalyzerRegistry {
-	registry := analyzer_registry.NewRegistry()
-
-	// Register analyzers from the new factory system with adapters
-	for _, lang := range analyzers.GetSupportedLanguages() {
-		if analyzer, err := analyzers.GetAnalyzer(lang, logger); err == nil {
-			adapter := &NewToLegacyAnalyzerAdapter{analyzer: analyzer}
-			registry.Register(adapter)
-		}
-	}
-
-	return registry
+func NewAnalyzerRegistry(logger core.Logger) core.AnalyzerRegistry {
+	return &ModernAnalyzerRegistry{logger: logger}
 }
 
-// NewToLegacyAnalyzerAdapter adapts the new analyzer interface to the legacy core.Analyzer interface
-type NewToLegacyAnalyzerAdapter struct {
+// ModernAnalyzerRegistry implements core.AnalyzerRegistry using the new factory system
+type ModernAnalyzerRegistry struct {
+	logger core.Logger
+}
+
+// Register is not supported in the new factory system (analyzers are auto-registered)
+func (r *ModernAnalyzerRegistry) Register(analyzer core.Analyzer) {
+	// No-op: analyzers are automatically registered via the factory system
+}
+
+// Unregister is not supported in the new factory system
+func (r *ModernAnalyzerRegistry) Unregister(language string) {
+	// No-op: analyzers are automatically managed via the factory system
+}
+
+// GetAnalyzer gets an analyzer for the specified language
+func (r *ModernAnalyzerRegistry) GetAnalyzer(language string) (core.Analyzer, error) {
+	analyzer, err := analyzers.GetAnalyzer(language, r.logger)
+	if err != nil {
+		return nil, err
+	}
+	return &ModernAnalyzerAdapter{analyzer: analyzer}, nil
+}
+
+// GetAnalyzers returns all available analyzers
+func (r *ModernAnalyzerRegistry) GetAnalyzers() []core.Analyzer {
+	var result []core.Analyzer
+	for _, lang := range analyzers.GetSupportedLanguages() {
+		if analyzer, err := analyzers.GetAnalyzer(lang, r.logger); err == nil {
+			result = append(result, &ModernAnalyzerAdapter{analyzer: analyzer})
+		}
+	}
+	return result
+}
+
+// GetSupportedLanguages returns all supported languages
+func (r *ModernAnalyzerRegistry) GetSupportedLanguages() []string {
+	return analyzers.GetSupportedLanguages()
+}
+
+// ModernAnalyzerAdapter adapts the new analyzer interface to the core.Analyzer interface
+type ModernAnalyzerAdapter struct {
 	analyzer common.FullAnalyzer
 }
 
-// Name returns the analyzer name (legacy interface)
-func (a *NewToLegacyAnalyzerAdapter) Name() string {
+// Name returns the analyzer name
+func (a *ModernAnalyzerAdapter) Name() string {
 	return a.analyzer.Language() + "-analyzer"
 }
 
 // Language returns the programming language
-func (a *NewToLegacyAnalyzerAdapter) Language() string {
+func (a *ModernAnalyzerAdapter) Language() string {
 	return a.analyzer.Language()
 }
 
-// SupportedExtensions returns supported file extensions (legacy interface)
-func (a *NewToLegacyAnalyzerAdapter) SupportedExtensions() []string {
+// SupportedExtensions returns supported file extensions
+func (a *ModernAnalyzerAdapter) SupportedExtensions() []string {
 	return a.analyzer.FileExtensions()
 }
 
 // CanAnalyze checks if the analyzer can process the given repository
-func (a *NewToLegacyAnalyzerAdapter) CanAnalyze(repo core.Repository) bool {
+func (a *ModernAnalyzerAdapter) CanAnalyze(repo core.Repository) bool {
 	return a.analyzer.CanAnalyze(repo)
 }
 
 // Analyze performs full analysis and returns results
-func (a *NewToLegacyAnalyzerAdapter) Analyze(ctx context.Context, repoPath string, config core.AnalyzerConfig) (*core.AnalysisResult, error) {
+func (a *ModernAnalyzerAdapter) Analyze(ctx context.Context, repoPath string, config core.AnalyzerConfig) (*core.AnalysisResult, error) {
 	// Use the new analyzer's Analyze method if available, otherwise synthesize from complexity analysis
 	if fullAnalyzer, ok := a.analyzer.(interface {
 		Analyze(context.Context, string, core.AnalyzerConfig) (*core.AnalysisResult, error)
@@ -114,13 +127,6 @@ func (a *NewToLegacyAnalyzerAdapter) Analyze(ctx context.Context, repoPath strin
 	}
 
 	return result, nil
-}
-
-// NewAnalyzerRegistryLegacy creates a legacy analyzer registry for backward compatibility
-// This function is deprecated - use NewAnalyzerRegistry(logger) instead
-func NewAnalyzerRegistryLegacy(fs core.FileSystem, logger core.Logger) *AnalyzerRegistry {
-	// Fallback to new registry since legacy implementation was removed
-	return NewAnalyzerRegistry(logger)
 }
 
 // NewCheckerRegistry creates a new checker registry with command executor
@@ -160,7 +166,7 @@ func GetExitCode(result core.WorkflowResult) int {
 
 // HealthPackage provides a unified interface for all health analysis functionality
 type HealthPackage struct {
-	AnalyzerRegistry *AnalyzerRegistry
+	AnalyzerRegistry core.AnalyzerRegistry
 	CheckerRegistry  *CheckerRegistry
 	Engine           *Engine
 	FileSystem       core.FileSystem

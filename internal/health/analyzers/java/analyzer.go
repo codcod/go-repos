@@ -443,7 +443,7 @@ func (j *JavaAnalyzer) AnalyzeComplexity(ctx context.Context, repoPath string) (
 	return result, nil
 }
 
-// AnalyzeFunctions performs function-level analysis (LegacyAnalyzer interface)
+// AnalyzeFunctions performs function-level analysis
 func (j *JavaAnalyzer) AnalyzeFunctions(ctx context.Context, repoPath string) ([]core.FunctionComplexity, error) {
 	complexityResult, err := j.AnalyzeComplexity(ctx, repoPath)
 	if err != nil {
@@ -452,7 +452,7 @@ func (j *JavaAnalyzer) AnalyzeFunctions(ctx context.Context, repoPath string) ([
 	return complexityResult.Functions, nil
 }
 
-// DetectPatterns detects patterns in code content (LegacyAnalyzer interface)
+// DetectPatterns detects patterns in code content
 func (j *JavaAnalyzer) DetectPatterns(ctx context.Context, content string, patterns []core.Pattern) ([]core.PatternMatch, error) {
 	// Basic pattern detection implementation
 	var matches []core.PatternMatch

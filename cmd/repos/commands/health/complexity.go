@@ -11,7 +11,7 @@ import (
 	"github.com/codcod/repos/cmd/repos/common"
 	"github.com/codcod/repos/internal/config"
 	"github.com/codcod/repos/internal/core"
-	"github.com/codcod/repos/internal/health"
+	"github.com/codcod/repos/internal/health/analyzers"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -67,9 +67,6 @@ func analyzeComplexity(repositories []config.Repository, maxComplexity int) erro
 	// Create logger
 	logger := &complexityLogger{}
 
-	// Create analyzer registry with standard analyzers
-	analyzerRegistry := health.NewAnalyzerRegistry(logger)
-
 	ctx := context.Background()
 	hasHighComplexity := false
 	totalRepos := len(repositories)
@@ -99,16 +96,16 @@ func analyzeComplexity(repositories []config.Repository, maxComplexity int) erro
 		}
 
 		// Get analyzer for the detected language
-		analyzer, err := analyzerRegistry.GetAnalyzer(language)
+		analyzer, err := analyzers.GetAnalyzer(language, logger)
 		if err != nil {
 			color.Yellow("%s | No analyzer available for language: %s", repo.Name, language)
 			continue
 		}
 
 		// Check if analyzer supports cyclomatic analysis
-		if legacyAnalyzer, ok := analyzer.(core.LegacyAnalyzer); ok && legacyAnalyzer.SupportsComplexity() {
-			// Use legacy cyclomatic analysis
-			result, err := legacyAnalyzer.AnalyzeComplexity(ctx, repoPath)
+		if analyzer.SupportsComplexity() {
+			// Use new cyclomatic analysis
+			result, err := analyzer.AnalyzeComplexity(ctx, repoPath)
 			if err != nil {
 				color.Red("%s | Error analyzing cyclomatic: %v", repo.Name, err)
 				continue

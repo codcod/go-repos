@@ -8,6 +8,7 @@ import (
 	"github.com/codcod/repos/cmd/repos/common"
 	"github.com/codcod/repos/internal/core"
 	"github.com/codcod/repos/internal/health"
+	"github.com/codcod/repos/internal/health/analyzers"
 	"github.com/codcod/repos/internal/health/commands"
 	"github.com/spf13/cobra"
 )
@@ -136,9 +137,6 @@ func listCategories() error {
 	executor := commands.NewOSCommandExecutor(30 * time.Second)
 	checkerRegistry := health.NewCheckerRegistry(executor)
 
-	// Create analyzer registry
-	analyzerRegistry := health.NewAnalyzerRegistry(logger)
-
 	fmt.Println()
 	fmt.Println("📋 CHECKERS:")
 
@@ -170,12 +168,17 @@ func listCategories() error {
 
 	fmt.Println("🔍 ANALYZERS:")
 
-	// Get and display analyzers
-	analyzers := analyzerRegistry.GetAnalyzers()
-	for _, analyzer := range analyzers {
+	// Get and display analyzers using new factory system
+	supportedLanguages := analyzers.GetSupportedLanguages()
+	for _, language := range supportedLanguages {
+		analyzer, err := analyzers.GetAnalyzer(language, logger)
+		if err != nil {
+			continue
+		}
 		fmt.Printf("  Language: %s\n", analyzer.Language())
-		fmt.Printf("    • Name: %s\n", analyzer.Name())
-		fmt.Printf("    • Extensions: %v\n", analyzer.SupportedExtensions())
+		fmt.Printf("    • Extensions: %v\n", analyzer.FileExtensions())
+		fmt.Printf("    • Supports Complexity: %t\n", analyzer.SupportsComplexity())
+		fmt.Printf("    • Supports Function Analysis: %t\n", analyzer.SupportsFunctionLevel())
 		fmt.Println()
 	}
 
@@ -183,7 +186,7 @@ func listCategories() error {
 	fmt.Println("=== Summary ===")
 	fmt.Printf("Total Checkers: %d\n", len(checkers))
 	fmt.Printf("Total Categories: %d\n", len(checkersByCategory))
-	fmt.Printf("Total Analyzers: %d\n", len(analyzers))
+	fmt.Printf("Total Analyzers: %d\n", len(supportedLanguages))
 
 	fmt.Println()
 	fmt.Println("Usage Examples:")

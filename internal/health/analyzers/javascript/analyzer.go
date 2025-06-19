@@ -511,7 +511,7 @@ func (js *JavaScriptAnalyzer) AnalyzeComplexity(ctx context.Context, repoPath st
 	return result, nil
 }
 
-// AnalyzeFunctions performs function-level analysis (LegacyAnalyzer interface)
+// AnalyzeFunctions performs function-level analysis
 func (js *JavaScriptAnalyzer) AnalyzeFunctions(ctx context.Context, repoPath string) ([]core.FunctionComplexity, error) {
 	complexityResult, err := js.AnalyzeComplexity(ctx, repoPath)
 	if err != nil {
@@ -520,7 +520,7 @@ func (js *JavaScriptAnalyzer) AnalyzeFunctions(ctx context.Context, repoPath str
 	return complexityResult.Functions, nil
 }
 
-// DetectPatterns detects patterns in code content (LegacyAnalyzer interface)
+// DetectPatterns detects patterns in code content
 func (js *JavaScriptAnalyzer) DetectPatterns(ctx context.Context, content string, patterns []core.Pattern) ([]core.PatternMatch, error) {
 	// Basic pattern detection implementation
 	var matches []core.PatternMatch

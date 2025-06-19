@@ -9,22 +9,38 @@ import (
 func TestNewFactorySystem(t *testing.T) {
 	logger := &common.MockLogger{}
 
-	// Test that we can create an analyzer map using the new factory system
-	analyzerMap := NewAnalyzerMap(logger)
-
-	if len(analyzerMap) == 0 {
-		t.Error("Expected analyzer map to have at least one analyzer")
-	}
+	// Test that we can create an analyzer registry using the new factory system
+	registry := NewAnalyzerRegistry(logger)
 
 	// Test that all expected languages are supported
 	expectedLanguages := []string{"go", "python", "java", "javascript"}
 	for _, lang := range expectedLanguages {
-		if analyzer, exists := analyzerMap[lang]; !exists {
-			t.Errorf("Expected language '%s' to be in analyzer map", lang)
-		} else {
-			if analyzer.Language() != lang {
-				t.Errorf("Expected analyzer for language '%s', got '%s'", lang, analyzer.Language())
+		analyzer, err := registry.GetAnalyzer(lang)
+		if err != nil {
+			t.Errorf("Failed to get analyzer for language '%s': %v", lang, err)
+			continue
+		}
+		if analyzer.Language() != lang {
+			t.Errorf("Expected analyzer for language '%s', got '%s'", lang, analyzer.Language())
+		}
+	}
+
+	// Test that supported languages include our expected languages
+	supportedLanguages := registry.GetSupportedLanguages()
+	if len(supportedLanguages) == 0 {
+		t.Error("Expected at least one supported language")
+	}
+
+	for _, expectedLang := range expectedLanguages {
+		found := false
+		for _, supportedLang := range supportedLanguages {
+			if supportedLang == expectedLang {
+				found = true
+				break
 			}
+		}
+		if !found {
+			t.Errorf("Expected language '%s' to be supported", expectedLang)
 		}
 	}
 }

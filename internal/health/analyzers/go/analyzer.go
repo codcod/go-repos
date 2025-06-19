@@ -294,7 +294,7 @@ func (g *GoAnalyzer) AnalyzeComplexity(ctx context.Context, repoPath string) (co
 	return result, nil
 }
 
-// AnalyzeFunctions performs function-level analysis (LegacyAnalyzer interface)
+// AnalyzeFunctions performs function-level analysis
 func (g *GoAnalyzer) AnalyzeFunctions(ctx context.Context, repoPath string) ([]core.FunctionComplexity, error) {
 	complexityResult, err := g.AnalyzeComplexity(ctx, repoPath)
 	if err != nil {
@@ -303,7 +303,7 @@ func (g *GoAnalyzer) AnalyzeFunctions(ctx context.Context, repoPath string) ([]c
 	return complexityResult.Functions, nil
 }
 
-// DetectPatterns detects patterns in code content (LegacyAnalyzer interface)
+// DetectPatterns detects patterns in code content
 func (g *GoAnalyzer) DetectPatterns(ctx context.Context, content string, patterns []core.Pattern) ([]core.PatternMatch, error) {
 	// Basic pattern detection implementation
 	var matches []core.PatternMatch

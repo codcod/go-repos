@@ -148,7 +148,3 @@ func (a *BaseAnalyzer) AnalyzeFunctions(ctx context.Context, repoPath string) ([
 func (a *BaseAnalyzer) DetectPatterns(ctx context.Context, content string, patterns []core.Pattern) ([]core.PatternMatch, error) {
 	return nil, nil
 }
-
-// NOTE: NewRegistryWithStandardAnalyzers has been deprecated
-// Use the new factory system in internal/health/analyzers instead
-// Example: analyzers.GetAnalyzer("go", logger)
