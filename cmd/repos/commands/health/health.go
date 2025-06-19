@@ -14,18 +14,17 @@ import (
 
 // Config contains all configuration for health checks
 type Config struct {
-	ConfigPath       string
-	Categories       []string
-	Pipeline         string
-	Parallel         bool
-	TimeoutSeconds   int // Timeout in seconds
-	DryRun           bool
-	Verbose          bool
-	Tag              string
-	BasicConfig      string // Path to basic repo config
-	ListCategories   bool   // List available categories and checkers
-	ComplexityReport bool   // Run complexity analysis only
-	MaxComplexity    int    // Maximum allowed complexity
+	ConfigPath     string
+	Categories     []string
+	Pipeline       string
+	Parallel       bool
+	TimeoutSeconds int // Timeout in seconds
+	DryRun         bool
+	Verbose        bool
+	Tag            string
+	BasicConfig    string // Path to basic repo config
+	ListCategories bool   // List available categories and checkers
+	MaxComplexity  int    // Maximum allowed complexity
 }
 
 // NewCommand creates the health command
@@ -46,8 +45,7 @@ Examples:
   repos health                           # Run with built-in defaults
   repos health --config custom.yaml     # Use custom configuration
   repos health --category git,security  # Run only git and security checks
-  repos health --complexity-report      # Run only cyclomatic complexity analysis
-  repos health --complexity-report --category docs,security # Run complexity and other checks
+  repos health cyclomatic-complexity    # Run only cyclomatic complexity analysis
   repos health --verbose                # Show detailed output
   repos health --list-categories        # List all available categories and checks
   repos health --dry-run                # Preview what would be executed
@@ -60,8 +58,6 @@ Examples:
 	// Add flags
 	cmd.Flags().StringSliceVar(&config.Categories, "category", []string{},
 		"filter checkers and analyzers by categories (comma-separated, e.g., 'git,security')")
-	cmd.Flags().BoolVar(&config.ComplexityReport, "complexity-report", false,
-		"Generate a cyclomatic complexity report for the codebase")
 	cmd.Flags().StringVar(&config.ConfigPath, "config", "",
 		"health config file path (optional, uses built-in defaults if not provided)")
 	cmd.Flags().BoolVar(&config.DryRun, "dry-run", false,
@@ -78,7 +74,7 @@ Examples:
 		"Enable verbose output for health checks")
 
 	// Add subcommands
-	cmd.AddCommand(NewComplexityCommand())
+	cmd.AddCommand(NewCyclomaticComplexityCommand())
 	cmd.AddCommand(NewGenConfigCommand())
 
 	return cmd
@@ -278,18 +274,13 @@ func showDryRunConfiguration(config *Config) error {
 
 	// Complexity Analysis Configuration
 	common.PrintInfo("🧮 COMPLEXITY ANALYSIS:")
-	if config.ComplexityReport {
-		fmt.Println("  Complexity Report: ENABLED")
-		if config.MaxComplexity > 0 {
-			fmt.Printf("  Maximum Complexity Threshold: %d\n", config.MaxComplexity)
-			fmt.Println("  Note: Functions exceeding this threshold will cause failure")
-		} else {
-			fmt.Println("  Maximum Complexity Threshold: DISABLED")
-			fmt.Println("  Note: Complexity will be reported but won't cause failure")
-		}
+	fmt.Println("  Complexity Report: Available via 'repos health cyclomatic-complexity' subcommand")
+	if config.MaxComplexity > 0 {
+		fmt.Printf("  Maximum Complexity Threshold: %d\n", config.MaxComplexity)
+		fmt.Println("  Note: Functions exceeding this threshold will cause failure")
 	} else {
-		fmt.Println("  Complexity Report: DISABLED")
-		fmt.Println("  Note: Use --complexity-report to enable complexity analysis")
+		fmt.Println("  Maximum Complexity Threshold: DISABLED")
+		fmt.Println("  Note: Complexity will be reported but won't cause failure")
 	}
 	fmt.Println()
 
@@ -368,22 +359,19 @@ func showDryRunConfiguration(config *Config) error {
 	}
 	fmt.Println("  4. Run health checkers on each repository")
 	fmt.Println("  5. Run code analyzers on detected languages")
-	if config.ComplexityReport {
-		fmt.Println("  6. Generate complexity analysis report")
-	}
 	if config.Parallel {
-		fmt.Println("  7. Execute checks in parallel for faster processing")
+		fmt.Println("  6. Execute checks in parallel for faster processing")
 	} else {
-		fmt.Println("  7. Execute checks sequentially")
+		fmt.Println("  6. Execute checks sequentially")
 	}
-	fmt.Println("  8. Generate comprehensive health report")
+	fmt.Println("  7. Generate comprehensive health report")
 	fmt.Println()
 
 	// Configuration Tips
 	common.PrintInfo("💡 CONFIGURATION TIPS:")
 	fmt.Println("  • Use --config <file> to specify custom health configuration")
 	fmt.Println("  • Use --category git,security to run only specific checker categories")
-	fmt.Println("  • Use --complexity-report --max-complexity 10 to enforce complexity limits")
+	fmt.Println("  • Use 'repos health cyclomatic-complexity --max-complexity 10' to enforce complexity limits")
 	fmt.Println("  • Use --parallel to speed up analysis of multiple repositories")
 	fmt.Println("  • Use --verbose to see detailed output during execution")
 	fmt.Println("  • Use --list-categories to see all available categories and checkers")

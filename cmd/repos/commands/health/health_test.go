@@ -28,7 +28,7 @@ func TestNewCommand(t *testing.T) {
 
 	// Test that subcommands are added
 	subcommands := cmd.Commands()
-	expectedSubcommands := []string{"complexity", "genconfig"}
+	expectedSubcommands := []string{"cyclomatic-complexity", "genconfig"}
 
 	if len(subcommands) != len(expectedSubcommands) {
 		t.Errorf("Expected %d subcommands, got %d", len(expectedSubcommands), len(subcommands))
@@ -72,7 +72,6 @@ func TestHealthCommandFlags(t *testing.T) {
 		"dry-run",
 		"verbose",
 		"list-categories",
-		"complexity-report",
 		"max-complexity",
 	}
 

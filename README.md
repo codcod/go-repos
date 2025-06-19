@@ -209,8 +209,11 @@ The health-based approach offers additional benefits:
 Generate detailed function-level cyclomatic complexity reports and comprehensive code analysis using the health engine:
 
 ```sh
-# Use health checks for comprehensive analysis including complexity
+# Use health checks for comprehensive analysis
 repos health --config examples/advanced-config-sample.yaml --timeout 60
+
+# Run only cyclomatic complexity analysis
+repos health cyclomatic-complexity --max-complexity 10
 
 # Run with verbose output for detailed analysis results
 repos health --config examples/advanced-config-sample.yaml --verbose
@@ -229,7 +232,7 @@ The health engine provides:
 - Format: `file:line:column: C901 'function_name' is too complex (complexity)`
 - Easy to integrate with CI/CD systems and linters
 
-**Note**: When `--complexity-report` or `--complexity-detailed` is used alone (without `--categories`), it generates **only** the complexity analysis and skips all other health checks for faster execution. To combine complexity reporting with other health checks, specify the desired categories using `--categories`.
+**Note**: Use the `repos health cyclomatic-complexity` subcommand to generate **only** the complexity analysis and skip all other health checks for faster execution. To combine complexity reporting with other health checks, use the main `repos health` command with specific categories using `--category`.
 
 The complexity report provides:
 - **Function-level analysis**: Individual function complexity scores

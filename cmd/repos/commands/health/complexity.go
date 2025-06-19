@@ -13,14 +13,14 @@ type ComplexityConfig struct {
 	MaxComplexity int
 }
 
-// NewComplexityCommand creates the complexity subcommand
-func NewComplexityCommand() *cobra.Command {
+// NewCyclomaticComplexityCommand creates the cyclomatic-complexity subcommand
+func NewCyclomaticComplexityCommand() *cobra.Command {
 	complexityConfig := &ComplexityConfig{
 		MaxComplexity: 10,
 	}
 
 	cmd := &cobra.Command{
-		Use:   "complexity",
+		Use:   "cyclomatic-complexity",
 		Short: "Run cyclomatic complexity analysis",
 		Long:  `Analyze the cyclomatic complexity of code in repositories.`,
 		RunE: func(cmd *cobra.Command, args []string) error {

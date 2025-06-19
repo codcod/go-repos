@@ -4,12 +4,12 @@ import (
 	"testing"
 )
 
-func TestNewComplexityCommand(t *testing.T) {
-	cmd := NewComplexityCommand()
+func TestNewCyclomaticComplexityCommand(t *testing.T) {
+	cmd := NewCyclomaticComplexityCommand()
 
 	// Test command properties
-	if cmd.Use != "complexity" {
-		t.Errorf("Expected command use to be 'complexity', got %q", cmd.Use)
+	if cmd.Use != "cyclomatic-complexity" {
+		t.Errorf("Expected command use to be 'cyclomatic-complexity', got %q", cmd.Use)
 	}
 
 	if cmd.Short == "" {
@@ -26,7 +26,7 @@ func TestNewComplexityCommand(t *testing.T) {
 }
 
 func TestComplexityFlags(t *testing.T) {
-	cmd := NewComplexityCommand()
+	cmd := NewCyclomaticComplexityCommand()
 	flags := cmd.Flags()
 
 	// Test required flags exist
