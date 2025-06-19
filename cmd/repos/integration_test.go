@@ -457,7 +457,6 @@ func TestCLIHealthCommand(t *testing.T) {
 		"Execute modular health checks",
 		"Available Commands:",
 		"complexity",
-		"dryrun",
 		"genconfig",
 		"--list-categories",
 		"--gen-config",
@@ -556,14 +555,14 @@ func TestCLIHealthDryRun(t *testing.T) {
 		t.Fatalf("failed to create config.yaml: %v", err)
 	}
 
-	cmd := exec.Command(filepath.Join(originalDir, "repos-test"), "health", "dryrun")
+	cmd := exec.Command(filepath.Join(originalDir, "repos-test"), "health", "--dry-run")
 	output, err := cmd.Output()
 	if err != nil {
-		t.Fatalf("health dryrun command failed: %v, output: %s", err, string(output))
+		t.Fatalf("health --dry-run command failed: %v, output: %s", err, string(output))
 	}
 
 	outputStr := string(output)
-	if !strings.Contains(outputStr, "Dry run") || !strings.Contains(outputStr, "would") {
+	if !strings.Contains(outputStr, "DRY RUN MODE") || !strings.Contains(outputStr, "Configuration Preview") {
 		t.Errorf("dryrun output should contain dry run indicators, got: %s", outputStr)
 	}
 }
@@ -796,15 +795,15 @@ func TestCLIHealthDryRunCommand(t *testing.T) {
 	}
 
 	// Run dry run
-	cmd := exec.Command(filepath.Join(originalDir, "repos-test"), "health", "dryrun")
+	cmd := exec.Command(filepath.Join(originalDir, "repos-test"), "health", "--dry-run")
 	output, err := cmd.Output()
 	if err != nil {
-		t.Fatalf("health dryrun command failed: %v, output: %s", err, string(output))
+		t.Fatalf("health --dry-run command failed: %v, output: %s", err, string(output))
 	}
 
 	outputStr := string(output)
 	// Dry run should show what would be executed
-	if !strings.Contains(outputStr, "dryrun-test-repo") {
+	if !strings.Contains(outputStr, "DRY RUN MODE") || !strings.Contains(outputStr, "Configuration Preview") {
 		t.Errorf("dry run output should contain repository name, got: %s", outputStr)
 	}
 }
