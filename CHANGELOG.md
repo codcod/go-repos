@@ -1,3 +1,10 @@
+## [3.1.1](https://github.com/codcod/repos/compare/v3.1.0...v3.1.1) (2025-06-19)
+
+
+### Bug Fixes
+
+* cyclomatic complexity for java ([a4df51c](https://github.com/codcod/repos/commit/a4df51c493e4419bd60ee5e8c970a2aacd19c57e))
+
 # [3.1.0](https://github.com/codcod/repos/compare/v3.0.0...v3.1.0) (2025-06-18)
 
 
