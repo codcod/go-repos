@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/codcod/repos/internal/core"
-	"github.com/codcod/repos/internal/platform/filesystem"
+	"github.com/codcod/repos/internal/health/filesystem"
 )
 
 // MockLogger for testing

@@ -12,7 +12,7 @@ import (
 	"github.com/codcod/repos/internal/health/checkers/docs"
 	"github.com/codcod/repos/internal/health/checkers/git"
 	"github.com/codcod/repos/internal/health/checkers/security"
-	"github.com/codcod/repos/internal/platform/commands"
+	"github.com/codcod/repos/internal/health/commands"
 )
 
 // CheckerRegistry manages all available checkers

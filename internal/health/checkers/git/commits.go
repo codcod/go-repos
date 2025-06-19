@@ -9,7 +9,7 @@ import (
 
 	"github.com/codcod/repos/internal/core"
 	"github.com/codcod/repos/internal/health/checkers/base"
-	"github.com/codcod/repos/internal/platform/commands"
+	"github.com/codcod/repos/internal/health/commands"
 )
 
 // LastCommitChecker checks when the last commit was made

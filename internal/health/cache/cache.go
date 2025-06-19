@@ -40,7 +40,6 @@ func (c *MemoryCache) Get(key string) (interface{}, bool) {
 
 	// Check if item has expired
 	if time.Now().After(item.expiredAt) {
-		// Remove expired item (will be cleaned up by background process)
 		return nil, false
 	}
 
@@ -53,11 +52,6 @@ func (c *MemoryCache) Set(key string, value interface{}, ttl time.Duration) {
 	defer c.mu.Unlock()
 
 	expiredAt := time.Now().Add(ttl)
-	if ttl <= 0 {
-		// No expiration
-		expiredAt = time.Now().Add(24 * time.Hour * 365) // 1 year
-	}
-
 	c.items[key] = &cacheItem{
 		value:     value,
 		expiredAt: expiredAt,
@@ -80,9 +74,9 @@ func (c *MemoryCache) Clear() {
 	c.items = make(map[string]*cacheItem)
 }
 
-// cleanup removes expired items periodically
+// cleanup removes expired items from the cache
 func (c *MemoryCache) cleanup() {
-	ticker := time.NewTicker(5 * time.Minute)
+	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
 	for range ticker.C {
@@ -95,12 +89,4 @@ func (c *MemoryCache) cleanup() {
 		}
 		c.mu.Unlock()
 	}
-}
-
-// Size returns the number of items in the cache
-func (c *MemoryCache) Size() int {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	return len(c.items)
 }

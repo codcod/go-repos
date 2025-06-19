@@ -10,7 +10,7 @@ import (
 
 	"github.com/codcod/repos/internal/core"
 	"github.com/codcod/repos/internal/health/checkers/base"
-	"github.com/codcod/repos/internal/platform/commands"
+	"github.com/codcod/repos/internal/health/commands"
 )
 
 // VulnerabilityChecker checks for security vulnerabilities

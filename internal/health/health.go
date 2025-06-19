@@ -6,10 +6,10 @@ import (
 	"github.com/codcod/repos/internal/core"
 	analyzer_registry "github.com/codcod/repos/internal/health/analyzers/registry"
 	checker_registry "github.com/codcod/repos/internal/health/checkers/registry"
+	"github.com/codcod/repos/internal/health/commands"
+	"github.com/codcod/repos/internal/health/filesystem"
 	"github.com/codcod/repos/internal/health/orchestration"
 	"github.com/codcod/repos/internal/health/reporting"
-	"github.com/codcod/repos/internal/platform/commands"
-	"github.com/codcod/repos/internal/platform/filesystem"
 )
 
 // Re-export key types for cleaner imports
