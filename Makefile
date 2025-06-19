@@ -48,7 +48,7 @@ test-unit: ## Run unit tests only
 
 test-integration: ## Run integration tests
 	@echo "Running integration tests..."
-	go test -v -tags=integration .
+	go test -v ./cmd/repos -run TestCLI
 
 test-coverage: ## Generate test coverage report
 	@echo "Generating coverage report..."

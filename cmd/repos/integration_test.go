@@ -29,7 +29,7 @@ func TestMain(m *testing.M) {
 }
 
 func buildBinary() error {
-	cmd := exec.Command("go", "build", "-o", "repos-test", "./cmd/repos")
+	cmd := exec.Command("go", "build", "-o", "repos-test", ".")
 	return cmd.Run()
 }
 
@@ -444,5 +444,3 @@ func TestCLIErrorHandling(t *testing.T) {
 		t.Errorf("error output should still contain repository name, got: %s", outputStr)
 	}
 }
-
-// Helper function to format repository configs

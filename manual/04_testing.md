@@ -29,8 +29,8 @@ repos/
 │       ├── repo_test.go            # Repository utilities tests
 │       └── scan_test.go            # Repository scanning tests
 ├── cmd/repos/
-│   └── main_test.go                # Main package and CLI tests
-└── integration_test.go             # End-to-end integration tests
+│   ├── main_test.go                # Main package and CLI tests
+│   └── integration_test.go         # End-to-end integration tests
 ```
 
 ## Running Tests
@@ -109,7 +109,7 @@ go test -short ./...
 - **TestGetEnvOrDefault**: Environment variable handling
 - **TestVersionVariables**: Version information management
 
-### Integration Tests (`integration_test.go`)
+### Integration Tests (`cmd/repos/integration_test.go`)
 
 End-to-end testing of the complete CLI:
 - **TestCLIVersion**: Version command functionality
