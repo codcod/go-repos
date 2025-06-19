@@ -95,13 +95,18 @@ func execute(config *Config) error {
 		return err
 	}
 
-	// Handle special flags first
+	// Handle special flags first - order matters!
 	if config.ListCategories {
 		return listCategories()
 	}
 
 	if config.GenConfig {
 		return generateConfig()
+	}
+
+	// Check for dry-run mode explicitly
+	if config.DryRun {
+		return showDryRunConfiguration(config)
 	}
 
 	// For now, this is a placeholder implementation
@@ -244,6 +249,168 @@ func generateConfig() error {
 	// This would delegate to the internal health package
 	// For now, we'll show a placeholder
 	common.PrintSuccess("Configuration template would be generated here")
+
+	return nil
+}
+
+// showDryRunConfiguration displays exhaustive configuration for dry-run mode
+//
+//nolint:gocyclo
+func showDryRunConfiguration(config *Config) error {
+	common.PrintInfo("🔍 DRY RUN MODE - Health Check Configuration Preview")
+	fmt.Println()
+
+	// Basic Configuration
+	common.PrintInfo("📋 BASIC CONFIGURATION:")
+	fmt.Printf("  Timeout: %d seconds\n", config.TimeoutSeconds)
+	fmt.Printf("  Parallel Execution: %t\n", config.Parallel)
+	fmt.Printf("  Verbose Output: %t\n", config.Verbose)
+
+	if config.ConfigPath != "" {
+		fmt.Printf("  Config File: %s\n", config.ConfigPath)
+	} else {
+		fmt.Println("  Config File: Using built-in defaults")
+	}
+	fmt.Println()
+
+	// Categories Configuration
+	common.PrintInfo("🏷️  CATEGORIES CONFIGURATION:")
+	if len(config.Categories) > 0 {
+		fmt.Printf("  Selected Categories: %v\n", config.Categories)
+		fmt.Println("  Note: Only checkers and analyzers in these categories will run")
+	} else {
+		fmt.Println("  Selected Categories: ALL (no filter applied)")
+		fmt.Println("  Note: All available checkers and analyzers will run")
+	}
+	fmt.Println()
+
+	// Repository Configuration
+	common.PrintInfo("🏪 REPOSITORY CONFIGURATION:")
+	if config.Tag != "" {
+		fmt.Printf("  Repository Filter: tag='%s'\n", config.Tag)
+		fmt.Println("  Note: Only repositories with this tag will be analyzed")
+	} else {
+		fmt.Println("  Repository Filter: ALL repositories")
+		fmt.Println("  Note: All repositories in config will be analyzed")
+	}
+	fmt.Println()
+
+	// Complexity Analysis Configuration
+	common.PrintInfo("🧮 COMPLEXITY ANALYSIS:")
+	if config.ComplexityReport {
+		fmt.Println("  Complexity Report: ENABLED")
+		if config.MaxComplexity > 0 {
+			fmt.Printf("  Maximum Complexity Threshold: %d\n", config.MaxComplexity)
+			fmt.Println("  Note: Functions exceeding this threshold will cause failure")
+		} else {
+			fmt.Println("  Maximum Complexity Threshold: DISABLED")
+			fmt.Println("  Note: Complexity will be reported but won't cause failure")
+		}
+	} else {
+		fmt.Println("  Complexity Report: DISABLED")
+		fmt.Println("  Note: Use --complexity-report to enable complexity analysis")
+	}
+	fmt.Println()
+
+	// Available Health Checkers
+	common.PrintInfo("✅ AVAILABLE HEALTH CHECKERS:")
+	checkers := []struct {
+		category    string
+		name        string
+		id          string
+		priority    string
+		description string
+	}{
+		{"ci", "CI/CD Configuration", "ci-config", "medium", "Validates CI/CD pipeline configuration"},
+		{"documentation", "README Documentation", "readme-check", "medium", "Ensures README exists and has required content"},
+		{"git", "Git Status", "git-status", "medium", "Checks for uncommitted changes and clean status"},
+		{"git", "Last Commit", "git-last-commit", "low", "Validates recent commit activity"},
+		{"security", "Branch Protection", "branch-protection", "high", "Verifies branch protection rules"},
+		{"security", "Vulnerability Scanner", "vulnerability-scan", "high", "Scans for known security vulnerabilities"},
+		{"dependencies", "Outdated Dependencies", "dependencies-outdated", "medium", "Checks for outdated package dependencies"},
+		{"compliance", "License Compliance", "license-check", "medium", "Validates license information and compliance"},
+	}
+
+	for _, checker := range checkers {
+		enabled := "ENABLED"
+		if len(config.Categories) > 0 {
+			found := false
+			for _, cat := range config.Categories {
+				if cat == checker.category {
+					found = true
+					break
+				}
+			}
+			if !found {
+				enabled = "DISABLED (category filter)"
+			}
+		}
+
+		fmt.Printf("  • %s (%s) - %s [%s]\n", checker.name, checker.id, enabled, checker.priority)
+		fmt.Printf("    Category: %s | %s\n", checker.category, checker.description)
+	}
+	fmt.Println()
+
+	// Available Code Analyzers
+	common.PrintInfo("🔍 AVAILABLE CODE ANALYZERS:")
+	analyzers := []struct {
+		language    string
+		name        string
+		extensions  []string
+		description string
+	}{
+		{"javascript", "javascript-analyzer", []string{".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"}, "Analyzes JavaScript/TypeScript code quality and complexity"},
+		{"go", "go-analyzer", []string{".go"}, "Analyzes Go code using standard Go tools"},
+		{"python", "python-analyzer", []string{".py"}, "Analyzes Python code quality and style"},
+		{"java", "java-analyzer", []string{".java"}, "Analyzes Java code complexity and quality"},
+	}
+
+	for _, analyzer := range analyzers {
+		fmt.Printf("  • %s\n", analyzer.name)
+		fmt.Printf("    Language: %s | Extensions: %v\n", analyzer.language, analyzer.extensions)
+		fmt.Printf("    Description: %s\n", analyzer.description)
+	}
+	fmt.Println()
+
+	// Execution Plan
+	common.PrintInfo("🚀 EXECUTION PLAN:")
+	fmt.Println("  1. Load repository configuration")
+	if config.Tag != "" {
+		fmt.Printf("  2. Filter repositories by tag: '%s'\n", config.Tag)
+	} else {
+		fmt.Println("  2. Process all repositories")
+	}
+	if len(config.Categories) > 0 {
+		fmt.Printf("  3. Filter health checkers by categories: %v\n", config.Categories)
+	} else {
+		fmt.Println("  3. Enable all health checkers")
+	}
+	fmt.Println("  4. Run health checkers on each repository")
+	fmt.Println("  5. Run code analyzers on detected languages")
+	if config.ComplexityReport {
+		fmt.Println("  6. Generate complexity analysis report")
+	}
+	if config.Parallel {
+		fmt.Println("  7. Execute checks in parallel for faster processing")
+	} else {
+		fmt.Println("  7. Execute checks sequentially")
+	}
+	fmt.Println("  8. Generate comprehensive health report")
+	fmt.Println()
+
+	// Configuration Tips
+	common.PrintInfo("💡 CONFIGURATION TIPS:")
+	fmt.Println("  • Use --config <file> to specify custom health configuration")
+	fmt.Println("  • Use --category git,security to run only specific checker categories")
+	fmt.Println("  • Use --complexity-report --max-complexity 10 to enforce complexity limits")
+	fmt.Println("  • Use --parallel to speed up analysis of multiple repositories")
+	fmt.Println("  • Use --verbose to see detailed output during execution")
+	fmt.Println("  • Use --list-categories to see all available categories and checkers")
+	fmt.Println("  • Use --gen-config to generate a template configuration file")
+	fmt.Println()
+
+	common.PrintSuccess("✨ Dry run complete! Use the above configuration to customize your health checks.")
+	common.PrintInfo("💻 Run without --dry-run to execute the actual health checks.")
 
 	return nil
 }
