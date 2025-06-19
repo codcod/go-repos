@@ -3,6 +3,7 @@ package common
 import (
 	"os"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/codcod/repos/internal/config"
@@ -178,20 +179,19 @@ func TestProcessReposParallel(t *testing.T) {
 		{Name: "repo2", URL: "https://github.com/test/repo2.git"},
 	}
 
-	processedCount := 0
+	var processedCount int32
 	processor := func(repo config.Repository) error {
-		processedCount++
+		atomic.AddInt32(&processedCount, 1)
 		return nil
 	}
 
-	// Currently parallel processing falls back to sequential
 	err := ProcessRepos(repos, true, processor)
 	if err != nil {
 		t.Errorf("ProcessRepos parallel failed: %v", err)
 	}
 
-	if processedCount != 2 {
-		t.Errorf("Expected 2 repos to be processed, got %d", processedCount)
+	if atomic.LoadInt32(&processedCount) != 2 {
+		t.Errorf("Expected 2 repos to be processed, got %d", atomic.LoadInt32(&processedCount))
 	}
 }
 

@@ -67,7 +67,7 @@ func NewCommand() *cobra.Command {
 	// Add flags
 	cmd.Flags().StringVarP(&runConfig.Tag, "tag", "t", "", "Filter repositories by tag")
 	cmd.Flags().BoolVarP(&runConfig.Parallel, "parallel", "p", false, "Run command in repositories in parallel")
-	cmd.Flags().StringVar(&runConfig.LogDir, "log-dir", "logs", "Directory to store command output logs")
+	cmd.Flags().StringVarP(&runConfig.LogDir, "log-dir", "l", "logs", "Directory to store command output logs")
 
 	return cmd
 }

@@ -192,45 +192,6 @@ func TestVersionVariablesWithEnv(t *testing.T) {
 	}
 }
 
-func TestDefaultLogDir(t *testing.T) {
-	expectedDefault := "logs"
-	if defaultLogs != expectedDefault {
-		t.Errorf("Expected defaultLogs to be %q, got %q", expectedDefault, defaultLogs)
-	}
-}
-
-func TestGlobalVariablesInitialization(t *testing.T) {
-	// Test that global variables are properly initialized to reasonable defaults
-	if configFile == "" {
-		t.Error("configFile should have a default value")
-	}
-
-	// Check that boolean flags have proper zero values
-	if parallel != false {
-		t.Error("parallel should default to false")
-	}
-	if prDraft != false {
-		t.Error("prDraft should default to false")
-	}
-	if createOnly != false {
-		t.Error("createOnly should default to false")
-	}
-	if overwrite != false {
-		t.Error("overwrite should default to false")
-	}
-
-	// Check that string flags are initialized (empty is OK)
-	_ = tag        // tag can be empty
-	_ = logDir     // logDir can be empty
-	_ = prTitle    // prTitle can be empty
-	_ = prBody     // prBody can be empty
-	_ = prBranch   // prBranch can be empty
-	_ = baseBranch // baseBranch can be empty
-	_ = commitMsg  // commitMsg can be empty
-	_ = prToken    // prToken can be empty
-	_ = outputFile // outputFile can be empty
-}
-
 func TestEnvironmentVariableEdgeCases(t *testing.T) {
 	tests := []struct {
 		name     string

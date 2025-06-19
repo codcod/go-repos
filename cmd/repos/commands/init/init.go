@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/codcod/repos/internal/config"
+	"github.com/codcod/repos/internal/util"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v3"
@@ -32,9 +33,25 @@ func NewCommand() *cobra.Command {
 				return nil
 			}
 
-			// Create sample configuration
-			sampleConfig := &config.Config{
-				Repositories: []config.Repository{
+			// Get current directory
+			currentDir, err := os.Getwd()
+			if err != nil {
+				color.Red("Error getting current directory: %v", err)
+				return err
+			}
+
+			// Find Git repositories
+			color.Green("Scanning for Git repositories in %s...", currentDir)
+			repos, err := util.FindGitRepositories(currentDir)
+			if err != nil {
+				color.Red("Error scanning for repositories: %v", err)
+				return err
+			}
+
+			if len(repos) == 0 {
+				color.Yellow("No Git repositories found in %s", currentDir)
+				// Create sample configuration instead
+				repos = []config.Repository{
 					{
 						Name: "example-repo",
 						URL:  "https://github.com/user/example-repo.git",
@@ -45,11 +62,19 @@ func NewCommand() *cobra.Command {
 						URL:  "https://github.com/user/another-repo.git",
 						Tags: []string{"example", "demo"},
 					},
-				},
+				}
+				color.Yellow("Creating sample configuration with example repositories")
+			} else {
+				color.Green("Found %d Git repositories", len(repos))
+			}
+
+			// Create configuration
+			cfg := &config.Config{
+				Repositories: repos,
 			}
 
 			// Convert to YAML
-			data, err := yaml.Marshal(sampleConfig)
+			data, err := yaml.Marshal(cfg)
 			if err != nil {
 				return err
 			}
@@ -60,7 +85,11 @@ func NewCommand() *cobra.Command {
 			}
 
 			color.Green("Configuration file created: %s", initConfig.OutputFile)
-			color.Cyan("Edit the file to add your repositories.")
+			if len(repos) == 0 {
+				color.Cyan("Edit the file to add your repositories.")
+			} else {
+				color.Green("Successfully created %s with %d repositories", initConfig.OutputFile, len(repos))
+			}
 			return nil
 		},
 	}

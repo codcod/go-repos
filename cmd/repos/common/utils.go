@@ -88,9 +88,34 @@ func processReposSequential(repositories []config.Repository, processor func(con
 }
 
 func processReposParallel(repositories []config.Repository, processor func(config.Repository) error) error {
-	// Implementation would be similar to main.go's processRepos function
-	// For now, fall back to sequential processing
-	return processReposSequential(repositories, processor)
+	// Use channels to collect errors from goroutines
+	errChan := make(chan error, len(repositories))
+
+	// Start goroutines for each repository
+	for _, repo := range repositories {
+		go func(r config.Repository) {
+			if err := processor(r); err != nil {
+				errChan <- fmt.Errorf("processing %s: %w", r.Name, err)
+			} else {
+				errChan <- nil
+			}
+		}(repo)
+	}
+
+	// Collect results
+	var errors []error
+	for i := 0; i < len(repositories); i++ {
+		if err := <-errChan; err != nil {
+			errors = append(errors, err)
+		}
+	}
+
+	// Return first error if any occurred
+	if len(errors) > 0 {
+		return errors[0]
+	}
+
+	return nil
 }
 
 // GetEnvOrDefault returns environment variable value or default
