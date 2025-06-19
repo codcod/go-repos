@@ -459,7 +459,6 @@ func TestCLIHealthCommand(t *testing.T) {
 		"complexity",
 		"genconfig",
 		"--list-categories",
-		"--gen-config",
 		"--complexity-report",
 	}
 

@@ -72,7 +72,6 @@ func TestHealthCommandFlags(t *testing.T) {
 		"dry-run",
 		"verbose",
 		"list-categories",
-		"gen-config",
 		"complexity-report",
 		"max-complexity",
 	}

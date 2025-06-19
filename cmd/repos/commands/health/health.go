@@ -24,7 +24,6 @@ type Config struct {
 	Tag              string
 	BasicConfig      string // Path to basic repo config
 	ListCategories   bool   // List available categories and checkers
-	GenConfig        bool   // Generate configuration template
 	ComplexityReport bool   // Run complexity analysis only
 	MaxComplexity    int    // Maximum allowed complexity
 }
@@ -51,8 +50,8 @@ Examples:
   repos health --complexity-report --category docs,security # Run complexity and other checks
   repos health --verbose                # Show detailed output
   repos health --list-categories        # List all available categories and checks
-  repos health --gen-config             # Generate comprehensive configuration template
-  repos health --dry-run                # Preview what would be executed`,
+  repos health --dry-run                # Preview what would be executed
+  repos health genconfig                 # Generate comprehensive configuration template`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return execute(config)
 		},
@@ -67,8 +66,6 @@ Examples:
 		"health config file path (optional, uses built-in defaults if not provided)")
 	cmd.Flags().BoolVar(&config.DryRun, "dry-run", false,
 		"Dry run mode - show what would be executed")
-	cmd.Flags().BoolVar(&config.GenConfig, "gen-config", false,
-		"Generate a comprehensive configuration template with all available options")
 	cmd.Flags().BoolVar(&config.ListCategories, "list-categories", false,
 		"List all available categories, checkers, and analyzers")
 	cmd.Flags().IntVar(&config.MaxComplexity, "max-complexity", 0,
@@ -97,10 +94,6 @@ func execute(config *Config) error {
 	// Handle special flags first - order matters!
 	if config.ListCategories {
 		return listCategories()
-	}
-
-	if config.GenConfig {
-		return generateConfig()
 	}
 
 	// Check for dry-run mode explicitly
@@ -239,190 +232,6 @@ func (l *simpleLogger) formatFields(fields []core.Field) string {
 		result += fmt.Sprintf(" [%s=%v]", field.Key, field.Value)
 	}
 	return result + "\n"
-}
-
-// generateConfig generates a comprehensive configuration template
-func generateConfig() error {
-	common.PrintInfo("🔧 Generating comprehensive health configuration template...")
-	fmt.Println()
-
-	template := `# Health Configuration Template
-# This is a comprehensive template showing all available health check options.
-# Uncomment and modify sections as needed for your project.
-
-# Global health check settings
-health:
-  # Timeout for individual health checks (e.g., "30s", "1m", "2m30s")
-  timeout: "30s"
-  
-  # Run health checks in parallel (true/false)
-  parallel: false
-  
-  # Verbose output during health checks (true/false)
-  verbose: false
-  
-  # Global categories to run (empty means all categories)
-  # Available categories: ci, documentation, git, security, dependencies, compliance
-  categories: []
-  
-  # Complexity analysis settings
-  complexity:
-    # Enable complexity analysis (true/false)
-    enabled: false
-    
-    # Maximum allowed cyclomatic complexity (0 = no limit)
-    max_complexity: 15
-    
-    # Report complexity even if within limits (true/false)
-    report_all: true
-
-  # Health checker configurations
-  checkers:
-    # CI/CD Configuration checks
-    ci:
-      enabled: true
-      severity: "medium"
-      config:
-        # Check for common CI files (.github/workflows, .gitlab-ci.yml, etc.)
-        check_ci_files: true
-        # Validate CI configuration syntax
-        validate_syntax: false
-
-    # Documentation checks  
-    documentation:
-      enabled: true
-      severity: "medium"
-      config:
-        # Require README.md file
-        require_readme: true
-        # Minimum README content length
-        min_readme_length: 100
-        # Check for common documentation sections
-        required_sections: ["Description", "Installation", "Usage"]
-
-    # Git repository checks
-    git:
-      enabled: true
-      severity: "medium"  
-      config:
-        # Check for uncommitted changes
-        check_clean_status: true
-        # Check last commit recency (days)
-        max_days_since_commit: 30
-        # Validate commit message format
-        validate_commit_messages: false
-
-    # Security checks
-    security:
-      enabled: true
-      severity: "high"
-      config:
-        # Check branch protection rules
-        check_branch_protection: true
-        # Scan for known vulnerabilities
-        vulnerability_scan: true
-        # Check for sensitive files
-        check_sensitive_files: true
-        # Patterns for sensitive content
-        sensitive_patterns:
-          - "password"
-          - "secret"
-          - "api_key"
-          - "private_key"
-
-    # Dependency checks
-    dependencies:
-      enabled: true
-      severity: "medium"
-      config:
-        # Check for outdated dependencies
-        check_outdated: true
-        # Security vulnerability scanning
-        security_scan: true
-        # License compatibility checks
-        license_check: false
-
-    # Compliance checks
-    compliance:
-      enabled: true
-      severity: "medium"
-      config:
-        # Check for required license file
-        require_license: true
-        # Accepted license types
-        accepted_licenses: ["MIT", "Apache-2.0", "BSD-3-Clause"]
-        # Check for code of conduct
-        require_code_of_conduct: false
-
-  # Code analyzer configurations
-  analyzers:
-    # JavaScript/TypeScript analyzer
-    javascript:
-      enabled: true
-      extensions: [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"]
-      config:
-        # ESLint integration
-        use_eslint: true
-        # Complexity analysis
-        complexity_analysis: true
-
-    # Go analyzer
-    go:
-      enabled: true
-      extensions: [".go"]
-      config:
-        # Use go vet
-        use_go_vet: true
-        # Use golangci-lint if available
-        use_golangci_lint: true
-        # Complexity analysis
-        complexity_analysis: true
-
-    # Python analyzer
-    python:
-      enabled: true
-      extensions: [".py"]
-      config:
-        # Use pylint if available
-        use_pylint: false
-        # Use flake8 if available  
-        use_flake8: true
-        # Complexity analysis
-        complexity_analysis: true
-
-    # Java analyzer
-    java:
-      enabled: true
-      extensions: [".java"]
-      config:
-        # Use checkstyle if available
-        use_checkstyle: false
-        # Use PMD if available
-        use_pmd: false
-        # Complexity analysis
-        complexity_analysis: true
-
-# Repository filtering (inherited from main config if not specified)
-# repositories:
-#   - name: "my-repo"
-#     url: "https://github.com/user/my-repo"
-#     tags: ["backend", "critical"]
-#   - name: "another-repo" 
-#     url: "https://github.com/user/another-repo"
-#     tags: ["frontend"]
-
-# Example usage:
-# 1. Save this template as 'health-config.yaml'
-# 2. Uncomment and modify the sections you need
-# 3. Run: repos health --config health-config.yaml
-# 4. Use --category to filter by specific categories
-# 5. Use --verbose for detailed output
-# 6. Use --parallel for faster execution
-# 7. Use --dry-run to preview what would be executed`
-
-	fmt.Println(template)
-	fmt.Println()
-	return nil
 }
 
 // showDryRunConfiguration displays exhaustive configuration for dry-run mode
@@ -578,7 +387,7 @@ func showDryRunConfiguration(config *Config) error {
 	fmt.Println("  • Use --parallel to speed up analysis of multiple repositories")
 	fmt.Println("  • Use --verbose to see detailed output during execution")
 	fmt.Println("  • Use --list-categories to see all available categories and checkers")
-	fmt.Println("  • Use --gen-config to generate a template configuration file")
+	fmt.Println("  • Use 'repos health genconfig' to generate a template configuration file")
 	fmt.Println()
 
 	common.PrintSuccess("✨ Dry run complete! Use the above configuration to customize your health checks.")
