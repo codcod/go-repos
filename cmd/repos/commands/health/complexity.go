@@ -64,12 +64,11 @@ func NewCyclomaticComplexityCommand() *cobra.Command {
 //
 //nolint:gocyclo
 func analyzeComplexity(repositories []config.Repository, maxComplexity int) error {
-	// Create filesystem and logger
-	fs := health.NewFileSystem()
+	// Create logger
 	logger := &complexityLogger{}
 
 	// Create analyzer registry with standard analyzers
-	analyzerRegistry := health.NewAnalyzerRegistry(fs, logger)
+	analyzerRegistry := health.NewAnalyzerRegistry(logger)
 
 	ctx := context.Background()
 	hasHighComplexity := false

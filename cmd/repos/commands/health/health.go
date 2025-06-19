@@ -136,9 +136,8 @@ func listCategories() error {
 	executor := commands.NewOSCommandExecutor(30 * time.Second)
 	checkerRegistry := health.NewCheckerRegistry(executor)
 
-	// Create filesystem and analyzer registry
-	fs := health.NewFileSystem()
-	analyzerRegistry := health.NewAnalyzerRegistry(fs, logger)
+	// Create analyzer registry
+	analyzerRegistry := health.NewAnalyzerRegistry(logger)
 
 	fmt.Println()
 	fmt.Println("📋 CHECKERS:")

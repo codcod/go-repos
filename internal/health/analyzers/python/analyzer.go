@@ -2,49 +2,49 @@ package python_analyzer
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/codcod/repos/internal/core"
+	"github.com/codcod/repos/internal/health/analyzers/common"
 )
 
 // PythonAnalyzer implements language-specific analysis for Python code
 type PythonAnalyzer struct {
-	name       string
-	language   string
-	extensions []string
-	excludes   []string
-	filesystem core.FileSystem
-	logger     core.Logger
+	*common.BaseAnalyzerImpl
 }
 
 // NewPythonAnalyzer creates a new Python language analyzer
-func NewPythonAnalyzer(fs core.FileSystem, logger core.Logger) *PythonAnalyzer {
+func NewPythonAnalyzer(walker common.FileWalker, logger core.Logger) *PythonAnalyzer {
+	baseAnalyzer := common.NewBaseAnalyzer(
+		"python-analyzer",
+		"python",
+		[]string{".py"},
+		[]string{".venv/", "__pycache__/", ".git/", "venv/", "env/", ".pytest_cache/"},
+		walker,
+		logger,
+	)
+
 	return &PythonAnalyzer{
-		name:       "python-analyzer",
-		language:   "python",
-		extensions: []string{".py"},
-		excludes:   []string{".venv/", "__pycache__/", ".git/", "venv/", "env/", ".pytest_cache/"},
-		filesystem: fs,
-		logger:     logger,
+		BaseAnalyzerImpl: baseAnalyzer,
 	}
 }
 
-// Name returns the analyzer name
-func (p *PythonAnalyzer) Name() string {
-	return p.name
+// NewPythonAnalyzerWithFS creates a Python analyzer with file system dependency
+func NewPythonAnalyzerWithFS(fs core.FileSystem, logger core.Logger) *PythonAnalyzer {
+	walker := common.NewDefaultFileWalker()
+	return NewPythonAnalyzer(walker, logger)
 }
 
-// Language returns the supported language
-func (p *PythonAnalyzer) Language() string {
-	return p.language
+// SupportsComplexity returns whether complexity analysis is supported
+func (p *PythonAnalyzer) SupportsComplexity() bool {
+	return true
 }
 
-// SupportedExtensions returns supported file extensions
-func (p *PythonAnalyzer) SupportedExtensions() []string {
-	return p.extensions
+// SupportsFunctionLevel returns whether function-level analysis is supported
+func (p *PythonAnalyzer) SupportsFunctionLevel() bool {
+	return true
 }
 
 // CanAnalyze checks if the analyzer can process the given repository
@@ -55,10 +55,10 @@ func (p *PythonAnalyzer) CanAnalyze(repo core.Repository) bool {
 
 // Analyze performs language-specific analysis on the repository
 func (p *PythonAnalyzer) Analyze(ctx context.Context, repoPath string, config core.AnalyzerConfig) (*core.AnalysisResult, error) {
-	p.logger.Info("Starting Python analysis", core.Field{Key: "repo", Value: repoPath})
+	p.Logger().Info("Starting Python analysis", core.Field{Key: "repo", Value: repoPath})
 
 	result := &core.AnalysisResult{
-		Language:  p.language,
+		Language:  p.Language(),
 		Files:     make(map[string]*core.FileAnalysis),
 		Functions: []core.FunctionInfo{},
 		Metrics:   make(map[string]interface{}),
@@ -82,7 +82,7 @@ func (p *PythonAnalyzer) Analyze(ctx context.Context, repoPath string, config co
 
 		fileAnalysis, err := p.analyzeFile(file)
 		if err != nil {
-			p.logger.Warn("Failed to analyze file",
+			p.Logger().Warn("Failed to analyze file",
 				core.Field{Key: "file", Value: file},
 				core.Field{Key: "error", Value: err.Error()})
 			continue
@@ -113,7 +113,7 @@ func (p *PythonAnalyzer) Analyze(ctx context.Context, repoPath string, config co
 	result.Metrics["max_complexity"] = maxComplexity
 	result.Metrics["average_complexity"] = avgComplexity
 
-	p.logger.Info("Python analysis completed",
+	p.Logger().Info("Python analysis completed",
 		core.Field{Key: "files", Value: len(result.Files)},
 		core.Field{Key: "functions", Value: totalFunctions})
 
@@ -128,48 +128,19 @@ func (p *PythonAnalyzer) hasPythonFiles(repoPath string) bool {
 
 // findPythonFiles finds all Python source files in the repository
 func (p *PythonAnalyzer) findPythonFiles(repoPath string) ([]string, error) {
-	var pythonFiles []string
-
-	err := filepath.Walk(repoPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Skip directories
-		if info.IsDir() {
-			return nil
-		}
-
-		// Check if it's a Python file
-		if !strings.HasSuffix(path, ".py") {
-			return nil
-		}
-
-		// Skip excluded patterns
-		relPath, _ := filepath.Rel(repoPath, path)
-		for _, exclude := range p.excludes {
-			if strings.Contains(relPath, exclude) {
-				return nil
-			}
-		}
-
-		pythonFiles = append(pythonFiles, path)
-		return nil
-	})
-
-	return pythonFiles, err
+	return p.FindFiles(repoPath)
 }
 
 // analyzeFile analyzes a single Python file
 func (p *PythonAnalyzer) analyzeFile(filePath string) (*core.FileAnalysis, error) {
-	content, err := os.ReadFile(filePath) //nolint:gosec // File path is from repository analysis
+	content, err := p.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
 	analysis := &core.FileAnalysis{
 		Path:      filePath,
-		Language:  p.language,
+		Language:  p.Language(),
 		Functions: []core.FunctionInfo{},
 		Imports:   []core.ImportInfo{},
 		Metrics:   make(map[string]interface{}),
@@ -268,7 +239,7 @@ func (p *PythonAnalyzer) parseFile(content, filePath string) ([]core.FunctionInf
 				File:       filePath,
 				Line:       lineNum,
 				Complexity: 1, // Base complexity
-				Language:   p.language,
+				Language:   p.Language(),
 			}
 
 			inFunction = true
@@ -366,24 +337,7 @@ func (p *PythonAnalyzer) calculateLineComplexity(line string) int {
 	return complexity
 }
 
-// Legacy analyzer interface methods for backward compatibility
-
-// FileExtensions returns supported file extensions (LegacyAnalyzer interface)
-func (p *PythonAnalyzer) FileExtensions() []string {
-	return p.extensions
-}
-
-// SupportsComplexity returns whether complexity analysis is supported (LegacyAnalyzer interface)
-func (p *PythonAnalyzer) SupportsComplexity() bool {
-	return true
-}
-
-// SupportsFunctionLevel returns whether function-level analysis is supported (LegacyAnalyzer interface)
-func (p *PythonAnalyzer) SupportsFunctionLevel() bool {
-	return true
-}
-
-// AnalyzeComplexity performs complexity analysis and returns results (LegacyAnalyzer interface)
+// AnalyzeComplexity performs complexity analysis and returns results (ComplexityAnalyzer interface)
 func (p *PythonAnalyzer) AnalyzeComplexity(ctx context.Context, repoPath string) (core.ComplexityResult, error) {
 	result := core.ComplexityResult{
 		Functions: []core.FunctionComplexity{},
@@ -404,7 +358,7 @@ func (p *PythonAnalyzer) AnalyzeComplexity(ctx context.Context, repoPath string)
 	for _, filePath := range pythonFiles {
 		fileAnalysis, err := p.analyzeFile(filePath)
 		if err != nil {
-			p.logger.Warn("Failed to analyze file",
+			p.Logger().Warn("Failed to analyze file",
 				core.Field{Key: "file", Value: filePath},
 				core.Field{Key: "error", Value: err})
 			continue

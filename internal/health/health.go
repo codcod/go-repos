@@ -1,9 +1,12 @@
 package health
 
 import (
+	"context"
 	"time"
 
 	"github.com/codcod/repos/internal/core"
+	"github.com/codcod/repos/internal/health/analyzers"
+	"github.com/codcod/repos/internal/health/analyzers/common"
 	analyzer_registry "github.com/codcod/repos/internal/health/analyzers/registry"
 	checker_registry "github.com/codcod/repos/internal/health/checkers/registry"
 	"github.com/codcod/repos/internal/health/commands"
@@ -20,9 +23,104 @@ type (
 	Formatter        = reporting.Formatter
 )
 
-// NewAnalyzerRegistry creates a new analyzer registry with all standard analyzers
-func NewAnalyzerRegistry(fs core.FileSystem, logger core.Logger) *AnalyzerRegistry {
-	return analyzer_registry.NewRegistryWithStandardAnalyzers(fs, logger)
+// NewAnalyzerMap creates a map of analyzers using the new factory system
+// This is the recommended way to get analyzers in the new architecture
+func NewAnalyzerMap(logger core.Logger) map[string]common.FullAnalyzer {
+	registry := make(map[string]common.FullAnalyzer)
+
+	for _, lang := range analyzers.GetSupportedLanguages() {
+		if analyzer, err := analyzers.GetAnalyzer(lang, logger); err == nil {
+			registry[lang] = analyzer
+		}
+	}
+
+	return registry
+}
+
+// NewAnalyzerRegistry creates a new analyzer registry using the new factory system
+// This method creates a legacy registry for backward compatibility
+func NewAnalyzerRegistry(logger core.Logger) *AnalyzerRegistry {
+	registry := analyzer_registry.NewRegistry()
+
+	// Register analyzers from the new factory system with adapters
+	for _, lang := range analyzers.GetSupportedLanguages() {
+		if analyzer, err := analyzers.GetAnalyzer(lang, logger); err == nil {
+			adapter := &NewToLegacyAnalyzerAdapter{analyzer: analyzer}
+			registry.Register(adapter)
+		}
+	}
+
+	return registry
+}
+
+// NewToLegacyAnalyzerAdapter adapts the new analyzer interface to the legacy core.Analyzer interface
+type NewToLegacyAnalyzerAdapter struct {
+	analyzer common.FullAnalyzer
+}
+
+// Name returns the analyzer name (legacy interface)
+func (a *NewToLegacyAnalyzerAdapter) Name() string {
+	return a.analyzer.Language() + "-analyzer"
+}
+
+// Language returns the programming language
+func (a *NewToLegacyAnalyzerAdapter) Language() string {
+	return a.analyzer.Language()
+}
+
+// SupportedExtensions returns supported file extensions (legacy interface)
+func (a *NewToLegacyAnalyzerAdapter) SupportedExtensions() []string {
+	return a.analyzer.FileExtensions()
+}
+
+// CanAnalyze checks if the analyzer can process the given repository
+func (a *NewToLegacyAnalyzerAdapter) CanAnalyze(repo core.Repository) bool {
+	return a.analyzer.CanAnalyze(repo)
+}
+
+// Analyze performs full analysis and returns results
+func (a *NewToLegacyAnalyzerAdapter) Analyze(ctx context.Context, repoPath string, config core.AnalyzerConfig) (*core.AnalysisResult, error) {
+	// Use the new analyzer's Analyze method if available, otherwise synthesize from complexity analysis
+	if fullAnalyzer, ok := a.analyzer.(interface {
+		Analyze(context.Context, string, core.AnalyzerConfig) (*core.AnalysisResult, error)
+	}); ok {
+		return fullAnalyzer.Analyze(ctx, repoPath, config)
+	}
+
+	// Fallback: create a basic analysis result from complexity analysis
+	result := &core.AnalysisResult{
+		Language:  a.analyzer.Language(),
+		Files:     make(map[string]*core.FileAnalysis),
+		Functions: []core.FunctionInfo{},
+		Metrics:   make(map[string]interface{}),
+	}
+
+	if complexityResult, err := a.analyzer.AnalyzeComplexity(ctx, repoPath); err == nil {
+		result.Metrics["total_files"] = complexityResult.TotalFiles
+		result.Metrics["total_functions"] = complexityResult.TotalFunctions
+		result.Metrics["average_complexity"] = complexityResult.AverageComplexity
+		result.Metrics["max_complexity"] = complexityResult.MaxComplexity
+
+		// Convert complexity functions to FunctionInfo
+		for _, fn := range complexityResult.Functions {
+			result.Functions = append(result.Functions, core.FunctionInfo{
+				Name:       fn.Name,
+				File:       fn.File,
+				Line:       fn.Line,
+				Complexity: fn.Complexity,
+				Language:   a.analyzer.Language(),
+			})
+		}
+	}
+
+	return result, nil
+}
+
+// NewAnalyzerRegistryLegacy creates a legacy analyzer registry for backward compatibility
+// This function is deprecated - use NewAnalyzerRegistry(logger) instead
+func NewAnalyzerRegistryLegacy(fs core.FileSystem, logger core.Logger) *AnalyzerRegistry {
+	// Fallback to new registry since legacy implementation was removed
+	return NewAnalyzerRegistry(logger)
 }
 
 // NewCheckerRegistry creates a new checker registry with command executor
@@ -74,7 +172,7 @@ func NewHealthPackage(config core.Config, logger core.Logger, timeout time.Durat
 	fs := NewFileSystem()
 	executor := NewCommandExecutor(timeout)
 
-	analyzerRegistry := NewAnalyzerRegistry(fs, logger)
+	analyzerRegistry := NewAnalyzerRegistry(logger)
 	checkerRegistry := NewCheckerRegistry(executor)
 	engine := NewOrchestrationEngine(checkerRegistry, analyzerRegistry, config, logger)
 

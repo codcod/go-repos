@@ -5,10 +5,6 @@ import (
 	"fmt"
 
 	"github.com/codcod/repos/internal/core"
-	golang "github.com/codcod/repos/internal/health/analyzers/go"
-	java_analyzer "github.com/codcod/repos/internal/health/analyzers/java"
-	javascript_analyzer "github.com/codcod/repos/internal/health/analyzers/javascript"
-	python_analyzer "github.com/codcod/repos/internal/health/analyzers/python"
 )
 
 // Registry manages language analyzers
@@ -153,15 +149,6 @@ func (a *BaseAnalyzer) DetectPatterns(ctx context.Context, content string, patte
 	return nil, nil
 }
 
-// NewRegistryWithStandardAnalyzers creates a registry with all standard language analyzers
-func NewRegistryWithStandardAnalyzers(fs core.FileSystem, logger core.Logger) *Registry {
-	registry := NewRegistry()
-
-	// Register all standard language analyzers
-	registry.Register(golang.NewGoAnalyzer(fs, logger))
-	registry.Register(python_analyzer.NewPythonAnalyzer(fs, logger))
-	registry.Register(java_analyzer.NewJavaAnalyzer(fs, logger))
-	registry.Register(javascript_analyzer.NewJavaScriptAnalyzer(fs, logger))
-
-	return registry
-}
+// NOTE: NewRegistryWithStandardAnalyzers has been deprecated
+// Use the new factory system in internal/health/analyzers instead
+// Example: analyzers.GetAnalyzer("go", logger)

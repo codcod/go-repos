@@ -2,49 +2,49 @@ package java_analyzer
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/codcod/repos/internal/core"
+	"github.com/codcod/repos/internal/health/analyzers/common"
 )
 
 // JavaAnalyzer implements language-specific analysis for Java code
 type JavaAnalyzer struct {
-	name       string
-	language   string
-	extensions []string
-	excludes   []string
-	filesystem core.FileSystem
-	logger     core.Logger
+	*common.BaseAnalyzerImpl
 }
 
 // NewJavaAnalyzer creates a new Java language analyzer
-func NewJavaAnalyzer(fs core.FileSystem, logger core.Logger) *JavaAnalyzer {
+func NewJavaAnalyzer(walker common.FileWalker, logger core.Logger) *JavaAnalyzer {
+	baseAnalyzer := common.NewBaseAnalyzer(
+		"java-analyzer",
+		"java",
+		[]string{".java"},
+		[]string{"target/", "build/", ".git/", "bin/", "out/"},
+		walker,
+		logger,
+	)
+
 	return &JavaAnalyzer{
-		name:       "java-analyzer",
-		language:   "java",
-		extensions: []string{".java"},
-		excludes:   []string{"target/", "build/", ".git/", "bin/", "out/"},
-		filesystem: fs,
-		logger:     logger,
+		BaseAnalyzerImpl: baseAnalyzer,
 	}
 }
 
-// Name returns the analyzer name
-func (j *JavaAnalyzer) Name() string {
-	return j.name
+// NewJavaAnalyzerWithFS creates a Java analyzer with file system dependency
+func NewJavaAnalyzerWithFS(fs core.FileSystem, logger core.Logger) *JavaAnalyzer {
+	walker := common.NewDefaultFileWalker()
+	return NewJavaAnalyzer(walker, logger)
 }
 
-// Language returns the supported language
-func (j *JavaAnalyzer) Language() string {
-	return j.language
+// SupportsComplexity returns whether complexity analysis is supported
+func (j *JavaAnalyzer) SupportsComplexity() bool {
+	return true
 }
 
-// SupportedExtensions returns supported file extensions
-func (j *JavaAnalyzer) SupportedExtensions() []string {
-	return j.extensions
+// SupportsFunctionLevel returns whether function-level analysis is supported
+func (j *JavaAnalyzer) SupportsFunctionLevel() bool {
+	return true
 }
 
 // CanAnalyze checks if the analyzer can process the given repository
@@ -55,10 +55,10 @@ func (j *JavaAnalyzer) CanAnalyze(repo core.Repository) bool {
 
 // Analyze performs language-specific analysis on the repository
 func (j *JavaAnalyzer) Analyze(ctx context.Context, repoPath string, config core.AnalyzerConfig) (*core.AnalysisResult, error) {
-	j.logger.Info("Starting Java analysis", core.Field{Key: "repo", Value: repoPath})
+	j.Logger().Info("Starting Java analysis", core.Field{Key: "repo", Value: repoPath})
 
 	result := &core.AnalysisResult{
-		Language:  j.language,
+		Language:  j.Language(),
 		Files:     make(map[string]*core.FileAnalysis),
 		Functions: []core.FunctionInfo{},
 		Metrics:   make(map[string]interface{}),
@@ -83,7 +83,7 @@ func (j *JavaAnalyzer) Analyze(ctx context.Context, repoPath string, config core
 
 		fileAnalysis, err := j.analyzeFile(file)
 		if err != nil {
-			j.logger.Warn("Failed to analyze file",
+			j.Logger().Warn("Failed to analyze file",
 				core.Field{Key: "file", Value: file},
 				core.Field{Key: "error", Value: err.Error()})
 			continue
@@ -117,7 +117,7 @@ func (j *JavaAnalyzer) Analyze(ctx context.Context, repoPath string, config core
 	result.Metrics["max_complexity"] = maxComplexity
 	result.Metrics["average_complexity"] = avgComplexity
 
-	j.logger.Info("Java analysis completed",
+	j.Logger().Info("Java analysis completed",
 		core.Field{Key: "files", Value: len(result.Files)},
 		core.Field{Key: "classes", Value: totalClasses},
 		core.Field{Key: "functions", Value: totalFunctions})
@@ -133,48 +133,19 @@ func (j *JavaAnalyzer) hasJavaFiles(repoPath string) bool {
 
 // findJavaFiles finds all Java source files in the repository
 func (j *JavaAnalyzer) findJavaFiles(repoPath string) ([]string, error) {
-	var javaFiles []string
-
-	err := filepath.Walk(repoPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Skip directories
-		if info.IsDir() {
-			return nil
-		}
-
-		// Check if it's a Java file
-		if !strings.HasSuffix(path, ".java") {
-			return nil
-		}
-
-		// Skip excluded patterns
-		relPath, _ := filepath.Rel(repoPath, path)
-		for _, exclude := range j.excludes {
-			if strings.Contains(relPath, exclude) {
-				return nil
-			}
-		}
-
-		javaFiles = append(javaFiles, path)
-		return nil
-	})
-
-	return javaFiles, err
+	return j.FindFiles(repoPath)
 }
 
 // analyzeFile analyzes a single Java file
 func (j *JavaAnalyzer) analyzeFile(filePath string) (*core.FileAnalysis, error) {
-	content, err := os.ReadFile(filePath) //nolint:gosec // File path is from repository analysis
+	content, err := j.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
 	analysis := &core.FileAnalysis{
 		Path:      filePath,
-		Language:  j.language,
+		Language:  j.Language(),
 		Functions: []core.FunctionInfo{},
 		Classes:   []core.ClassInfo{},
 		Imports:   []core.ImportInfo{},
@@ -265,7 +236,7 @@ func (j *JavaAnalyzer) parseFile(content, filePath string) ([]core.FunctionInfo,
 				Name:     className,
 				File:     filePath,
 				Line:     lineNum,
-				Language: j.language,
+				Language: j.Language(),
 				Methods:  []core.FunctionInfo{},
 				Fields:   []core.FieldInfo{},
 			}
@@ -291,11 +262,10 @@ func (j *JavaAnalyzer) parseFile(content, filePath string) ([]core.FunctionInfo,
 
 			// Start new method
 			currentMethod = &core.FunctionInfo{
-				Name:       methodName,
-				File:       filePath,
+				Name: methodName, File: filePath,
 				Line:       lineNum,
 				Complexity: 1, // Base complexity
-				Language:   j.language,
+				Language:   j.Language(),
 			}
 
 			// Constructors and simple getters/setters get lower base complexity
@@ -410,24 +380,7 @@ func (j *JavaAnalyzer) calculateLineComplexity(line string) int {
 	return complexity
 }
 
-// Legacy analyzer interface methods for backward compatibility
-
-// FileExtensions returns supported file extensions (LegacyAnalyzer interface)
-func (j *JavaAnalyzer) FileExtensions() []string {
-	return j.extensions
-}
-
-// SupportsComplexity returns whether complexity analysis is supported (LegacyAnalyzer interface)
-func (j *JavaAnalyzer) SupportsComplexity() bool {
-	return true
-}
-
-// SupportsFunctionLevel returns whether function-level analysis is supported (LegacyAnalyzer interface)
-func (j *JavaAnalyzer) SupportsFunctionLevel() bool {
-	return true
-}
-
-// AnalyzeComplexity performs complexity analysis and returns results (LegacyAnalyzer interface)
+// AnalyzeComplexity performs complexity analysis and returns results (ComplexityAnalyzer interface)
 func (j *JavaAnalyzer) AnalyzeComplexity(ctx context.Context, repoPath string) (core.ComplexityResult, error) {
 	result := core.ComplexityResult{
 		Functions: []core.FunctionComplexity{},
@@ -448,7 +401,7 @@ func (j *JavaAnalyzer) AnalyzeComplexity(ctx context.Context, repoPath string) (
 	for _, filePath := range javaFiles {
 		fileAnalysis, err := j.analyzeFile(filePath)
 		if err != nil {
-			j.logger.Warn("Failed to analyze file",
+			j.Logger().Warn("Failed to analyze file",
 				core.Field{Key: "file", Value: filePath},
 				core.Field{Key: "error", Value: err})
 			continue

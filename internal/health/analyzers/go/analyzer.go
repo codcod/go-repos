@@ -5,48 +5,48 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/codcod/repos/internal/core"
+	"github.com/codcod/repos/internal/health/analyzers/common"
 )
 
 // GoAnalyzer implements language-specific analysis for Go code
 type GoAnalyzer struct {
-	name       string
-	language   string
-	extensions []string
-	excludes   []string
-	filesystem core.FileSystem
-	logger     core.Logger
+	*common.BaseAnalyzerImpl
 }
 
 // NewGoAnalyzer creates a new Go language analyzer
-func NewGoAnalyzer(fs core.FileSystem, logger core.Logger) *GoAnalyzer {
+func NewGoAnalyzer(walker common.FileWalker, logger core.Logger) *GoAnalyzer {
+	baseAnalyzer := common.NewBaseAnalyzer(
+		"go-analyzer",
+		"go",
+		[]string{".go"},
+		[]string{"vendor/", "_test.go", ".git/"},
+		walker,
+		logger,
+	)
+
 	return &GoAnalyzer{
-		name:       "go-analyzer",
-		language:   "go",
-		extensions: []string{".go"},
-		excludes:   []string{"vendor/", "_test.go", ".git/"},
-		filesystem: fs,
-		logger:     logger,
+		BaseAnalyzerImpl: baseAnalyzer,
 	}
 }
 
-// Name returns the analyzer name
-func (g *GoAnalyzer) Name() string {
-	return g.name
+// NewGoAnalyzerWithFS creates a Go analyzer with file system dependency
+func NewGoAnalyzerWithFS(fs core.FileSystem, logger core.Logger) *GoAnalyzer {
+	walker := common.NewDefaultFileWalker()
+	return NewGoAnalyzer(walker, logger)
 }
 
-// Language returns the supported language
-func (g *GoAnalyzer) Language() string {
-	return g.language
+// SupportsComplexity returns whether complexity analysis is supported
+func (g *GoAnalyzer) SupportsComplexity() bool {
+	return true
 }
 
-// SupportedExtensions returns supported file extensions
-func (g *GoAnalyzer) SupportedExtensions() []string {
-	return g.extensions
+// SupportsFunctionLevel returns whether function-level analysis is supported
+func (g *GoAnalyzer) SupportsFunctionLevel() bool {
+	return true
 }
 
 // CanAnalyze checks if the analyzer can process the given repository
@@ -57,10 +57,10 @@ func (g *GoAnalyzer) CanAnalyze(repo core.Repository) bool {
 
 // Analyze performs language-specific analysis on the repository
 func (g *GoAnalyzer) Analyze(ctx context.Context, repoPath string, config core.AnalyzerConfig) (*core.AnalysisResult, error) {
-	g.logger.Info("Starting Go analysis", core.Field{Key: "path", Value: repoPath})
+	g.Logger().Info("Starting Go analysis", core.Field{Key: "path", Value: repoPath})
 
 	result := &core.AnalysisResult{
-		Language:  g.language,
+		Language:  g.Language(),
 		Files:     make(map[string]*core.FileAnalysis),
 		Functions: []core.FunctionInfo{},
 		Metrics:   make(map[string]interface{}),
@@ -84,7 +84,7 @@ func (g *GoAnalyzer) Analyze(ctx context.Context, repoPath string, config core.A
 
 		fileAnalysis, err := g.analyzeFile(file)
 		if err != nil {
-			g.logger.Warn("Failed to analyze file",
+			g.Logger().Warn("Failed to analyze file",
 				core.Field{Key: "file", Value: file},
 				core.Field{Key: "error", Value: err.Error()})
 			continue
@@ -115,7 +115,7 @@ func (g *GoAnalyzer) Analyze(ctx context.Context, repoPath string, config core.A
 	result.Metrics["max_complexity"] = maxComplexity
 	result.Metrics["average_complexity"] = avgComplexity
 
-	g.logger.Info("Go analysis completed",
+	g.Logger().Info("Go analysis completed",
 		core.Field{Key: "files", Value: len(result.Files)},
 		core.Field{Key: "functions", Value: totalFunctions})
 
@@ -130,36 +130,7 @@ func (g *GoAnalyzer) hasGoFiles(repoPath string) bool {
 
 // findGoFiles finds all Go source files in the repository
 func (g *GoAnalyzer) findGoFiles(repoPath string) ([]string, error) {
-	var goFiles []string
-
-	err := filepath.Walk(repoPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Skip directories
-		if info.IsDir() {
-			return nil
-		}
-
-		// Check if it's a Go file
-		if !strings.HasSuffix(path, ".go") {
-			return nil
-		}
-
-		// Skip excluded patterns
-		relPath, _ := filepath.Rel(repoPath, path)
-		for _, exclude := range g.excludes {
-			if strings.Contains(relPath, exclude) {
-				return nil
-			}
-		}
-
-		goFiles = append(goFiles, path)
-		return nil
-	})
-
-	return goFiles, err
+	return g.FindFiles(repoPath)
 }
 
 // analyzeFile analyzes a single Go file
@@ -173,7 +144,7 @@ func (g *GoAnalyzer) analyzeFile(filePath string) (*core.FileAnalysis, error) {
 
 	analysis := &core.FileAnalysis{
 		Path:      filePath,
-		Language:  g.language,
+		Language:  g.Language(),
 		Functions: []core.FunctionInfo{},
 		Metrics:   make(map[string]interface{}),
 	}
@@ -212,7 +183,7 @@ func (g *GoAnalyzer) analyzeFunctionDecl(fn *ast.FuncDecl, fset *token.FileSet) 
 		File:       pos.Filename,
 		Line:       pos.Line,
 		Complexity: 1, // Base complexity
-		Language:   g.language,
+		Language:   g.Language(),
 	}
 
 	// Calculate cyclomatic complexity
@@ -260,24 +231,7 @@ func (g *GoAnalyzer) calculateComplexity(body *ast.BlockStmt) int {
 	return complexity
 }
 
-// Legacy analyzer interface methods for backward compatibility
-
-// FileExtensions returns supported file extensions (LegacyAnalyzer interface)
-func (g *GoAnalyzer) FileExtensions() []string {
-	return g.extensions
-}
-
-// SupportsComplexity returns whether complexity analysis is supported (LegacyAnalyzer interface)
-func (g *GoAnalyzer) SupportsComplexity() bool {
-	return true
-}
-
-// SupportsFunctionLevel returns whether function-level analysis is supported (LegacyAnalyzer interface)
-func (g *GoAnalyzer) SupportsFunctionLevel() bool {
-	return true
-}
-
-// AnalyzeComplexity performs complexity analysis and returns results (LegacyAnalyzer interface)
+// AnalyzeComplexity performs complexity analysis and returns results (ComplexityAnalyzer interface)
 func (g *GoAnalyzer) AnalyzeComplexity(ctx context.Context, repoPath string) (core.ComplexityResult, error) {
 	result := core.ComplexityResult{
 		Functions: []core.FunctionComplexity{},
@@ -298,7 +252,7 @@ func (g *GoAnalyzer) AnalyzeComplexity(ctx context.Context, repoPath string) (co
 	for _, filePath := range goFiles {
 		fileAnalysis, err := g.analyzeFile(filePath)
 		if err != nil {
-			g.logger.Warn("Failed to analyze file",
+			g.Logger().Warn("Failed to analyze file",
 				core.Field{Key: "file", Value: filePath},
 				core.Field{Key: "error", Value: err})
 			continue

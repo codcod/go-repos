@@ -129,10 +129,9 @@ func (e *FileNotFoundError) Error() string {
 
 // Test NewAnalyzerRegistry
 func TestNewAnalyzerRegistry(t *testing.T) {
-	fs := NewMockFileSystem()
 	logger := &MockLogger{}
 
-	registry := NewAnalyzerRegistry(fs, logger)
+	registry := NewAnalyzerRegistry(logger)
 
 	if registry == nil {
 		t.Error("Expected NewAnalyzerRegistry to return non-nil registry")
@@ -163,12 +162,11 @@ func TestNewAnalyzerRegistry(t *testing.T) {
 // Test factory function integration
 func TestFactoryFunctions_Integration(t *testing.T) {
 	// Create dependencies
-	fs := NewFileSystem()
 	logger := &MockLogger{}
 	timeout := 10 * time.Second
 
 	// Test that all factory functions work together
-	analyzerRegistry := NewAnalyzerRegistry(fs, logger)
+	analyzerRegistry := NewAnalyzerRegistry(logger)
 	if analyzerRegistry == nil {
 		t.Error("Failed to create analyzer registry")
 	}
@@ -196,11 +194,10 @@ func TestFactoryFunctions_Integration(t *testing.T) {
 // Test type aliases
 func TestTypeAliases(t *testing.T) {
 	// Test that type aliases are correctly defined by creating instances
-	fs := NewMockFileSystem()
 	logger := &MockLogger{}
 	timeout := 5 * time.Second
 
-	var analyzerReg = NewAnalyzerRegistry(fs, logger)
+	var analyzerReg = NewAnalyzerRegistry(logger)
 	if analyzerReg == nil {
 		t.Error("AnalyzerRegistry type alias not working")
 	}
@@ -226,8 +223,7 @@ func TestFactoryFunctions_ErrorHandling(t *testing.T) {
 	}()
 
 	// Test NewAnalyzerRegistry with nil logger (if it handles gracefully)
-	fs := NewMockFileSystem()
-	registry := NewAnalyzerRegistry(fs, nil)
+	registry := NewAnalyzerRegistry(nil)
 	if registry == nil {
 		t.Error("Expected NewAnalyzerRegistry to handle nil logger gracefully")
 	}
@@ -242,11 +238,10 @@ func TestFactoryFunctions_ErrorHandling(t *testing.T) {
 // Test package-level constants and configuration
 func TestPackageConfiguration(t *testing.T) {
 	// Test that we can create all the main components
-	fs := NewFileSystem()
 	logger := &MockLogger{}
 	executor := NewCommandExecutor(30 * time.Second)
 
-	analyzerReg := NewAnalyzerRegistry(fs, logger)
+	analyzerReg := NewAnalyzerRegistry(logger)
 	checkerReg := NewCheckerRegistry(executor)
 
 	// Verify they're properly initialized
@@ -269,12 +264,11 @@ func TestPackageConfiguration(t *testing.T) {
 
 // Benchmark factory functions
 func BenchmarkNewAnalyzerRegistry(b *testing.B) {
-	fs := NewMockFileSystem()
 	logger := &MockLogger{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		registry := NewAnalyzerRegistry(fs, logger)
+		registry := NewAnalyzerRegistry(logger)
 		if registry == nil {
 			b.Fatal("Failed to create analyzer registry")
 		}

@@ -2,49 +2,49 @@ package javascript_analyzer
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/codcod/repos/internal/core"
+	"github.com/codcod/repos/internal/health/analyzers/common"
 )
 
 // JavaScriptAnalyzer implements language-specific analysis for JavaScript/TypeScript code
 type JavaScriptAnalyzer struct {
-	name       string
-	language   string
-	extensions []string
-	excludes   []string
-	filesystem core.FileSystem
-	logger     core.Logger
+	*common.BaseAnalyzerImpl
 }
 
 // NewJavaScriptAnalyzer creates a new JavaScript/TypeScript language analyzer
-func NewJavaScriptAnalyzer(fs core.FileSystem, logger core.Logger) *JavaScriptAnalyzer {
+func NewJavaScriptAnalyzer(walker common.FileWalker, logger core.Logger) *JavaScriptAnalyzer {
+	baseAnalyzer := common.NewBaseAnalyzer(
+		"javascript-analyzer",
+		"javascript",
+		[]string{".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"},
+		[]string{"node_modules/", "dist/", "build/", ".git/", "coverage/", ".next/"},
+		walker,
+		logger,
+	)
+
 	return &JavaScriptAnalyzer{
-		name:       "javascript-analyzer",
-		language:   "javascript",
-		extensions: []string{".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"},
-		excludes:   []string{"node_modules/", "dist/", "build/", ".git/", "coverage/", ".next/"},
-		filesystem: fs,
-		logger:     logger,
+		BaseAnalyzerImpl: baseAnalyzer,
 	}
 }
 
-// Name returns the analyzer name
-func (js *JavaScriptAnalyzer) Name() string {
-	return js.name
+// NewJavaScriptAnalyzerWithFS creates a JavaScript analyzer with file system dependency
+func NewJavaScriptAnalyzerWithFS(fs core.FileSystem, logger core.Logger) *JavaScriptAnalyzer {
+	walker := common.NewDefaultFileWalker()
+	return NewJavaScriptAnalyzer(walker, logger)
 }
 
-// Language returns the supported language
-func (js *JavaScriptAnalyzer) Language() string {
-	return js.language
+// SupportsComplexity returns whether complexity analysis is supported
+func (js *JavaScriptAnalyzer) SupportsComplexity() bool {
+	return true
 }
 
-// SupportedExtensions returns supported file extensions
-func (js *JavaScriptAnalyzer) SupportedExtensions() []string {
-	return js.extensions
+// SupportsFunctionLevel returns whether function-level analysis is supported
+func (js *JavaScriptAnalyzer) SupportsFunctionLevel() bool {
+	return true
 }
 
 // CanAnalyze checks if the analyzer can process the given repository
@@ -55,10 +55,10 @@ func (js *JavaScriptAnalyzer) CanAnalyze(repo core.Repository) bool {
 
 // Analyze performs language-specific analysis on the repository
 func (js *JavaScriptAnalyzer) Analyze(ctx context.Context, repoPath string, config core.AnalyzerConfig) (*core.AnalysisResult, error) {
-	js.logger.Info("Starting JavaScript/TypeScript analysis", core.Field{Key: "repo", Value: repoPath})
+	js.Logger().Info("Starting JavaScript/TypeScript analysis", core.Field{Key: "repo", Value: repoPath})
 
 	result := &core.AnalysisResult{
-		Language:  js.language,
+		Language:  js.Language(),
 		Files:     make(map[string]*core.FileAnalysis),
 		Functions: []core.FunctionInfo{},
 		Metrics:   make(map[string]interface{}),
@@ -84,7 +84,7 @@ func (js *JavaScriptAnalyzer) Analyze(ctx context.Context, repoPath string, conf
 
 		fileAnalysis, err := js.analyzeFile(file)
 		if err != nil {
-			js.logger.Warn("Failed to analyze file",
+			js.Logger().Warn("Failed to analyze file",
 				core.Field{Key: "file", Value: file},
 				core.Field{Key: "error", Value: err.Error()})
 			continue
@@ -124,7 +124,7 @@ func (js *JavaScriptAnalyzer) Analyze(ctx context.Context, repoPath string, conf
 	result.Metrics["max_complexity"] = maxComplexity
 	result.Metrics["average_complexity"] = avgComplexity
 
-	js.logger.Info("JavaScript/TypeScript analysis completed",
+	js.Logger().Info("JavaScript/TypeScript analysis completed",
 		core.Field{Key: "files", Value: len(result.Files)},
 		core.Field{Key: "js_files", Value: jsFiles},
 		core.Field{Key: "ts_files", Value: tsFiles},
@@ -141,48 +141,12 @@ func (js *JavaScriptAnalyzer) hasJavaScriptFiles(repoPath string) bool {
 
 // findJavaScriptFiles finds all JavaScript/TypeScript source files in the repository
 func (js *JavaScriptAnalyzer) findJavaScriptFiles(repoPath string) ([]string, error) {
-	var jsFiles []string
-
-	err := filepath.Walk(repoPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Skip directories
-		if info.IsDir() {
-			return nil
-		}
-
-		// Check if it's a JavaScript/TypeScript file
-		isJSFile := false
-		for _, ext := range js.extensions {
-			if strings.HasSuffix(path, ext) {
-				isJSFile = true
-				break
-			}
-		}
-		if !isJSFile {
-			return nil
-		}
-
-		// Skip excluded patterns
-		relPath, _ := filepath.Rel(repoPath, path)
-		for _, exclude := range js.excludes {
-			if strings.Contains(relPath, exclude) {
-				return nil
-			}
-		}
-
-		jsFiles = append(jsFiles, path)
-		return nil
-	})
-
-	return jsFiles, err
+	return js.FindFiles(repoPath)
 }
 
 // analyzeFile analyzes a single JavaScript/TypeScript file
 func (js *JavaScriptAnalyzer) analyzeFile(filePath string) (*core.FileAnalysis, error) {
-	content, err := os.ReadFile(filePath) //nolint:gosec // File path is from repository analysis
+	content, err := js.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -484,22 +448,7 @@ func (js *JavaScriptAnalyzer) calculateLineComplexity(line string) int {
 
 // Legacy analyzer interface methods for backward compatibility
 
-// FileExtensions returns supported file extensions (LegacyAnalyzer interface)
-func (js *JavaScriptAnalyzer) FileExtensions() []string {
-	return js.extensions
-}
-
-// SupportsComplexity returns whether complexity analysis is supported (LegacyAnalyzer interface)
-func (js *JavaScriptAnalyzer) SupportsComplexity() bool {
-	return true
-}
-
-// SupportsFunctionLevel returns whether function-level analysis is supported (LegacyAnalyzer interface)
-func (js *JavaScriptAnalyzer) SupportsFunctionLevel() bool {
-	return true
-}
-
-// AnalyzeComplexity performs complexity analysis and returns results (LegacyAnalyzer interface)
+// AnalyzeComplexity performs complexity analysis and returns results (ComplexityAnalyzer interface)
 func (js *JavaScriptAnalyzer) AnalyzeComplexity(ctx context.Context, repoPath string) (core.ComplexityResult, error) {
 	result := core.ComplexityResult{
 		Functions: []core.FunctionComplexity{},
@@ -520,7 +469,7 @@ func (js *JavaScriptAnalyzer) AnalyzeComplexity(ctx context.Context, repoPath st
 	for _, filePath := range jsFiles {
 		fileAnalysis, err := js.analyzeFile(filePath)
 		if err != nil {
-			js.logger.Warn("Failed to analyze file",
+			js.Logger().Warn("Failed to analyze file",
 				core.Field{Key: "file", Value: filePath},
 				core.Field{Key: "error", Value: err})
 			continue
