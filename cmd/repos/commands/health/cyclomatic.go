@@ -69,7 +69,6 @@ func analyzeComplexity(repositories []config.Repository, maxComplexity int) erro
 
 	ctx := context.Background()
 	hasHighComplexity := false
-	totalRepos := len(repositories)
 	successfulRepos := 0
 
 	fmt.Println()
@@ -119,17 +118,9 @@ func analyzeComplexity(repositories []config.Repository, maxComplexity int) erro
 		}
 	}
 
-	// Display summary
-	fmt.Println()
-	color.Cyan("=== Summary ===")
-	fmt.Printf("Total repositories: %d\n", totalRepos)
-	fmt.Printf("Successfully analyzed: %d\n", successfulRepos)
-	fmt.Printf("Skipped: %d\n", totalRepos-successfulRepos)
-
+	// Check for threshold violations and exit with non-zero status
 	if hasHighComplexity && maxComplexity > 0 {
-		fmt.Println()
-		color.Red("❌ Some functions exceed the complexity threshold of %d", maxComplexity)
-		return fmt.Errorf("complexity threshold exceeded")
+		os.Exit(1)
 	}
 
 	if successfulRepos == 0 {
@@ -137,7 +128,6 @@ func analyzeComplexity(repositories []config.Repository, maxComplexity int) erro
 		return nil
 	}
 
-	color.Green("✅ Cyclomatic analysis completed successfully")
 	return nil
 }
 
