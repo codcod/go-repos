@@ -259,3 +259,113 @@ func (g *GoAnalyzer) calculateComplexity(body *ast.BlockStmt) int {
 
 	return complexity
 }
+
+// Legacy analyzer interface methods for backward compatibility
+
+// FileExtensions returns supported file extensions (LegacyAnalyzer interface)
+func (g *GoAnalyzer) FileExtensions() []string {
+	return g.extensions
+}
+
+// SupportsComplexity returns whether complexity analysis is supported (LegacyAnalyzer interface)
+func (g *GoAnalyzer) SupportsComplexity() bool {
+	return true
+}
+
+// SupportsFunctionLevel returns whether function-level analysis is supported (LegacyAnalyzer interface)
+func (g *GoAnalyzer) SupportsFunctionLevel() bool {
+	return true
+}
+
+// AnalyzeComplexity performs complexity analysis and returns results (LegacyAnalyzer interface)
+func (g *GoAnalyzer) AnalyzeComplexity(ctx context.Context, repoPath string) (core.ComplexityResult, error) {
+	result := core.ComplexityResult{
+		Functions: []core.FunctionComplexity{},
+	}
+
+	// Find all Go files
+	goFiles, err := g.findGoFiles(repoPath)
+	if err != nil {
+		return result, err
+	}
+
+	result.TotalFiles = len(goFiles)
+
+	var totalComplexity int
+	var maxComplexity int
+
+	// Analyze each file
+	for _, filePath := range goFiles {
+		fileAnalysis, err := g.analyzeFile(filePath)
+		if err != nil {
+			g.logger.Warn("Failed to analyze file",
+				core.Field{Key: "file", Value: filePath},
+				core.Field{Key: "error", Value: err})
+			continue
+		}
+
+		// Convert function info to complexity format
+		for _, fn := range fileAnalysis.Functions {
+			complexity := core.FunctionComplexity{
+				Name:       fn.Name,
+				File:       fn.File,
+				Line:       fn.Line,
+				Complexity: fn.Complexity,
+			}
+
+			result.Functions = append(result.Functions, complexity)
+			totalComplexity += fn.Complexity
+
+			if fn.Complexity > maxComplexity {
+				maxComplexity = fn.Complexity
+			}
+		}
+
+		result.TotalFunctions += len(fileAnalysis.Functions)
+	}
+
+	// Calculate average complexity
+	if result.TotalFunctions > 0 {
+		result.AverageComplexity = float64(totalComplexity) / float64(result.TotalFunctions)
+	}
+	result.MaxComplexity = maxComplexity
+
+	return result, nil
+}
+
+// AnalyzeFunctions performs function-level analysis (LegacyAnalyzer interface)
+func (g *GoAnalyzer) AnalyzeFunctions(ctx context.Context, repoPath string) ([]core.FunctionComplexity, error) {
+	complexityResult, err := g.AnalyzeComplexity(ctx, repoPath)
+	if err != nil {
+		return nil, err
+	}
+	return complexityResult.Functions, nil
+}
+
+// DetectPatterns detects patterns in code content (LegacyAnalyzer interface)
+func (g *GoAnalyzer) DetectPatterns(ctx context.Context, content string, patterns []core.Pattern) ([]core.PatternMatch, error) {
+	// Basic pattern detection implementation
+	var matches []core.PatternMatch
+
+	for _, pattern := range patterns {
+		// Check each pattern string in the pattern
+		for _, patternStr := range pattern.Patterns {
+			// Simple string matching for now - could be enhanced with regex
+			if strings.Contains(content, patternStr) {
+				match := core.PatternMatch{
+					Pattern: pattern,
+					Location: core.Location{
+						File:   "", // Would need file path context
+						Line:   1,  // Would need line-by-line analysis for accurate line numbers
+						Column: 1,
+					},
+					MatchText: patternStr,
+					Context:   content, // Could be trimmed to surrounding context
+				}
+				matches = append(matches, match)
+			}
+		}
+	}
+
+	return matches, nil
+}
