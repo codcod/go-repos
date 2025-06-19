@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -312,52 +311,10 @@ func BenchmarkGetEnvOrDefaultNotSet(b *testing.B) {
 	}
 }
 
-func TestListHealthCategoriesFunction(t *testing.T) {
-	// This is a simple test to ensure the function doesn't panic
-	// and can be called without errors
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("listHealthCategories() panicked: %v", r)
-		}
-	}()
-
-	// Redirect stdout to capture the output
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// Call the function
-	listHealthCategories()
-
-	// Restore stdout
-	w.Close()
-	os.Stdout = old
-
-	// Read the captured output
-	out, _ := io.ReadAll(r)
-	output := string(out)
-
-	// Check that expected content is present
-	if !strings.Contains(output, "Available Health Check Categories") {
-		t.Error("Expected header not found in output")
-	}
-
-	if !strings.Contains(output, "CHECKERS:") {
-		t.Error("Expected checkers section not found in output")
-	}
-
-	if !strings.Contains(output, "ANALYZERS:") {
-		t.Error("Expected analyzers section not found in output")
-	}
-
-	if !strings.Contains(output, "Summary") {
-		t.Error("Expected summary section not found in output")
-	}
-}
-
 func TestHealthCommandWithListCategories(t *testing.T) {
 	// Test that the command can be executed with --list-categories flag
-	// This is an integration test
+	// This integration test covers the functionality that was previously tested
+	// by the direct function call (which has been moved to the health command module)
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
