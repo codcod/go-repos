@@ -45,7 +45,7 @@ Examples:
   repos health                           # Run with built-in defaults
   repos health --config custom.yaml     # Use custom configuration
   repos health --category git,security  # Run only git and security checks
-  repos health cyclomatic-complexity    # Run only cyclomatic complexity analysis
+  repos health cyclomatic    # Run only cyclomatic analysis
   repos health --verbose                # Show detailed output
   repos health --list-categories        # List all available categories and checks
   repos health --dry-run                # Preview what would be executed
@@ -274,7 +274,7 @@ func showDryRunConfiguration(config *Config) error {
 
 	// Complexity Analysis Configuration
 	common.PrintInfo("🧮 COMPLEXITY ANALYSIS:")
-	fmt.Println("  Complexity Report: Available via 'repos health cyclomatic-complexity' subcommand")
+	fmt.Println("  Complexity Report: Available via 'repos health cyclomatic' subcommand")
 	if config.MaxComplexity > 0 {
 		fmt.Printf("  Maximum Complexity Threshold: %d\n", config.MaxComplexity)
 		fmt.Println("  Note: Functions exceeding this threshold will cause failure")
@@ -371,7 +371,7 @@ func showDryRunConfiguration(config *Config) error {
 	common.PrintInfo("💡 CONFIGURATION TIPS:")
 	fmt.Println("  • Use --config <file> to specify custom health configuration")
 	fmt.Println("  • Use --category git,security to run only specific checker categories")
-	fmt.Println("  • Use 'repos health cyclomatic-complexity --max-complexity 10' to enforce complexity limits")
+	fmt.Println("  • Use 'repos health cyclomatic --max-complexity 10' to enforce complexity limits")
 	fmt.Println("  • Use --parallel to speed up analysis of multiple repositories")
 	fmt.Println("  • Use --verbose to see detailed output during execution")
 	fmt.Println("  • Use --list-categories to see all available categories and checkers")

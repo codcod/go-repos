@@ -456,7 +456,7 @@ func TestCLIHealthCommand(t *testing.T) {
 	expectedSections := []string{
 		"Execute modular health checks",
 		"Available Commands:",
-		"cyclomatic-complexity",
+		"cyclomatic",
 		"genconfig",
 		"--list-categories",
 	}
@@ -757,15 +757,15 @@ func complexFunction(x int) int {
 	}
 
 	// Run complexity analysis
-	cmd := exec.Command(filepath.Join(originalDir, "repos-test"), "health", "cyclomatic-complexity")
+	cmd := exec.Command(filepath.Join(originalDir, "repos-test"), "health", "cyclomatic")
 	output, err := cmd.Output()
 	if err != nil {
 		t.Fatalf("health complexity command failed: %v, output: %s", err, string(output))
 	}
 
 	outputStr := string(output)
-	if !strings.Contains(outputStr, "Running cyclomatic complexity analysis") {
-		t.Errorf("complexity output should contain complexity analysis message, got: %s", outputStr)
+	if !strings.Contains(outputStr, "Running cyclomatic analysis") {
+		t.Errorf("complexity output should contain cyclomatic analysis message, got: %s", outputStr)
 	}
 	if !strings.Contains(outputStr, "Maximum complexity threshold") {
 		t.Errorf("complexity output should contain complexity threshold message, got: %s", outputStr)

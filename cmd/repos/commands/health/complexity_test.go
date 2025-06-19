@@ -8,8 +8,8 @@ func TestNewCyclomaticComplexityCommand(t *testing.T) {
 	cmd := NewCyclomaticComplexityCommand()
 
 	// Test command properties
-	if cmd.Use != "cyclomatic-complexity" {
-		t.Errorf("Expected command use to be 'cyclomatic-complexity', got %q", cmd.Use)
+	if cmd.Use != "cyclomatic" {
+		t.Errorf("Expected command use to be 'cyclomatic', got %q", cmd.Use)
 	}
 
 	if cmd.Short == "" {

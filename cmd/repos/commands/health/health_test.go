@@ -28,7 +28,7 @@ func TestNewCommand(t *testing.T) {
 
 	// Test that subcommands are added
 	subcommands := cmd.Commands()
-	expectedSubcommands := []string{"cyclomatic-complexity", "genconfig"}
+	expectedSubcommands := []string{"cyclomatic", "genconfig"}
 
 	if len(subcommands) != len(expectedSubcommands) {
 		t.Errorf("Expected %d subcommands, got %d", len(expectedSubcommands), len(subcommands))

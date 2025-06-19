@@ -16,21 +16,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// ComplexityConfig contains configuration for complexity analysis
+// ComplexityConfig contains configuration for cyclomatic analysis
 type ComplexityConfig struct {
 	Tag           string
 	MaxComplexity int
 }
 
-// NewCyclomaticComplexityCommand creates the cyclomatic-complexity subcommand
+// NewCyclomaticComplexityCommand creates the cyclomatic subcommand
 func NewCyclomaticComplexityCommand() *cobra.Command {
 	complexityConfig := &ComplexityConfig{
 		MaxComplexity: 10,
 	}
 
 	cmd := &cobra.Command{
-		Use:   "cyclomatic-complexity",
-		Short: "Run cyclomatic complexity analysis",
+		Use:   "cyclomatic",
+		Short: "Run cyclomatic analysis",
 		Long:  `Analyze the cyclomatic complexity of code in repositories.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			configFile, _ := cmd.Flags().GetString("config")
@@ -46,9 +46,9 @@ func NewCyclomaticComplexityCommand() *cobra.Command {
 				return nil
 			}
 
-			color.Green("Running cyclomatic complexity analysis on %d repositories...", len(repositories))
+			color.Green("Running cyclomatic analysis on %d repositories...", len(repositories))
 
-			// Analyze complexity for each repository
+			// Analyze cyclomatic for each repository
 			return analyzeComplexity(repositories, complexityConfig.MaxComplexity)
 		},
 	}
@@ -60,7 +60,7 @@ func NewCyclomaticComplexityCommand() *cobra.Command {
 	return cmd
 }
 
-// analyzeComplexity performs complexity analysis on repositories
+// analyzeComplexity performs cyclomatic analysis on repositories
 //
 //nolint:gocyclo
 func analyzeComplexity(repositories []config.Repository, maxComplexity int) error {
@@ -77,7 +77,7 @@ func analyzeComplexity(repositories []config.Repository, maxComplexity int) erro
 	successfulRepos := 0
 
 	fmt.Println()
-	color.Cyan("=== Cyclomatic Complexity Report (Maximum complexity threshold: %d) ===", maxComplexity)
+	color.Cyan("=== Cyclomatic Report (Maximum complexity threshold: %d) ===", maxComplexity)
 	fmt.Println()
 
 	for _, repo := range repositories {
@@ -106,12 +106,12 @@ func analyzeComplexity(repositories []config.Repository, maxComplexity int) erro
 			continue
 		}
 
-		// Check if analyzer supports complexity analysis
+		// Check if analyzer supports cyclomatic analysis
 		if legacyAnalyzer, ok := analyzer.(core.LegacyAnalyzer); ok && legacyAnalyzer.SupportsComplexity() {
-			// Use legacy complexity analysis
+			// Use legacy cyclomatic analysis
 			result, err := legacyAnalyzer.AnalyzeComplexity(ctx, repoPath)
 			if err != nil {
-				color.Red("%s | Error analyzing complexity: %v", repo.Name, err)
+				color.Red("%s | Error analyzing cyclomatic: %v", repo.Name, err)
 				continue
 			}
 
@@ -119,7 +119,7 @@ func analyzeComplexity(repositories []config.Repository, maxComplexity int) erro
 			displayComplexityResult(repo.Name, result, maxComplexity, &hasHighComplexity)
 			successfulRepos++
 		} else {
-			color.Yellow("%s | Complexity analysis not supported for language: %s", repo.Name, language)
+			color.Yellow("%s | Cyclomatic analysis not supported for language: %s", repo.Name, language)
 		}
 	}
 
@@ -141,7 +141,7 @@ func analyzeComplexity(repositories []config.Repository, maxComplexity int) erro
 		return nil
 	}
 
-	color.Green("✅ Complexity analysis completed successfully")
+	color.Green("✅ Cyclomatic analysis completed successfully")
 	return nil
 }
 
@@ -243,7 +243,7 @@ func displayComplexityResult(repoName string, result core.ComplexityResult, thre
 	fmt.Println()
 }
 
-// complexityLogger implements core.Logger interface for complexity analysis
+// complexityLogger implements core.Logger interface for cyclomatic analysis
 type complexityLogger struct{}
 
 func (l *complexityLogger) Debug(msg string, fields ...core.Field) {
