@@ -306,9 +306,16 @@ func (g *GoAnalyzer) AnalyzeComplexity(ctx context.Context, repoPath string) (co
 
 		// Convert function info to complexity format
 		for _, fn := range fileAnalysis.Functions {
+			// Make file path relative to repository root
+			relativePath, err := filepath.Rel(repoPath, fn.File)
+			if err != nil {
+				// If we can't make it relative, use the original path
+				relativePath = fn.File
+			}
+
 			complexity := core.FunctionComplexity{
 				Name:       fn.Name,
-				File:       fn.File,
+				File:       relativePath,
 				Line:       fn.Line,
 				Complexity: fn.Complexity,
 			}

@@ -409,3 +409,120 @@ func (j *JavaAnalyzer) calculateLineComplexity(line string) int {
 
 	return complexity
 }
+
+// Legacy analyzer interface methods for backward compatibility
+
+// FileExtensions returns supported file extensions (LegacyAnalyzer interface)
+func (j *JavaAnalyzer) FileExtensions() []string {
+	return j.extensions
+}
+
+// SupportsComplexity returns whether complexity analysis is supported (LegacyAnalyzer interface)
+func (j *JavaAnalyzer) SupportsComplexity() bool {
+	return true
+}
+
+// SupportsFunctionLevel returns whether function-level analysis is supported (LegacyAnalyzer interface)
+func (j *JavaAnalyzer) SupportsFunctionLevel() bool {
+	return true
+}
+
+// AnalyzeComplexity performs complexity analysis and returns results (LegacyAnalyzer interface)
+func (j *JavaAnalyzer) AnalyzeComplexity(ctx context.Context, repoPath string) (core.ComplexityResult, error) {
+	result := core.ComplexityResult{
+		Functions: []core.FunctionComplexity{},
+	}
+
+	// Find all Java files
+	javaFiles, err := j.findJavaFiles(repoPath)
+	if err != nil {
+		return result, err
+	}
+
+	result.TotalFiles = len(javaFiles)
+
+	var totalComplexity int
+	var maxComplexity int
+
+	// Analyze each file
+	for _, filePath := range javaFiles {
+		fileAnalysis, err := j.analyzeFile(filePath)
+		if err != nil {
+			j.logger.Warn("Failed to analyze file",
+				core.Field{Key: "file", Value: filePath},
+				core.Field{Key: "error", Value: err})
+			continue
+		}
+
+		// Convert function info to complexity format
+		for _, fn := range fileAnalysis.Functions {
+			// Make file path relative to repository root
+			relativePath, err := filepath.Rel(repoPath, fn.File)
+			if err != nil {
+				// If we can't make it relative, use the original path
+				relativePath = fn.File
+			}
+
+			complexity := core.FunctionComplexity{
+				Name:       fn.Name,
+				File:       relativePath,
+				Line:       fn.Line,
+				Complexity: fn.Complexity,
+			}
+
+			result.Functions = append(result.Functions, complexity)
+			totalComplexity += fn.Complexity
+
+			if fn.Complexity > maxComplexity {
+				maxComplexity = fn.Complexity
+			}
+		}
+
+		result.TotalFunctions += len(fileAnalysis.Functions)
+	}
+
+	// Calculate average complexity
+	if result.TotalFunctions > 0 {
+		result.AverageComplexity = float64(totalComplexity) / float64(result.TotalFunctions)
+	}
+	result.MaxComplexity = maxComplexity
+
+	return result, nil
+}
+
+// AnalyzeFunctions performs function-level analysis (LegacyAnalyzer interface)
+func (j *JavaAnalyzer) AnalyzeFunctions(ctx context.Context, repoPath string) ([]core.FunctionComplexity, error) {
+	complexityResult, err := j.AnalyzeComplexity(ctx, repoPath)
+	if err != nil {
+		return nil, err
+	}
+	return complexityResult.Functions, nil
+}
+
+// DetectPatterns detects patterns in code content (LegacyAnalyzer interface)
+func (j *JavaAnalyzer) DetectPatterns(ctx context.Context, content string, patterns []core.Pattern) ([]core.PatternMatch, error) {
+	// Basic pattern detection implementation
+	var matches []core.PatternMatch
+
+	for _, pattern := range patterns {
+		// Check each pattern string in the pattern
+		for _, patternStr := range pattern.Patterns {
+			// Simple string matching for now - could be enhanced with regex
+			if strings.Contains(content, patternStr) {
+				match := core.PatternMatch{
+					Pattern: pattern,
+					Location: core.Location{
+						File:   "", // Would need file path context
+						Line:   1,  // Would need line-by-line analysis for accurate line numbers
+						Column: 1,
+					},
+					MatchText: patternStr,
+					Context:   content, // Could be trimmed to surrounding context
+				}
+				matches = append(matches, match)
+			}
+		}
+	}
+
+	return matches, nil
+}
