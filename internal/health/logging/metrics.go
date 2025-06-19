@@ -1,5 +1,5 @@
-// Package observability provides metrics collection and monitoring capabilities
-package observability
+// Package logging provides metrics collection for the health package.
+package logging
 
 import (
 	"fmt"

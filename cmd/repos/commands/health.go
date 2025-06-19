@@ -12,7 +12,7 @@ import (
 	"github.com/codcod/repos/internal/errors"
 	"github.com/codcod/repos/internal/health"
 	healthconfig "github.com/codcod/repos/internal/health/config"
-	"github.com/codcod/repos/internal/observability"
+	"github.com/codcod/repos/internal/health/logging"
 )
 
 // HealthCommand handles the health check command execution
@@ -20,8 +20,8 @@ type HealthCommand struct {
 	config    *HealthConfig
 	validator *healthconfig.ConfigValidator
 	executor  *HealthExecutor
-	logger    *observability.StructuredLogger
-	metrics   *observability.MetricsCollector
+	logger    *logging.StructuredLogger
+	metrics   *logging.MetricsCollector
 }
 
 // HealthConfig contains all configuration for health checks
@@ -41,9 +41,9 @@ type HealthConfig struct {
 
 // NewHealthCommand creates a new health command instance
 func NewHealthCommand(healthConfig *HealthConfig) *HealthCommand {
-	logger := observability.NewStructuredLogger(observability.LevelInfo)
+	logger := logging.NewStructuredLogger(logging.LevelInfo)
 	if healthConfig.Verbose {
-		logger = observability.NewStructuredLogger(observability.LevelDebug)
+		logger = logging.NewStructuredLogger(logging.LevelDebug)
 	}
 
 	return &HealthCommand{
@@ -51,7 +51,7 @@ func NewHealthCommand(healthConfig *HealthConfig) *HealthCommand {
 		validator: healthconfig.NewConfigValidator(),
 		executor:  NewHealthExecutor(),
 		logger:    logger.WithPrefix("health-cmd"),
-		metrics:   observability.NewMetricsCollector(),
+		metrics:   logging.NewMetricsCollector(),
 	}
 }
 
@@ -117,7 +117,7 @@ func (he *HealthExecutor) SetLogger(logger core.Logger) {
 }
 
 // Run executes the health checks with the given configuration
-func (he *HealthExecutor) Run(ctx context.Context, config *HealthConfig, logger *observability.StructuredLogger, metrics *observability.MetricsCollector) error {
+func (he *HealthExecutor) Run(ctx context.Context, config *HealthConfig, logger *logging.StructuredLogger, metrics *logging.MetricsCollector) error {
 	opLogger := logger.WithField("operation", "health_executor")
 
 	// Setup context with timeout
@@ -154,7 +154,7 @@ func (he *HealthExecutor) Run(ctx context.Context, config *HealthConfig, logger 
 }
 
 // setupContext configures the context with timeout if specified
-func (he *HealthExecutor) setupContext(ctx context.Context, config *HealthConfig, logger *observability.StructuredLogger) (context.Context, context.CancelFunc) {
+func (he *HealthExecutor) setupContext(ctx context.Context, config *HealthConfig, logger *logging.StructuredLogger) (context.Context, context.CancelFunc) {
 	if config.Timeout <= 0 {
 		return ctx, func() {}
 	}
@@ -164,7 +164,7 @@ func (he *HealthExecutor) setupContext(ctx context.Context, config *HealthConfig
 }
 
 // loadAndValidateConfig loads the advanced configuration
-func (he *HealthExecutor) loadAndValidateConfig(config *HealthConfig, logger *observability.StructuredLogger, metrics *observability.MetricsCollector) (*healthconfig.AdvancedConfig, error) {
+func (he *HealthExecutor) loadAndValidateConfig(config *HealthConfig, logger *logging.StructuredLogger, metrics *logging.MetricsCollector) (*healthconfig.AdvancedConfig, error) {
 	// Load advanced configuration
 	logger.Info("loading advanced configuration", core.String("config_path", config.ConfigPath))
 	advConfig, err := he.loadAdvancedConfig(config.ConfigPath)
@@ -178,7 +178,7 @@ func (he *HealthExecutor) loadAndValidateConfig(config *HealthConfig, logger *ob
 }
 
 // loadAndPrepareRepositories loads repositories and converts them to core format
-func (he *HealthExecutor) loadAndPrepareRepositories(config *HealthConfig, logger *observability.StructuredLogger, metrics *observability.MetricsCollector) ([]core.Repository, error) {
+func (he *HealthExecutor) loadAndPrepareRepositories(config *HealthConfig, logger *logging.StructuredLogger, metrics *logging.MetricsCollector) ([]core.Repository, error) {
 	// Load repositories from basic config
 	logger.Info("loading repositories",
 		core.String("basic_config", config.BasicConfig),
@@ -203,7 +203,7 @@ func (he *HealthExecutor) loadAndPrepareRepositories(config *HealthConfig, logge
 }
 
 // executeAndReportResults executes health checks and reports the results
-func (he *HealthExecutor) executeAndReportResults(ctx context.Context, coreRepos []core.Repository, advConfig *healthconfig.AdvancedConfig, config *HealthConfig, logger *observability.StructuredLogger, metrics *observability.MetricsCollector) error {
+func (he *HealthExecutor) executeAndReportResults(ctx context.Context, coreRepos []core.Repository, advConfig *healthconfig.AdvancedConfig, config *HealthConfig, logger *logging.StructuredLogger, metrics *logging.MetricsCollector) error {
 	// Execute health checks
 	logger.Info("executing comprehensive health checks",
 		core.Int("repositories", len(coreRepos)),
@@ -247,7 +247,7 @@ func (he *HealthExecutor) executeAndReportResults(ctx context.Context, coreRepos
 
 // executeHealthChecks executes the actual health checks
 func (he *HealthExecutor) executeHealthChecks(ctx context.Context, repos []core.Repository,
-	advConfig *healthconfig.AdvancedConfig, config *HealthConfig, logger *observability.StructuredLogger, metrics *observability.MetricsCollector) (*core.WorkflowResult, error) {
+	advConfig *healthconfig.AdvancedConfig, config *HealthConfig, logger *logging.StructuredLogger, metrics *logging.MetricsCollector) (*core.WorkflowResult, error) {
 	opLogger := logger.WithField("operation", "execute_health_checks")
 
 	// Create command executor and registries

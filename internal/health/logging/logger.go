@@ -1,5 +1,5 @@
-// Package observability provides structured logging and metrics for the repos tool.
-package observability
+// Package logging provides structured logging for the health package.
+package logging
 
 import (
 	"fmt"
