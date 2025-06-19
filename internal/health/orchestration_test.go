@@ -1,4 +1,4 @@
-package main
+package health
 
 import (
 	"context"
@@ -8,10 +8,8 @@ import (
 	"time"
 
 	"github.com/codcod/repos/internal/core"
-	"github.com/codcod/repos/internal/health/checkers/registry"
 	healthconfig "github.com/codcod/repos/internal/health/config"
 	"github.com/codcod/repos/internal/health/orchestration"
-	"github.com/codcod/repos/internal/platform/commands"
 )
 
 // TestOrchestrationEndToEnd tests the complete orchestration workflow
@@ -61,11 +59,11 @@ func TestOrchestrationEndToEnd(t *testing.T) {
 	}
 
 	// Create command executor and logger
-	executor := commands.NewOSCommandExecutor(30 * time.Second)
+	executor := NewCommandExecutor(30 * time.Second)
 	logger := &testLogger{t: t}
 
 	// Create registries
-	checkerRegistry := registry.NewCheckerRegistry(executor)
+	checkerRegistry := NewCheckerRegistry(executor)
 
 	// Create orchestration engine
 	engine := orchestration.NewEngine(checkerRegistry, nil, config, logger)
@@ -182,9 +180,9 @@ func TestOrchestrationDryRun(t *testing.T) {
 		},
 	}
 
-	executor := commands.NewMockCommandExecutor()
+	executor := NewCommandExecutor(10 * time.Second)
 	logger := &testLogger{t: t}
-	checkerRegistry := registry.NewCheckerRegistry(executor)
+	checkerRegistry := NewCheckerRegistry(executor)
 
 	engine := orchestration.NewEngine(checkerRegistry, nil, config, logger)
 
@@ -205,7 +203,7 @@ func TestOrchestrationDryRun(t *testing.T) {
 // Helper functions
 
 func createTestGitRepo(t *testing.T, dir string) {
-	executor := commands.NewOSCommandExecutor(10 * time.Second)
+	executor := NewCommandExecutor(10 * time.Second)
 	ctx := context.Background()
 
 	// Initialize git repo
