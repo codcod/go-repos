@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
 )
@@ -72,17 +71,17 @@ func TestGetEnvOrDefault(t *testing.T) {
 			originalValue := os.Getenv(tt.key)
 			defer func() {
 				if originalValue != "" {
-					_ = os.Setenv(tt.key, originalValue)
+					os.Setenv(tt.key, originalValue)
 				} else {
-					_ = os.Unsetenv(tt.key)
+					os.Unsetenv(tt.key)
 				}
 			}()
 
 			// Set up test environment
 			if tt.setEnv {
-				_ = os.Setenv(tt.key, tt.envValue)
+				os.Setenv(tt.key, tt.envValue)
 			} else {
-				_ = os.Unsetenv(tt.key)
+				os.Unsetenv(tt.key)
 			}
 
 			// Test the function
@@ -113,9 +112,9 @@ func TestVersionVariables(t *testing.T) {
 	oldCommit := os.Getenv("COMMIT")
 	oldDate := os.Getenv("BUILD_DATE")
 
-	_ = os.Unsetenv("VERSION")
-	_ = os.Unsetenv("COMMIT")
-	_ = os.Unsetenv("BUILD_DATE")
+	os.Unsetenv("VERSION")
+	os.Unsetenv("COMMIT")
+	os.Unsetenv("BUILD_DATE")
 
 	// Reinitialize to test defaults
 	testVersion := getEnvOrDefault("VERSION", "dev")
@@ -134,13 +133,13 @@ func TestVersionVariables(t *testing.T) {
 
 	// Restore original environment variables
 	if oldVersion != "" {
-		_ = os.Setenv("VERSION", oldVersion)
+		os.Setenv("VERSION", oldVersion)
 	}
 	if oldCommit != "" {
-		_ = os.Setenv("COMMIT", oldCommit)
+		os.Setenv("COMMIT", oldCommit)
 	}
 	if oldDate != "" {
-		_ = os.Setenv("BUILD_DATE", oldDate)
+		os.Setenv("BUILD_DATE", oldDate)
 	}
 }
 
@@ -174,14 +173,14 @@ func TestVersionVariablesWithEnv(t *testing.T) {
 			original := os.Getenv(tc.envVar)
 			defer func() {
 				if original != "" {
-					_ = os.Setenv(tc.envVar, original)
+					os.Setenv(tc.envVar, original)
 				} else {
-					_ = os.Unsetenv(tc.envVar)
+					os.Unsetenv(tc.envVar)
 				}
 			}()
 
 			// Set test value
-			_ = os.Setenv(tc.envVar, tc.envValue)
+			os.Setenv(tc.envVar, tc.envValue)
 
 			// Test that environment variable is used
 			result := tc.getter()
@@ -265,14 +264,14 @@ func TestEnvironmentVariableEdgeCases(t *testing.T) {
 			original := os.Getenv(tt.key)
 			defer func() {
 				if original != "" {
-					_ = os.Setenv(tt.key, original)
+					os.Setenv(tt.key, original)
 				} else {
-					_ = os.Unsetenv(tt.key)
+					os.Unsetenv(tt.key)
 				}
 			}()
 
 			// Set test value
-			_ = os.Setenv(tt.key, tt.envValue)
+			os.Setenv(tt.key, tt.envValue)
 
 			// Test
 			result := getEnvOrDefault(tt.key, "default")
@@ -289,8 +288,8 @@ func BenchmarkGetEnvOrDefault(b *testing.B) {
 	defaultValue := "default_value"
 
 	// Test with environment variable set
-	_ = os.Setenv(key, "env_value")
-	defer func() { _ = os.Unsetenv(key) }()
+	os.Setenv(key, "env_value")
+	defer os.Unsetenv(key)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -303,52 +302,10 @@ func BenchmarkGetEnvOrDefaultNotSet(b *testing.B) {
 	defaultValue := "default_value"
 
 	// Ensure environment variable is not set
-	_ = os.Unsetenv(key)
+	os.Unsetenv(key)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = getEnvOrDefault(key, defaultValue)
-	}
-}
-
-func TestHealthCommandWithListCategories(t *testing.T) {
-	// Test that the command can be executed with --list-categories flag
-	// This integration test covers the functionality that was previously tested
-	// by the direct function call (which has been moved to the health command module)
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	// Build the binary first
-	buildCmd := exec.Command("go", "build", "-o", "repos_test", ".")
-	if err := buildCmd.Run(); err != nil {
-		t.Fatalf("Failed to build binary: %v", err)
-	}
-	defer os.Remove("repos_test")
-
-	// Run the command with --list-categories
-	cmd := exec.Command("./repos_test", "health", "--list-categories")
-	output, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("Command failed: %v", err)
-	}
-
-	outputStr := string(output)
-
-	// Verify expected content
-	expectedPhrases := []string{
-		"Available Health Check Categories",
-		"CHECKERS:",
-		"ANALYZERS:",
-		"Summary",
-		"Total Checkers:",
-		"Total Categories:",
-		"Total Analyzers:",
-	}
-
-	for _, phrase := range expectedPhrases {
-		if !strings.Contains(outputStr, phrase) {
-			t.Errorf("Expected phrase '%s' not found in output", phrase)
-		}
 	}
 }

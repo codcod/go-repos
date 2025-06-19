@@ -444,3 +444,398 @@ func TestCLIErrorHandling(t *testing.T) {
 		t.Errorf("error output should still contain repository name, got: %s", outputStr)
 	}
 }
+
+func TestCLIHealthCommand(t *testing.T) {
+	cmd := exec.Command("./repos-test", "health", "--help")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("health help command failed: %v", err)
+	}
+
+	outputStr := string(output)
+	expectedSections := []string{
+		"Execute modular health checks",
+		"Available Commands:",
+		"complexity",
+		"dryrun",
+		"genconfig",
+		"--list-categories",
+		"--gen-config",
+		"--complexity-report",
+	}
+
+	for _, section := range expectedSections {
+		if !strings.Contains(outputStr, section) {
+			t.Errorf("health help output should contain '%s', got: %s", section, outputStr)
+		}
+	}
+}
+
+func TestCLIHealthListCategories(t *testing.T) {
+	cmd := exec.Command("./repos-test", "health", "--list-categories")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("health list-categories command failed: %v", err)
+	}
+
+	outputStr := string(output)
+	expectedSections := []string{
+		"Available Health Check Categories:",
+		"CHECKERS:",
+		"ANALYZERS:",
+		"Total Checkers:",
+		"Total Analyzers:",
+		"Usage Examples:",
+	}
+
+	for _, section := range expectedSections {
+		if !strings.Contains(outputStr, section) {
+			t.Errorf("health list-categories output should contain '%s', got: %s", section, outputStr)
+		}
+	}
+}
+
+func TestCLIHealthGenConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalDir, _ := os.Getwd()
+	defer func() { _ = os.Chdir(originalDir) }()
+
+	_ = os.Chdir(tmpDir)
+
+	cmd := exec.Command(filepath.Join(originalDir, "repos-test"), "health", "genconfig", "--overwrite")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("health genconfig command failed: %v, output: %s", err, string(output))
+	}
+
+	// Check that health-config.yaml was created
+	if _, err := os.Stat("health-config.yaml"); os.IsNotExist(err) {
+		t.Error("health-config.yaml should have been created")
+	}
+
+	// Check content of health-config.yaml
+	content, err := os.ReadFile("health-config.yaml")
+	if err != nil {
+		t.Fatalf("failed to read health-config.yaml: %v", err)
+	}
+
+	contentStr := string(content)
+	expectedSections := []string{
+		"health:",
+		"checkers:",
+		"timeout:",
+	}
+
+	for _, section := range expectedSections {
+		if !strings.Contains(contentStr, section) {
+			t.Errorf("health-config.yaml should contain '%s', got: %s", section, contentStr)
+		}
+	}
+}
+
+func TestCLIHealthDryRun(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalDir, _ := os.Getwd()
+	defer func() { _ = os.Chdir(originalDir) }()
+
+	_ = os.Chdir(tmpDir)
+
+	// Create a test repository directory
+	repoDir := filepath.Join(tmpDir, "health-test-repo")
+	_ = os.MkdirAll(repoDir, 0755)
+
+	// Create a basic config.yaml for testing
+	configContent := `repositories:
+  - name: health-test-repo
+    url: git@github.com:owner/health-test-repo.git
+    tags: [test]
+    path: ` + repoDir
+
+	err := os.WriteFile("config.yaml", []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("failed to create config.yaml: %v", err)
+	}
+
+	cmd := exec.Command(filepath.Join(originalDir, "repos-test"), "health", "dryrun")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("health dryrun command failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "Dry run") || !strings.Contains(outputStr, "would") {
+		t.Errorf("dryrun output should contain dry run indicators, got: %s", outputStr)
+	}
+}
+
+func TestCLIHealthComplexity(t *testing.T) {
+	cmd := exec.Command("./repos-test", "health", "complexity", "--help")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("health complexity help command failed: %v", err)
+	}
+
+	outputStr := string(output)
+	expectedSections := []string{
+		"cyclomatic complexity",
+		"--max-complexity",
+		"--tag",
+	}
+
+	for _, section := range expectedSections {
+		if !strings.Contains(outputStr, section) {
+			t.Errorf("health complexity help should contain '%s', got: %s", section, outputStr)
+		}
+	}
+}
+
+func TestCLIHealthInvalidFlag(t *testing.T) {
+	cmd := exec.Command("./repos-test", "health", "--invalid-flag")
+	_, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Error("health command with invalid flag should fail")
+	}
+}
+
+func TestCLIAllCommandsHelp(t *testing.T) {
+	commands := []string{"clone", "health", "init", "pr", "rm", "run"}
+
+	for _, cmdName := range commands {
+		t.Run(cmdName+"_help", func(t *testing.T) {
+			cmd := exec.Command("./repos-test", cmdName, "--help")
+			output, err := cmd.Output()
+			if err != nil {
+				t.Fatalf("%s help command failed: %v", cmdName, err)
+			}
+
+			outputStr := string(output)
+			if !strings.Contains(outputStr, "Usage:") {
+				t.Errorf("%s help should contain 'Usage:', got: %s", cmdName, outputStr)
+			}
+		})
+	}
+}
+
+func TestCLIGlobalFlags(t *testing.T) {
+	cmd := exec.Command("./repos-test", "--help")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("global help command failed: %v", err)
+	}
+
+	outputStr := string(output)
+	expectedGlobalFlags := []string{
+		"--config",
+		"--tag",
+		"--parallel",
+	}
+
+	for _, flag := range expectedGlobalFlags {
+		if !strings.Contains(outputStr, flag) {
+			t.Errorf("global help should contain flag '%s', got: %s", flag, outputStr)
+		}
+	}
+}
+
+func TestCLIConfigFlag(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalDir, _ := os.Getwd()
+	defer func() { _ = os.Chdir(originalDir) }()
+
+	_ = os.Chdir(tmpDir)
+
+	// Create a custom config file with different name
+	customConfigContent := `repositories:
+  - name: custom-config-repo
+    url: git@github.com:owner/custom-config-repo.git
+    tags: [custom]
+    path: ` + filepath.Join(tmpDir, "custom-config-repo")
+
+	_ = os.MkdirAll(filepath.Join(tmpDir, "custom-config-repo"), 0755)
+	err := os.WriteFile("my-custom.yaml", []byte(customConfigContent), 0644)
+	if err != nil {
+		t.Fatalf("failed to create custom config: %v", err)
+	}
+
+	// Test using --config flag
+	cmd := exec.Command(filepath.Join(originalDir, "repos-test"), "--config", "my-custom.yaml", "run", "echo", "test")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("command with --config flag failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "custom-config-repo") {
+		t.Errorf("output should contain custom repository name, got: %s", outputStr)
+	}
+}
+
+func TestCLIVersionCommand(t *testing.T) {
+	// Test version command output format
+	cmd := exec.Command("./repos-test", "version")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("version command failed: %v", err)
+	}
+
+	outputStr := string(output)
+	expectedFields := []string{
+		"repos",
+		"built",
+	}
+
+	for _, field := range expectedFields {
+		if !strings.Contains(outputStr, field) {
+			t.Errorf("version output should contain '%s', got: %s", field, outputStr)
+		}
+	}
+}
+
+func TestCLICommandCompletion(t *testing.T) {
+	// Test that all expected commands are available
+	cmd := exec.Command("./repos-test", "--help")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("help command failed: %v", err)
+	}
+
+	outputStr := string(output)
+	expectedCommands := []string{
+		"clone",
+		"health",
+		"init",
+		"pr",
+		"rm",
+		"run",
+		"version",
+	}
+
+	for _, command := range expectedCommands {
+		if !strings.Contains(outputStr, command) {
+			t.Errorf("help output should list command '%s', got: %s", command, outputStr)
+		}
+	}
+}
+
+func TestCLIHealthComplexityCommand(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalDir, _ := os.Getwd()
+	defer func() { _ = os.Chdir(originalDir) }()
+
+	_ = os.Chdir(tmpDir)
+
+	// Create a simple Go repository for complexity analysis
+	repoDir := filepath.Join(tmpDir, "complexity-test-repo")
+	_ = os.MkdirAll(repoDir, 0755)
+
+	// Create a simple Go file
+	goContent := `package main
+
+func simpleFunction() {
+	println("Hello, World!")
+}
+
+func complexFunction(x int) int {
+	if x > 10 {
+		if x > 20 {
+			return x * 2
+		}
+		return x + 5
+	}
+	return x
+}
+`
+	_ = os.WriteFile(filepath.Join(repoDir, "main.go"), []byte(goContent), 0644)
+
+	// Create config
+	configContent := `repositories:
+  - name: complexity-test-repo
+    url: git@github.com:owner/complexity-test-repo.git
+    tags: [test]
+    path: ` + repoDir
+
+	err := os.WriteFile("config.yaml", []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("failed to create config.yaml: %v", err)
+	}
+
+	// Run complexity analysis
+	cmd := exec.Command(filepath.Join(originalDir, "repos-test"), "health", "complexity")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("health complexity command failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "Running cyclomatic complexity analysis") {
+		t.Errorf("complexity output should contain complexity analysis message, got: %s", outputStr)
+	}
+	if !strings.Contains(outputStr, "Maximum complexity threshold") {
+		t.Errorf("complexity output should contain complexity threshold message, got: %s", outputStr)
+	}
+}
+
+func TestCLIHealthDryRunCommand(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalDir, _ := os.Getwd()
+	defer func() { _ = os.Chdir(originalDir) }()
+
+	_ = os.Chdir(tmpDir)
+
+	// Create minimal config
+	configContent := `repositories:
+  - name: dryrun-test-repo
+    url: git@github.com:owner/dryrun-test-repo.git
+    tags: [test]
+    path: ` + filepath.Join(tmpDir, "dryrun-test-repo")
+
+	_ = os.MkdirAll(filepath.Join(tmpDir, "dryrun-test-repo"), 0755)
+	err := os.WriteFile("config.yaml", []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("failed to create config.yaml: %v", err)
+	}
+
+	// Run dry run
+	cmd := exec.Command(filepath.Join(originalDir, "repos-test"), "health", "dryrun")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("health dryrun command failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	// Dry run should show what would be executed
+	if !strings.Contains(outputStr, "dryrun-test-repo") {
+		t.Errorf("dry run output should contain repository name, got: %s", outputStr)
+	}
+}
+
+func TestCLIHealthGenConfigCommand(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalDir, _ := os.Getwd()
+	defer func() { _ = os.Chdir(originalDir) }()
+
+	_ = os.Chdir(tmpDir)
+
+	// Run genconfig command
+	cmd := exec.Command(filepath.Join(originalDir, "repos-test"), "health", "genconfig")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("health genconfig command failed: %v, output: %s", err, string(output))
+	}
+
+	// Check if config file was generated
+	if _, err := os.Stat("health-config.yaml"); os.IsNotExist(err) {
+		t.Error("health-config.yaml should have been generated")
+	}
+
+	// Check content
+	content, err := os.ReadFile("health-config.yaml")
+	if err != nil {
+		t.Fatalf("failed to read generated config: %v", err)
+	}
+
+	contentStr := string(content)
+	if !strings.Contains(contentStr, "checkers") {
+		t.Errorf("generated config should contain 'checkers', got: %s", contentStr)
+	}
+}

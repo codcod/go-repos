@@ -114,11 +114,14 @@ func execute(config *Config) error {
 // validateConfig validates the health command configuration
 func validateConfig(config *Config) error {
 	// Validate timeout
-	if config.TimeoutSeconds > 7200 { // 2 hours in seconds
-		return fmt.Errorf("timeout cannot exceed 2 hours")
+	if config.TimeoutSeconds < 0 {
+		return fmt.Errorf("timeout cannot be negative")
 	}
 	if config.TimeoutSeconds == 0 {
-		config.TimeoutSeconds = 30
+		return fmt.Errorf("timeout cannot be zero")
+	}
+	if config.TimeoutSeconds > 7200 { // 2 hours in seconds
+		return fmt.Errorf("timeout cannot exceed 2 hours")
 	}
 
 	// Validate complexity threshold
